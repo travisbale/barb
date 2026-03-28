@@ -87,9 +87,11 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 	}
 
 	targetSvc := &phishing.TargetService{Store: sqlite.NewTargetStore(db)}
+	smtpSvc := &phishing.SMTPService{Store: sqlite.NewSMTPStore(db)}
 
 	apiRouter := &api.Router{
 		Targets: targetSvc,
+		SMTP:    smtpSvc,
 		Version: Version,
 		Logger:  logger,
 	}

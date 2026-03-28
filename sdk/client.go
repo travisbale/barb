@@ -96,6 +96,28 @@ func (c *Client) DeleteTarget(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTarget, "id", id))
 }
 
+// --- SMTP Profiles ---
+
+func (c *Client) CreateSMTPProfile(req CreateSMTPProfileRequest) (*SMTPProfileResponse, error) {
+	return send[SMTPProfileResponse](c, http.MethodPost, RouteSMTPProfiles, req)
+}
+
+func (c *Client) ListSMTPProfiles() ([]SMTPProfileResponse, error) {
+	resp, err := get[[]SMTPProfileResponse](c, RouteSMTPProfiles)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) GetSMTPProfile(id string) (*SMTPProfileResponse, error) {
+	return get[SMTPProfileResponse](c, ResolveRoute(RouteSMTPProfile, "id", id))
+}
+
+func (c *Client) DeleteSMTPProfile(id string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RouteSMTPProfile, "id", id))
+}
+
 // --- System ---
 
 func (c *Client) Status() (*StatusResponse, error) {

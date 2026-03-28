@@ -15,10 +15,12 @@ func (r *Router) listTargetLists(w http.ResponseWriter, req *http.Request) {
 		r.writeError(w, http.StatusInternalServerError, "failed to list target lists", err)
 		return
 	}
+
 	items := make([]sdk.TargetListResponse, len(lists))
 	for i, l := range lists {
 		items[i] = targetListToResponse(l)
 	}
+
 	writeJSON(w, http.StatusOK, items)
 }
 
@@ -38,6 +40,7 @@ func (r *Router) createTargetList(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
 	writeJSON(w, http.StatusCreated, targetListToResponse(list))
 }
 
@@ -52,6 +55,7 @@ func (r *Router) getTargetList(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
 	writeJSON(w, http.StatusOK, targetListToResponse(list))
 }
 
@@ -65,6 +69,7 @@ func (r *Router) deleteTargetList(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -75,10 +80,12 @@ func (r *Router) listTargets(w http.ResponseWriter, req *http.Request) {
 		r.writeError(w, http.StatusInternalServerError, "failed to list targets", err)
 		return
 	}
+
 	items := make([]sdk.TargetResponse, len(targets))
 	for i, t := range targets {
 		items[i] = targetToResponse(t)
 	}
+
 	writeJSON(w, http.StatusOK, items)
 }
 
@@ -107,6 +114,7 @@ func (r *Router) addTarget(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
 	writeJSON(w, http.StatusCreated, targetToResponse(target))
 }
 
@@ -139,6 +147,7 @@ func (r *Router) deleteTarget(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 

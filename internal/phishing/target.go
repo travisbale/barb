@@ -38,6 +38,13 @@ type targetStore interface {
 	DeleteTarget(id string) error
 }
 
+func (t *Target) Validate() error {
+	if t.Email == "" {
+		return ErrEmailRequired
+	}
+	return nil
+}
+
 // TargetService manages target lists and their members.
 type TargetService struct {
 	Store targetStore
@@ -71,8 +78,8 @@ func (s *TargetService) ListLists() ([]*TargetList, error) {
 }
 
 func (s *TargetService) AddTarget(listID string, target *Target) error {
-	if target.Email == "" {
-		return ErrEmailRequired
+	if err := target.Validate(); err != nil {
+		return err
 	}
 	target.ID = uuid.New().String()
 	target.ListID = listID

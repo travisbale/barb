@@ -32,6 +32,29 @@ type TargetResponse struct {
 	Position   string `json:"position"`
 }
 
+// --- SMTP Profiles ---
+
+type CreateSMTPProfileRequest struct {
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	FromAddr string `json:"from_addr"`
+	FromName string `json:"from_name"`
+}
+
+type SMTPProfileResponse struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Host      string    `json:"host"`
+	Port      int       `json:"port"`
+	Username  string    `json:"username"`
+	FromAddr  string    `json:"from_addr"`
+	FromName  string    `json:"from_name"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ImportTargetsResponse struct {
 	Imported int `json:"imported"`
 }

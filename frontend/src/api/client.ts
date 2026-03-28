@@ -87,6 +87,35 @@ export async function importTargetsCSV(listId: string, file: File): Promise<Impo
   return resp.json()
 }
 
+// --- SMTP Profiles ---
+
+export interface SMTPProfile {
+  id: string
+  name: string
+  host: string
+  port: number
+  username: string
+  from_addr: string
+  from_name: string
+  created_at: string
+}
+
+export function listSMTPProfiles(): Promise<SMTPProfile[]> {
+  return request('GET', '/smtp-profiles')
+}
+
+export function createSMTPProfile(profile: Omit<SMTPProfile, 'id' | 'created_at'> & { password?: string }): Promise<SMTPProfile> {
+  return request('POST', '/smtp-profiles', profile)
+}
+
+export function getSMTPProfile(id: string): Promise<SMTPProfile> {
+  return request('GET', `/smtp-profiles/${id}`)
+}
+
+export function deleteSMTPProfile(id: string): Promise<void> {
+  return request('DELETE', `/smtp-profiles/${id}`)
+}
+
 // --- System ---
 
 export interface Status {
