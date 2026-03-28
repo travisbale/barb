@@ -50,7 +50,7 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	
+
 	writeJSON(w, http.StatusCreated, smtpProfileToResponse(created))
 }
 

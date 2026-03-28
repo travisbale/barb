@@ -39,15 +39,17 @@ func NewHarness(t *testing.T) *Harness {
 	t.Cleanup(func() { db.Close() })
 
 	targetSvc := &phishing.TargetService{Store: sqlite.NewTargetStore(db)}
+	templateSvc := &phishing.TemplateService{Store: sqlite.NewTemplateStore(db)}
 	smtpSvc := &phishing.SMTPService{Store: sqlite.NewSMTPStore(db)}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	apiRouter := &api.Router{
-		Targets: targetSvc,
-		SMTP:    smtpSvc,
-		Version: "test",
-		Logger:  logger,
+		Targets:   targetSvc,
+		Templates: templateSvc,
+		SMTP:      smtpSvc,
+		Version:   "test",
+		Logger:    logger,
 	}
 
 	// Use an empty fs.FS for the frontend — tests don't need the SPA.

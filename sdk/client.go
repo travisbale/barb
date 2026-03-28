@@ -96,6 +96,32 @@ func (c *Client) DeleteTarget(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTarget, "id", id))
 }
 
+// --- Email Templates ---
+
+func (c *Client) CreateTemplate(req CreateTemplateRequest) (*TemplateResponse, error) {
+	return send[TemplateResponse](c, http.MethodPost, RouteTemplates, req)
+}
+
+func (c *Client) ListTemplates() ([]TemplateResponse, error) {
+	resp, err := get[[]TemplateResponse](c, RouteTemplates)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) GetTemplate(id string) (*TemplateResponse, error) {
+	return get[TemplateResponse](c, ResolveRoute(RouteTemplate, "id", id))
+}
+
+func (c *Client) UpdateTemplate(id string, req UpdateTemplateRequest) (*TemplateResponse, error) {
+	return send[TemplateResponse](c, http.MethodPatch, ResolveRoute(RouteTemplate, "id", id), req)
+}
+
+func (c *Client) DeleteTemplate(id string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RouteTemplate, "id", id))
+}
+
 // --- SMTP Profiles ---
 
 func (c *Client) CreateSMTPProfile(req CreateSMTPProfileRequest) (*SMTPProfileResponse, error) {

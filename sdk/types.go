@@ -55,6 +55,31 @@ type SMTPProfileResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// --- Email Templates ---
+
+type CreateTemplateRequest struct {
+	Name     string `json:"name"`
+	Subject  string `json:"subject"`
+	HTMLBody string `json:"html_body"`
+	TextBody string `json:"text_body"`
+}
+
+type UpdateTemplateRequest struct {
+	Name     string `json:"name"`
+	Subject  string `json:"subject"`
+	HTMLBody string `json:"html_body"`
+	TextBody string `json:"text_body"`
+}
+
+type TemplateResponse struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Subject   string    `json:"subject"`
+	HTMLBody  string    `json:"html_body"`
+	TextBody  string    `json:"text_body"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ImportTargetsResponse struct {
 	Imported int `json:"imported"`
 }

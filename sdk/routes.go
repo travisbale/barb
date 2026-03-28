@@ -10,6 +10,10 @@ const (
 	RouteTargetsImport = "/api/target-lists/{id}/import"
 	RouteTarget        = "/api/targets/{id}"
 
+	// Email Templates
+	RouteTemplates = "/api/templates"
+	RouteTemplate  = "/api/templates/{id}"
+
 	// SMTP Profiles
 	RouteSMTPProfiles = "/api/smtp-profiles"
 	RouteSMTPProfile  = "/api/smtp-profiles/{id}"

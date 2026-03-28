@@ -87,6 +87,37 @@ export async function importTargetsCSV(listId: string, file: File): Promise<Impo
   return resp.json()
 }
 
+// --- Email Templates ---
+
+export interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  html_body: string
+  text_body: string
+  created_at: string
+}
+
+export function listTemplates(): Promise<EmailTemplate[]> {
+  return request('GET', '/templates')
+}
+
+export function createTemplate(template: Omit<EmailTemplate, 'id' | 'created_at'>): Promise<EmailTemplate> {
+  return request('POST', '/templates', template)
+}
+
+export function getTemplate(id: string): Promise<EmailTemplate> {
+  return request('GET', `/templates/${id}`)
+}
+
+export function updateTemplate(id: string, template: Omit<EmailTemplate, 'id' | 'created_at'>): Promise<EmailTemplate> {
+  return request('PATCH', `/templates/${id}`, template)
+}
+
+export function deleteTemplate(id: string): Promise<void> {
+  return request('DELETE', `/templates/${id}`)
+}
+
 // --- SMTP Profiles ---
 
 export interface SMTPProfile {
