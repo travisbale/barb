@@ -37,12 +37,6 @@ const nav = [
         </RouterLink>
       </div>
 
-      <div class="px-5 py-4 border-t border-edge">
-        <div class="font-mono text-xs text-dim">
-          <span class="inline-block w-1.5 h-1.5 bg-teal rounded-full mr-1.5 align-middle"></span>
-          Connected
-        </div>
-      </div>
     </nav>
 
     <!-- Main content -->
