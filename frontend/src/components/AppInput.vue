@@ -13,7 +13,7 @@ defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const baseClass = 'px-3 py-2 bg-bg border border-edge text-sm font-mono text-gray-200 placeholder-dim focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors leading-relaxed'
+const baseClass = 'px-3 py-2 bg-bg border border-edge text-sm font-mono text-primary placeholder-dim focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors leading-relaxed'
 </script>
 
 <template>

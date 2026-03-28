@@ -98,7 +98,7 @@ onMounted(load)
             :style="{ animationDelay: `${i * 20}ms` }"
             class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
           >
-            <td class="px-4 py-2.5 text-gray-200">{{ p.name }}</td>
+            <td class="px-4 py-2.5 text-primary">{{ p.name }}</td>
             <td class="px-4 py-2.5 text-muted">{{ p.host }}:{{ p.port }}</td>
             <td class="px-4 py-2.5 text-muted">
               {{ p.from_name ? `${p.from_name} <${p.from_addr}>` : p.from_addr }}

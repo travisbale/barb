@@ -24,7 +24,7 @@ const nav = [
           v-for="item in nav"
           :key="item.to"
           :to="item.to"
-          class="group flex items-center gap-3 px-3 py-2 text-sm font-mono text-muted hover:text-gray-200 hover:bg-surface-hover transition-colors"
+          class="group flex items-center gap-3 px-3 py-2 text-sm font-mono text-muted hover:text-primary hover:bg-surface-hover transition-colors"
           active-class="!text-amber bg-amber-glow border-l-2 border-amber !pl-[10px]"
         >
           <span class="text-xs opacity-50 group-hover:opacity-100 transition-opacity" v-html="item.icon"></span>

@@ -77,7 +77,7 @@ onMounted(load)
         <div class="flex items-center gap-3">
           <span class="text-amber text-xs font-mono">&#x25C9;</span>
           <div>
-            <div class="text-sm font-medium text-gray-200">{{ list.name }}</div>
+            <div class="text-sm font-medium text-primary">{{ list.name }}</div>
             <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(list.created_at).toLocaleDateString() }}</div>
           </div>
         </div>

@@ -5,7 +5,7 @@ import Card from '../components/Card.vue'
 <template>
   <div>
     <div class="mb-8">
-      <h1 class="text-lg font-mono font-semibold tracking-tight text-gray-100">Settings</h1>
+      <h1 class="text-lg font-mono font-semibold tracking-tight text-primary">Settings</h1>
       <p class="text-xs text-dim font-mono mt-0.5">Console configuration</p>
     </div>
 

@@ -78,7 +78,7 @@ onMounted(load)
         class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover transition-colors"
       >
         <div>
-          <div class="text-sm font-medium text-gray-200">{{ t.name }}</div>
+          <div class="text-sm font-medium text-primary">{{ t.name }}</div>
           <div class="text-xs text-dim font-mono mt-0.5">Subject: {{ t.subject }}</div>
         </div>
         <AppButton variant="danger" @click="remove(t.id)">Del</AppButton>

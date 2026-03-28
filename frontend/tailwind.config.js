@@ -7,6 +7,7 @@ export default {
         bg: 'var(--color-bg)',
         surface: { DEFAULT: 'var(--color-surface)', hover: 'var(--color-surface-hover)' },
         edge: { DEFAULT: 'var(--color-border)', subtle: 'var(--color-border-subtle)' },
+        primary: 'var(--color-text)',
         muted: 'var(--color-text-muted)',
         dim: 'var(--color-text-dim)',
         amber: { DEFAULT: 'var(--color-amber)', dim: 'var(--color-amber-dim)', glow: 'var(--color-amber-glow)' },

@@ -83,7 +83,7 @@ onMounted(load)
         class="text-dim hover:text-amber font-mono text-sm transition-colors"
       >&larr;</button>
       <div>
-        <h1 class="text-lg font-mono font-semibold tracking-tight text-gray-100">
+        <h1 class="text-lg font-mono font-semibold tracking-tight text-primary">
           {{ list?.name ?? '...' }}
         </h1>
         <span class="text-xs text-dim font-mono">{{ targets.length }} targets</span>
@@ -137,7 +137,7 @@ onMounted(load)
             :style="{ animationDelay: `${i * 20}ms` }"
             class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
           >
-            <td class="px-4 py-2.5 text-gray-200">{{ t.email }}</td>
+            <td class="px-4 py-2.5 text-primary">{{ t.email }}</td>
             <td class="px-4 py-2.5 text-muted">{{ [t.first_name, t.last_name].filter(Boolean).join(' ') || '—' }}</td>
             <td class="px-4 py-2.5 text-dim">{{ t.department || '—' }}</td>
             <td class="px-4 py-2.5 text-dim">{{ t.position || '—' }}</td>

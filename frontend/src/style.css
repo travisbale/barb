@@ -2,7 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode (default) */
 :root {
+  --color-bg: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f9fafb;
+  --color-border: #e0e1e4;
+  --color-border-subtle: #eaebee;
+  --color-text: #1f2028;
+  --color-text-muted: #6b6d74;
+  --color-text-dim: #9ca0a8;
+  --color-amber: #b08825;
+  --color-amber-dim: #8a6a1c;
+  --color-amber-glow: rgba(176, 136, 37, 0.06);
+  --color-red: #c44d4d;
+  --color-red-dim: rgba(196, 77, 77, 0.06);
+  --color-teal: #2d8a82;
+  --color-teal-dim: rgba(45, 138, 130, 0.06);
+}
+
+/* Dark mode */
+:root.dark {
   --color-bg: #15161a;
   --color-surface: #1c1d22;
   --color-surface-hover: #232428;
@@ -28,7 +48,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-body::before {
+:root.dark body::before {
   content: '';
   position: fixed;
   inset: 0;

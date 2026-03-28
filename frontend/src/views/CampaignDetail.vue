@@ -9,7 +9,7 @@ const id = route.params.id
 <template>
   <div>
     <div class="mb-8">
-      <h1 class="text-lg font-mono font-semibold tracking-tight text-gray-100">Campaign {{ id }}</h1>
+      <h1 class="text-lg font-mono font-semibold tracking-tight text-primary">Campaign {{ id }}</h1>
       <p class="text-xs text-dim font-mono mt-0.5">Campaign details</p>
     </div>
     <EmptyState message="Campaign view coming soon." />
