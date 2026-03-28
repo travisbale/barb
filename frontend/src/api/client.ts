@@ -202,6 +202,10 @@ export function startCampaign(id: string): Promise<void> {
   return request('POST', `/campaigns/${id}/start`)
 }
 
+export function cancelCampaign(id: string): Promise<void> {
+  return request('POST', `/campaigns/${id}/cancel`)
+}
+
 export function deleteCampaign(id: string): Promise<void> {
   return request('DELETE', `/campaigns/${id}`)
 }

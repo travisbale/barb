@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getCampaign, startCampaign, listCampaignResults, type Campaign, type CampaignResult } from '../api/client'
+import { getCampaign, startCampaign, cancelCampaign, listCampaignResults, type Campaign, type CampaignResult } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -15,6 +15,7 @@ const campaign = ref<Campaign | null>(null)
 const results = ref<CampaignResult[]>([])
 const error = ref('')
 const starting = ref(false)
+const cancelling = ref(false)
 
 const isDraft = computed(() => campaign.value?.status === 'draft')
 const isActive = computed(() => campaign.value?.status === 'active')
@@ -39,6 +40,21 @@ async function start() {
     error.value = e.message
   } finally {
     starting.value = false
+  }
+}
+
+async function cancel() {
+  if (!confirm('Cancel this campaign? Sending will stop immediately.')) return
+  cancelling.value = true
+  error.value = ''
+  try {
+    await cancelCampaign(id)
+    await load()
+    stopPolling()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    cancelling.value = false
   }
 }
 
@@ -92,12 +108,16 @@ onUnmounted(stopPolling)
             'text-teal': campaign?.status === 'active',
             'text-amber': campaign?.status === 'paused',
             'text-muted': campaign?.status === 'completed',
+            'text-danger': campaign?.status === 'cancelled',
           }">{{ campaign?.status }}</span>
           <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
         </div>
       </template>
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
         {{ starting ? 'Starting...' : 'Start Campaign' }}
+      </AppButton>
+      <AppButton v-if="isActive" variant="danger" :disabled="cancelling" @click="cancel">
+        {{ cancelling ? 'Cancelling...' : 'Cancel Campaign' }}
       </AppButton>
     </PageHeader>
 

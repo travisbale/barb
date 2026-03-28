@@ -30,7 +30,7 @@ const smtpProfiles = ref<SMTPProfile[]>([])
 const miragedConnections = ref<MiragedConnection[]>([])
 const phishlets = ref<MiragedPhishlet[]>([])
 
-const form = ref({ name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '' })
+const form = ref({ name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '', send_rate: '10' })
 
 async function load() {
   try {
@@ -72,9 +72,9 @@ async function onMiragedChange(id: string) {
 
 async function create() {
   try {
-    const campaign = await createCampaign(form.value)
+    const campaign = await createCampaign({ ...form.value, send_rate: parseInt(form.value.send_rate) || 10 })
     campaigns.value.unshift(campaign)
-    form.value = { name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '' }
+    form.value = { name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '', send_rate: '10' }
     showCreate.value = false
     router.push(`/campaigns/${campaign.id}`)
   } catch (e: any) {
@@ -96,6 +96,7 @@ const statusColor: Record<string, string> = {
   active: 'text-teal',
   paused: 'text-amber',
   completed: 'text-muted',
+  cancelled: 'text-danger',
 }
 
 onMounted(load)
@@ -141,6 +142,8 @@ onMounted(load)
             <option v-for="p in phishlets" :key="p.name" :value="p.name">{{ p.name }}{{ p.enabled ? '' : ' (disabled)' }}</option>
           </AppSelect>
         </div>
+
+        <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (emails per minute)" />
 
         <div class="flex gap-2 pt-1">
           <AppButton type="submit">Create</AppButton>
