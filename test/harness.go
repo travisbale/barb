@@ -28,11 +28,8 @@ type MockEmail struct {
 	Subject string
 }
 
-func (m *MockMailer) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, lureURL string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.Sent = append(m.Sent, MockEmail{To: target.Email, Subject: tmpl.Subject})
-	return nil
+func (m *MockMailer) Dial(_ *phishing.SMTPProfile) (phishing.MailConn, error) {
+	return &mockConn{mailer: m}, nil
 }
 
 func (m *MockMailer) Count() int {
@@ -40,6 +37,19 @@ func (m *MockMailer) Count() int {
 	defer m.mu.Unlock()
 	return len(m.Sent)
 }
+
+type mockConn struct {
+	mailer *MockMailer
+}
+
+func (c *mockConn) Send(_ *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, _ string) error {
+	c.mailer.mu.Lock()
+	defer c.mailer.mu.Unlock()
+	c.mailer.Sent = append(c.mailer.Sent, MockEmail{To: target.Email, Subject: tmpl.Subject})
+	return nil
+}
+
+func (c *mockConn) Close() error { return nil }
 
 // Harness is a fully-wired test environment. Obtain one via NewHarness.
 type Harness struct {

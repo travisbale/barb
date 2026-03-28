@@ -94,10 +94,16 @@ type campaignStore interface {
 	GetResultByEmail(campaignID, email string) (*CampaignResult, error)
 }
 
-// Mailer sends a single rendered email. Implementations may reuse
-// connections across calls.
-type Mailer interface {
+// MailConn represents an open SMTP connection that can send multiple
+// messages before being closed.
+type MailConn interface {
 	Send(profile *SMTPProfile, tmpl *EmailTemplate, target *Target, lureURL string) error
+	Close() error
+}
+
+// Mailer opens SMTP connections for sending email.
+type Mailer interface {
+	Dial(profile *SMTPProfile) (MailConn, error)
 }
 
 // CampaignService manages campaign lifecycle.
@@ -307,6 +313,17 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		return
 	}
 
+	conn, err := s.Mailer.Dial(profile)
+	if err != nil {
+		s.Logger.Error("failed to connect to SMTP server", "campaign_id", campaign.ID, "error", err)
+		return
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			s.Logger.Debug("SMTP connection close error", "error", err)
+		}
+	}()
+
 	targets := make(map[string]*Target, len(targetList))
 	for _, t := range targetList {
 		targets[t.ID] = t
@@ -336,7 +353,7 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		sentAt := time.Now()
 		result.SentAt = &sentAt
 
-		if err := s.Mailer.Send(profile, tmpl, target, campaign.LureURL); err != nil {
+		if err := conn.Send(profile, tmpl, target, campaign.LureURL); err != nil {
 			result.Status = ResultFailed
 			s.Logger.Error("failed to send email", "campaign_id", campaign.ID, "email", target.Email, "error", err)
 		} else {

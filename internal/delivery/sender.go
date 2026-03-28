@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -20,14 +21,32 @@ type TemplateData struct {
 	URL       string
 }
 
-// Sender implements phishing.Mailer using go-mail for MIME construction
-// and SMTP delivery.
+// Sender implements phishing.Mailer by opening persistent SMTP connections.
 type Sender struct {
 	Logger *slog.Logger
 }
 
-// Send renders an email template for a target and sends it via SMTP.
-func (s *Sender) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, lureURL string) error {
+// Dial connects to the SMTP server described by profile and returns a
+// connection that can send multiple messages before being closed.
+func (s *Sender) Dial(profile *phishing.SMTPProfile) (phishing.MailConn, error) {
+	client, err := dialClient(profile)
+	if err != nil {
+		return nil, fmt.Errorf("creating SMTP client: %w", err)
+	}
+	if err := client.DialWithContext(context.Background()); err != nil {
+		return nil, fmt.Errorf("connecting to SMTP server: %w", err)
+	}
+	return &conn{client: client, logger: s.Logger}, nil
+}
+
+// conn wraps a connected go-mail client and implements phishing.MailConn.
+type conn struct {
+	client *mail.Client
+	logger *slog.Logger
+}
+
+// Send renders and sends a single email on the open connection.
+func (c *conn) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, lureURL string) error {
 	data := TemplateData{
 		FirstName: target.FirstName,
 		LastName:  target.LastName,
@@ -62,7 +81,6 @@ func (s *Sender) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplat
 		}
 		msg.SetBodyString(mail.TypeTextHTML, htmlBody)
 
-		// Add plain text alternative if available.
 		if tmpl.TextBody != "" {
 			textBody, err := renderText(tmpl.TextBody, data)
 			if err != nil {
@@ -78,20 +96,15 @@ func (s *Sender) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplat
 		msg.SetBodyString(mail.TypeTextPlain, textBody)
 	}
 
-	client, err := s.dialClient(profile)
-	if err != nil {
-		return fmt.Errorf("connecting to SMTP server: %w", err)
-	}
-	defer func() {
-		if err := client.Close(); err != nil {
-			s.Logger.Debug("SMTP close error", "error", err)
-		}
-	}()
-
-	return client.DialAndSend(msg)
+	return c.client.Send(msg)
 }
 
-func (s *Sender) dialClient(profile *phishing.SMTPProfile) (*mail.Client, error) {
+// Close terminates the SMTP connection.
+func (c *conn) Close() error {
+	return c.client.Close()
+}
+
+func dialClient(profile *phishing.SMTPProfile) (*mail.Client, error) {
 	opts := []mail.Option{
 		mail.WithPort(profile.Port),
 		mail.WithTLSPolicy(mail.TLSOpportunistic),
