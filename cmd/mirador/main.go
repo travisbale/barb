@@ -14,6 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/travisbale/mirador/internal/api"
+	"github.com/travisbale/mirador/internal/phishing"
 	"github.com/travisbale/mirador/internal/server"
 	"github.com/travisbale/mirador/internal/store/sqlite"
 )
@@ -84,12 +86,18 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 		return fmt.Errorf("loading embedded frontend: %w", err)
 	}
 
+	targetSvc := &phishing.TargetService{Store: sqlite.NewTargetStore(db)}
+
+	apiRouter := &api.Router{
+		Targets: targetSvc,
+		Version: Version,
+		Logger:  logger,
+	}
+
 	srv := server.New(server.Config{
 		Addr:     addr,
-		DB:       db,
+		API:      apiRouter,
 		Frontend: frontendDist,
-		Logger:   logger,
-		Version:  Version,
 	})
 
 	go func() {

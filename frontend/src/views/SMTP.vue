@@ -1,16 +1,14 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
+import AppButton from '../components/AppButton.vue'
+import EmptyState from '../components/EmptyState.vue'
 </script>
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-semibold">SMTP Profiles</h1>
-      <button class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors">
-        Add Profile
-      </button>
-    </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-      No SMTP profiles configured. Add one to send emails.
-    </div>
+    <PageHeader title="SMTP Profiles">
+      <AppButton>Add Profile</AppButton>
+    </PageHeader>
+    <EmptyState message="No SMTP profiles configured. Add one to send emails." />
   </div>
 </template>

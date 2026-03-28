@@ -41,5 +41,8 @@ lint:
 	@echo "Linting code..."
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
 
-dev:
-	@cd frontend && npm run dev
+dev-backend:
+	@go run ./cmd/mirador --debug
+
+dev-frontend:
+	@cd frontend && npm install --silent && npm run dev
