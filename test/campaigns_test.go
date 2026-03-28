@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -261,6 +262,107 @@ func TestCampaigns_StartRequiresDraft(t *testing.T) {
 	err := h.Client.StartCampaign(created.ID)
 	if err == nil {
 		t.Error("expected error starting a non-draft campaign")
+	}
+}
+
+func TestCampaigns_Cancel(t *testing.T) {
+	h := test.NewHarness(t)
+
+	// Create a campaign with many targets and slow send rate so it's
+	// still running when we cancel.
+	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Cancel Targets"})
+	for i := 0; i < 20; i++ {
+		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{
+			Email: fmt.Sprintf("user%d@acme.com", i),
+		})
+	}
+
+	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
+		Name:     "Cancel Template",
+		Subject:  "Test",
+		HTMLBody: "<p>{{.URL}}</p>",
+	})
+	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name:     "Cancel SMTP",
+		Host:     "smtp.example.com",
+		FromAddr: "it@example.com",
+	})
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Cancel Test",
+		TemplateID:    tmpl.ID,
+		SMTPProfileID: smtp.ID,
+		TargetListID:  list.ID,
+		SendRate:      1, // 1 per minute — very slow, so it's still running when we cancel
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	if err := h.Client.StartCampaign(created.ID); err != nil {
+		t.Fatalf("StartCampaign: %v", err)
+	}
+
+	// Give the goroutine a moment to start sending.
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancel it.
+	if err := h.Client.CancelCampaign(created.ID); err != nil {
+		t.Fatalf("CancelCampaign: %v", err)
+	}
+
+	// Verify the status is cancelled.
+	got, err := h.Client.GetCampaign(created.ID)
+	if err != nil {
+		t.Fatalf("GetCampaign: %v", err)
+	}
+	if got.Status != "cancelled" {
+		t.Errorf("Status = %q, want %q", got.Status, "cancelled")
+	}
+
+	// Not all emails should have been sent (campaign was interrupted).
+	if h.Mailer.Count() >= 20 {
+		t.Errorf("expected fewer than 20 emails sent (campaign was cancelled), got %d", h.Mailer.Count())
+	}
+}
+
+func TestCampaigns_CancelNotRunning(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Not Running",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+	})
+
+	// Cancel a draft campaign — should fail.
+	err := h.Client.CancelCampaign(created.ID)
+	if err == nil {
+		t.Error("expected error cancelling a draft campaign")
+	}
+}
+
+func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Already Done",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		SendRate:      600,
+	})
+
+	h.Client.StartCampaign(created.ID)
+	time.Sleep(1 * time.Second)
+
+	// Campaign should be completed by now.
+	err := h.Client.CancelCampaign(created.ID)
+	if err == nil {
+		t.Error("expected error cancelling a completed campaign")
 	}
 }
 
