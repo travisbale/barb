@@ -8,6 +8,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import AddButton from '../components/AddButton.vue'
 
 const templates = ref<EmailTemplate[]>([])
 const showCreate = ref(false)
@@ -49,14 +50,14 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="Email Templates" :subtitle="`${templates.length} templates`">
-      <AppButton @click="showCreate = true">+ New Template</AppButton>
+      <AddButton @click="showCreate = true">New Template</AddButton>
     </PageHeader>
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showCreate" class="p-4 mb-4">
-      <form @submit.prevent="create" class="flex flex-col gap-3">
-        <div class="grid grid-cols-2 gap-3">
+    <Card v-if="showCreate" class="p-7 mb-4">
+      <form @submit.prevent="create" class="flex flex-col gap-7">
+        <div class="grid grid-cols-2 gap-5">
           <AppInput v-model="form.name" placeholder="Template name (required)" required />
           <AppInput v-model="form.subject" placeholder="Email subject (required)" required />
         </div>

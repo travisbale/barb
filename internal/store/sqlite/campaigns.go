@@ -14,9 +14,9 @@ func NewCampaignStore(db *DB) *Campaigns { return &Campaigns{db: db} }
 
 func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
 	_, err := s.db.db.Exec(
-		`INSERT INTO campaigns (id, name, status, template_id, smtp_profile_id, target_list_id, lure_url, send_rate, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.LureURL, c.SendRate, c.CreatedAt.Unix(),
+		`INSERT INTO campaigns (id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, lure_url, send_rate, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.LureURL, c.SendRate, c.CreatedAt.Unix(),
 	)
 	if isConflict(err) {
 		return phishing.ErrConflict
@@ -26,7 +26,7 @@ func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
 
 func (s *Campaigns) GetCampaign(id string) (*phishing.Campaign, error) {
 	row := s.db.db.QueryRow(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, lure_url, send_rate, created_at, started_at, completed_at
+		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns WHERE id = ?`, id,
 	)
 	return scanCampaign(row)
@@ -54,7 +54,7 @@ func (s *Campaigns) DeleteCampaign(id string) error {
 
 func (s *Campaigns) ListCampaigns() ([]*phishing.Campaign, error) {
 	rows, err := s.db.db.Query(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, lure_url, send_rate, created_at, started_at, completed_at
+		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -118,8 +118,8 @@ func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, 
 	var out []*phishing.CampaignResult
 	for rows.Next() {
 		var (
-			r                              phishing.CampaignResult
-			sentAt, clickedAt, capturedAt   sql.NullInt64
+			r                             phishing.CampaignResult
+			sentAt, clickedAt, capturedAt sql.NullInt64
 		)
 		if err := rows.Scan(&r.ID, &r.CampaignID, &r.TargetID, &r.Email, &r.Status, &sentAt, &clickedAt, &capturedAt, &r.SessionID); err != nil {
 			return nil, err
@@ -134,11 +134,11 @@ func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, 
 
 func scanCampaign(row scanner) (*phishing.Campaign, error) {
 	var (
-		c                            phishing.Campaign
-		createdAt                    int64
-		startedAt, completedAt       sql.NullInt64
+		c                      phishing.Campaign
+		createdAt              int64
+		startedAt, completedAt sql.NullInt64
 	)
-	err := row.Scan(&c.ID, &c.Name, &c.Status, &c.TemplateID, &c.SMTPProfileID, &c.TargetListID, &c.LureURL, &c.SendRate, &createdAt, &startedAt, &completedAt)
+	err := row.Scan(&c.ID, &c.Name, &c.Status, &c.TemplateID, &c.SMTPProfileID, &c.TargetListID, &c.MiragedID, &c.Phishlet, &c.LureURL, &c.SendRate, &createdAt, &startedAt, &completedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, phishing.ErrNotFound
 	}

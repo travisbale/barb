@@ -1,21 +1,36 @@
 <script setup lang="ts">
-defineProps<{
+import { ref } from 'vue'
+
+const props = defineProps<{
   modelValue: string
+  label?: string
   required?: boolean
 }>()
 
 defineEmits<{
   'update:modelValue': [value: string]
 }>()
+
+const focused = ref(false)
+const isActive = () => focused.value || props.modelValue
 </script>
 
 <template>
   <div class="relative">
+    <label
+      v-if="label"
+      class="absolute left-3 font-mono transition-all duration-150 pointer-events-none z-10"
+      :class="isActive()
+        ? 'text-xs -top-2.5 px-1 bg-surface text-amber/70'
+        : 'text-sm top-2.5 text-dim'"
+    >{{ label }}</label>
     <select
       :value="modelValue"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+      @focus="focused = true"
+      @blur="focused = false"
       :required="required"
-      class="w-full px-3 py-2 pr-9 bg-bg border border-edge text-sm font-mono text-primary appearance-none focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors"
+      class="w-full px-3 pt-3 pb-2 pr-9 bg-surface border border-edge text-sm font-mono text-primary appearance-none focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors"
     >
       <slot />
     </select>

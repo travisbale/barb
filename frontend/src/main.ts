@@ -3,11 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import './style.css'
 
-// Default to dark mode on first visit.
-if (!localStorage.getItem('theme')) {
-  localStorage.setItem('theme', 'dark')
-  document.documentElement.classList.add('dark')
-}
+// Apply saved theme, defaulting to dark mode.
+const theme = localStorage.getItem('theme') ?? 'dark'
+localStorage.setItem('theme', theme)
+document.documentElement.classList.toggle('dark', theme === 'dark')
 
 const router = createRouter({
   history: createWebHistory(),

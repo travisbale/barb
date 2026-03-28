@@ -180,6 +180,36 @@ func (c *Client) DeleteSMTPProfile(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteSMTPProfile, "id", id))
 }
 
+// --- Miraged Connections ---
+
+func (c *Client) CreateMiraged(req CreateMiragedRequest) (*MiragedResponse, error) {
+	return send[MiragedResponse](c, http.MethodPost, RouteMiraged, req)
+}
+
+func (c *Client) ListMiraged() ([]MiragedResponse, error) {
+	resp, err := get[[]MiragedResponse](c, RouteMiraged)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) DeleteMiraged(id string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RouteMiragedInstance, "id", id))
+}
+
+func (c *Client) TestMiraged(id string) (*MiragedStatusResponse, error) {
+	return get[MiragedStatusResponse](c, ResolveRoute(RouteMiragedStatus, "id", id))
+}
+
+func (c *Client) ListMiragedPhishlets(id string) ([]MiragedPhishletResponse, error) {
+	resp, err := get[[]MiragedPhishletResponse](c, ResolveRoute(RouteMiragedPhishlets, "id", id))
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
 // --- System ---
 
 func (c *Client) Status() (*StatusResponse, error) {

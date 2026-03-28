@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     template_id     TEXT    NOT NULL REFERENCES email_templates(id),
     smtp_profile_id TEXT    NOT NULL REFERENCES smtp_profiles(id),
     target_list_id  TEXT    NOT NULL REFERENCES target_lists(id),
+    miraged_id      TEXT    NOT NULL DEFAULT '',
     phishlet        TEXT    NOT NULL DEFAULT '',
     lure_url        TEXT    NOT NULL DEFAULT '',
     send_rate       INTEGER NOT NULL DEFAULT 10,
@@ -66,3 +67,14 @@ CREATE TABLE IF NOT EXISTS campaign_results (
 
 CREATE INDEX IF NOT EXISTS idx_results_campaign ON campaign_results(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_results_email ON campaign_results(email);
+
+CREATE TABLE IF NOT EXISTS miraged_connections (
+    id              TEXT    PRIMARY KEY,
+    name            TEXT    NOT NULL,
+    address         TEXT    NOT NULL,
+    secret_hostname TEXT    NOT NULL,
+    cert_pem        BLOB    NOT NULL,
+    key_pem         BLOB    NOT NULL,
+    ca_cert_pem     BLOB    NOT NULL,
+    created_at      INTEGER NOT NULL
+);

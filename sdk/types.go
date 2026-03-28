@@ -91,6 +91,8 @@ type CreateCampaignRequest struct {
 	TemplateID    string `json:"template_id"`
 	SMTPProfileID string `json:"smtp_profile_id"`
 	TargetListID  string `json:"target_list_id"`
+	MiragedID     string `json:"miraged_id"`
+	Phishlet      string `json:"phishlet"`
 	LureURL       string `json:"lure_url"`
 	SendRate      int    `json:"send_rate"`
 }
@@ -102,6 +104,8 @@ type CampaignResponse struct {
 	TemplateID    string     `json:"template_id"`
 	SMTPProfileID string     `json:"smtp_profile_id"`
 	TargetListID  string     `json:"target_list_id"`
+	MiragedID     string     `json:"miraged_id"`
+	Phishlet      string     `json:"phishlet"`
 	LureURL       string     `json:"lure_url"`
 	SendRate      int        `json:"send_rate"`
 	CreatedAt     time.Time  `json:"created_at"`
@@ -119,6 +123,37 @@ type CampaignResultResponse struct {
 	ClickedAt  *time.Time `json:"clicked_at"`
 	CapturedAt *time.Time `json:"captured_at"`
 	SessionID  string     `json:"session_id,omitempty"`
+}
+
+// --- Miraged Connections ---
+
+type CreateMiragedRequest struct {
+	Name           string `json:"name"`
+	Address        string `json:"address"`
+	SecretHostname string `json:"secret_hostname"`
+	CertPEM        string `json:"cert_pem"`
+	KeyPEM         string `json:"key_pem"`
+	CACertPEM      string `json:"ca_cert_pem"`
+}
+
+type MiragedResponse struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Address        string    `json:"address"`
+	SecretHostname string    `json:"secret_hostname"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type MiragedStatusResponse struct {
+	Connected bool   `json:"connected"`
+	Version   string `json:"version,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type MiragedPhishletResponse struct {
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+	Enabled  bool   `json:"enabled"`
 }
 
 // --- System ---

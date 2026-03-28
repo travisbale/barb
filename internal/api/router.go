@@ -9,7 +9,17 @@ import (
 
 	"github.com/travisbale/mirador/internal/phishing"
 	"github.com/travisbale/mirador/sdk"
+	miragesdk "github.com/travisbale/mirage/sdk"
 )
+
+type miragedManager interface {
+	Create(conn *phishing.MiragedConnection) (*phishing.MiragedConnection, error)
+	Get(id string) (*phishing.MiragedConnection, error)
+	Delete(id string) error
+	List() ([]*phishing.MiragedConnection, error)
+	Client(id string) (*miragesdk.Client, error)
+	TestConnection(id string) error
+}
 
 type campaignManager interface {
 	Create(campaign *phishing.Campaign) (*phishing.Campaign, error)
@@ -48,6 +58,7 @@ type targetManager interface {
 
 // Router is the HTTP handler for the Mirador API.
 type Router struct {
+	Miraged   miragedManager
 	Campaigns campaignManager
 	Targets   targetManager
 	Templates templateManager
@@ -108,4 +119,11 @@ func (r *Router) registerRoutes() {
 	h("DELETE", sdk.RouteCampaign, r.deleteCampaign)
 	h("POST", sdk.RouteCampaignStart, r.startCampaign)
 	h("GET", sdk.RouteCampaignResults, r.listCampaignResults)
+
+	// Miraged connections
+	h("GET", sdk.RouteMiraged, r.listMiraged)
+	h("POST", sdk.RouteMiraged, r.createMiraged)
+	h("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
+	h("GET", sdk.RouteMiragedStatus, r.testMiraged)
+	h("GET", sdk.RouteMiragedPhishlets, r.listMiragedPhishlets)
 }

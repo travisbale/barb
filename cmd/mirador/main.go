@@ -106,7 +106,10 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 		Logger:    logger,
 	}
 
+	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
+
 	apiRouter := &api.Router{
+		Miraged:   miragedSvc,
 		Campaigns: campaignSvc,
 		Targets:   targetSvc,
 		Templates: templateSvc,

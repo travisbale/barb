@@ -34,6 +34,8 @@ type Campaign struct {
 	TemplateID    string
 	SMTPProfileID string
 	TargetListID  string
+	MiragedID     string
+	Phishlet      string
 	LureURL       string
 	SendRate      int
 	CreatedAt     time.Time

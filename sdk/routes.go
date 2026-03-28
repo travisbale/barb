@@ -24,6 +24,12 @@ const (
 	RouteSMTPProfiles = "/api/smtp-profiles"
 	RouteSMTPProfile  = "/api/smtp-profiles/{id}"
 
+	// Miraged connections
+	RouteMiraged          = "/api/miraged"
+	RouteMiragedInstance  = "/api/miraged/{id}"
+	RouteMiragedStatus    = "/api/miraged/{id}/status"
+	RouteMiragedPhishlets = "/api/miraged/{id}/phishlets"
+
 	// System
 	RouteStatus = "/api/status"
 )

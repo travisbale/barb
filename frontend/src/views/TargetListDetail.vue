@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { getTargetList, listTargets, addTarget, deleteTarget, importTargetsCSV, type TargetList, type Target } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import IconTrash from '../components/IconTrash.vue'
@@ -8,9 +8,10 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import AddButton from '../components/AddButton.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const route = useRoute()
-const router = useRouter()
 const id = route.params.id as string
 
 const list = ref<TargetList | null>(null)
@@ -77,32 +78,23 @@ onMounted(load)
 
 <template>
   <div>
-    <!-- Header with back nav -->
-    <div class="flex items-center gap-3 mb-8">
-      <button
-        @click="router.push('/targets')"
-        class="text-dim hover:text-amber font-mono text-sm transition-colors"
-      >&larr;</button>
-      <div class="flex-1">
-        <h1 class="text-lg font-mono font-semibold tracking-tight text-primary">
-          {{ list?.name ?? '...' }}
-        </h1>
-        <span class="text-xs text-dim font-mono">{{ targets.length }} targets</span>
-      </div>
-      <div class="flex gap-2">
-        <AppButton variant="secondary" :disabled="importing" @click="fileInput?.click()">
-          {{ importing ? 'Importing...' : 'Import CSV' }}
-        </AppButton>
-        <AppButton @click="showAdd = true">+ Add Target</AppButton>
-        <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="importCSV" />
-      </div>
-    </div>
+    <PageHeader
+      :title="list?.name ?? '...'"
+      :subtitle="`${targets.length} targets`"
+      :breadcrumbs="[{ label: 'Target Lists', to: '/targets' }, { label: list?.name ?? '...' }]"
+    >
+      <AppButton variant="secondary" :disabled="importing" @click="fileInput?.click()">
+        {{ importing ? 'Importing...' : 'Import CSV' }}
+      </AppButton>
+      <AddButton @click="showAdd = true">Add Target</AddButton>
+      <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="importCSV" />
+    </PageHeader>
 
     <ErrorBanner :message="error" />
 
     <!-- Add target form -->
-    <Card v-if="showAdd" class="p-4 mb-4">
-      <form @submit.prevent="add" class="grid grid-cols-2 gap-3">
+    <Card v-if="showAdd" class="p-7 mb-4">
+      <form @submit.prevent="add" class="grid grid-cols-2 gap-7">
         <AppInput v-model="form.email" type="email" placeholder="Email (required)" required class="col-span-2" />
         <AppInput v-model="form.first_name" placeholder="First name" />
         <AppInput v-model="form.last_name" placeholder="Last name" />

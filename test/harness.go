@@ -86,7 +86,10 @@ func NewHarness(t *testing.T) *Harness {
 		Logger:    logger,
 	}
 
+	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
+
 	apiRouter := &api.Router{
+		Miraged:   miragedSvc,
 		Campaigns: campaignSvc,
 		Targets:   targetSvc,
 		Templates: templateSvc,

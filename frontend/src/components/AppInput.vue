@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { ref } from 'vue'
+
+const props = defineProps<{
   modelValue: string
   type?: string
   placeholder?: string
@@ -13,28 +15,40 @@ defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const baseClass = 'px-3 py-2 bg-bg border border-edge text-sm font-mono text-primary placeholder-dim focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors leading-relaxed'
+const focused = ref(false)
+const isActive = () => focused.value || props.modelValue
 </script>
 
 <template>
-  <textarea
-    v-if="multiline"
-    :value="modelValue"
-    @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-    :placeholder="placeholder"
-    :required="required"
-    :autofocus="autofocus"
-    :rows="rows ?? 4"
-    :class="[baseClass, 'resize-y']"
-  ></textarea>
-  <input
-    v-else
-    :value="modelValue"
-    @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-    :type="type ?? 'text'"
-    :placeholder="placeholder"
-    :required="required"
-    :autofocus="autofocus"
-    :class="baseClass"
-  />
+  <div class="relative">
+    <label
+      v-if="placeholder"
+      class="absolute left-3 font-mono transition-all duration-150 pointer-events-none"
+      :class="isActive()
+        ? 'text-xs -top-2.5 px-1 bg-surface text-amber/70'
+        : 'text-sm top-2.5 text-dim'"
+    >{{ placeholder }}</label>
+    <textarea
+      v-if="multiline"
+      :value="modelValue"
+      @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+      :required="required"
+      :autofocus="autofocus"
+      :rows="rows ?? 4"
+      @focus="focused = true"
+      @blur="focused = false"
+      class="w-full px-3 pt-3 pb-2 bg-surface border border-edge text-sm font-mono text-primary focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors leading-relaxed resize-y"
+    ></textarea>
+    <input
+      v-else
+      :value="modelValue"
+      @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      :type="type ?? 'text'"
+      :required="required"
+      :autofocus="autofocus"
+      @focus="focused = true"
+      @blur="focused = false"
+      class="w-full px-3 pt-3 pb-2 bg-surface border border-edge text-sm font-mono text-primary focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors leading-relaxed"
+    />
+  </div>
 </template>

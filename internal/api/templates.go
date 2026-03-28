@@ -123,5 +123,8 @@ func isValidationError(err error) bool {
 		errors.Is(err, phishing.ErrHostRequired) ||
 		errors.Is(err, phishing.ErrFromAddrRequired) ||
 		errors.Is(err, phishing.ErrSubjectRequired) ||
-		errors.Is(err, phishing.ErrBodyRequired)
+		errors.Is(err, phishing.ErrBodyRequired) ||
+		errors.Is(err, phishing.ErrAddressRequired) ||
+		errors.Is(err, phishing.ErrSecretHostnameRequired) ||
+		errors.Is(err, phishing.ErrCertsRequired)
 }

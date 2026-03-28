@@ -9,6 +9,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
 const lists = ref<TargetList[]>([])
@@ -52,12 +53,12 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="Target Lists" :subtitle="`${lists.length} lists`">
-      <AppButton @click="showCreate = true">+ New List</AppButton>
+      <AddButton @click="showCreate = true">New List</AddButton>
     </PageHeader>
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showCreate" class="p-4 mb-4">
+    <Card v-if="showCreate" class="p-7 mb-4">
       <form @submit.prevent="create" class="flex gap-3 items-center">
         <AppInput v-model="newName" placeholder="List name..." autofocus class="flex-1" />
         <AppButton type="submit">Create</AppButton>

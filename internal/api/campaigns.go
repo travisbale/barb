@@ -34,6 +34,8 @@ func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
 		TemplateID:    body.TemplateID,
 		SMTPProfileID: body.SMTPProfileID,
 		TargetListID:  body.TargetListID,
+		MiragedID:     body.MiragedID,
+		Phishlet:      body.Phishlet,
 		LureURL:       body.LureURL,
 		SendRate:      body.SendRate,
 	}
@@ -120,6 +122,8 @@ func campaignToResponse(c *phishing.Campaign) sdk.CampaignResponse {
 		TemplateID:    c.TemplateID,
 		SMTPProfileID: c.SMTPProfileID,
 		TargetListID:  c.TargetListID,
+		MiragedID:     c.MiragedID,
+		Phishlet:      c.Phishlet,
 		LureURL:       c.LureURL,
 		SendRate:      c.SendRate,
 		CreatedAt:     c.CreatedAt,

@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import IconCampaign from './components/IconCampaign.vue'
+import IconTarget from './components/IconTarget.vue'
+import IconTemplate from './components/IconTemplate.vue'
+import IconSMTP from './components/IconSMTP.vue'
+import IconSettings from './components/IconSettings.vue'
 
 const nav = [
-  { to: '/campaigns', label: 'Campaigns', icon: '&#x25B6;' },
-  { to: '/targets', label: 'Targets', icon: '&#x25C9;' },
-  { to: '/templates', label: 'Templates', icon: '&#x25A1;' },
-  { to: '/smtp', label: 'SMTP', icon: '&#x25B7;' },
-  { to: '/settings', label: 'Settings', icon: '&#x2699;' },
+  { to: '/campaigns', label: 'Campaigns', icon: IconCampaign },
+  { to: '/targets', label: 'Targets', icon: IconTarget },
+  { to: '/templates', label: 'Templates', icon: IconTemplate },
+  { to: '/smtp', label: 'SMTP', icon: IconSMTP },
+  { to: '/settings', label: 'Miraged', icon: IconSettings },
 ]
 </script>
 
@@ -15,7 +20,7 @@ const nav = [
     <!-- Sidebar -->
     <nav class="w-52 bg-surface border-r border-edge flex flex-col">
       <div class="px-5 py-5 border-b border-edge">
-        <div class="font-mono text-sm font-bold tracking-widest text-amber uppercase">Mirador</div>
+        <div class="font-mono text-base font-bold tracking-widest text-amber uppercase">Mirador</div>
         <div class="font-mono text-xs text-dim mt-0.5 tracking-wider">Operations Console</div>
       </div>
 
@@ -24,10 +29,10 @@ const nav = [
           v-for="item in nav"
           :key="item.to"
           :to="item.to"
-          class="group flex items-center gap-3 px-3 py-2 text-sm font-mono text-muted hover:text-primary hover:bg-surface-hover transition-colors"
+          class="group flex items-center gap-3 px-3 py-2.5 text-sm font-mono text-muted hover:text-primary hover:bg-surface-hover transition-colors uppercase tracking-wide"
           active-class="!text-amber bg-amber-glow border-l-2 border-amber !pl-[10px]"
         >
-          <span class="text-xs opacity-50 group-hover:opacity-100 transition-opacity" v-html="item.icon"></span>
+          <component :is="item.icon" class="opacity-50 group-hover:opacity-100 transition-opacity" />
           {{ item.label }}
         </RouterLink>
       </div>

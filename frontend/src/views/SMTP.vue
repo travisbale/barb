@@ -8,6 +8,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import AddButton from '../components/AddButton.vue'
 
 const profiles = ref<SMTPProfile[]>([])
 const showCreate = ref(false)
@@ -59,13 +60,13 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="SMTP Profiles" :subtitle="`${profiles.length} profiles`">
-      <AppButton @click="showCreate = true">+ Add Profile</AppButton>
+      <AddButton @click="showCreate = true">Add Profile</AddButton>
     </PageHeader>
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showCreate" class="p-4 mb-4">
-      <form @submit.prevent="create" class="grid grid-cols-2 gap-3">
+    <Card v-if="showCreate" class="p-7 mb-4">
+      <form @submit.prevent="create" class="grid grid-cols-2 gap-7">
         <AppInput v-model="form.name" placeholder="Profile name (required)" required class="col-span-2" />
         <AppInput v-model="form.host" placeholder="SMTP host (required)" required />
         <AppInput v-model="form.port" placeholder="Port" type="number" />

@@ -4,7 +4,9 @@ import { useRouter } from 'vue-router'
 import {
   listCampaigns, createCampaign, deleteCampaign,
   listTargetLists, listTemplates, listSMTPProfiles,
+  listMiraged, listMiragedPhishlets,
   type Campaign, type TargetList, type EmailTemplate, type SMTPProfile,
+  type MiragedConnection, type MiragedPhishlet,
 } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -14,6 +16,7 @@ import AppSelect from '../components/AppSelect.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
 const campaigns = ref<Campaign[]>([])
@@ -24,8 +27,10 @@ const error = ref('')
 const targetLists = ref<TargetList[]>([])
 const templates = ref<EmailTemplate[]>([])
 const smtpProfiles = ref<SMTPProfile[]>([])
+const miragedConnections = ref<MiragedConnection[]>([])
+const phishlets = ref<MiragedPhishlet[]>([])
 
-const form = ref({ name: '', template_id: '', smtp_profile_id: '', target_list_id: '' })
+const form = ref({ name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '' })
 
 async function load() {
   try {
@@ -37,15 +42,29 @@ async function load() {
 
 async function openCreate() {
   try {
-    const [lists, tmpls, profiles] = await Promise.all([
+    const [lists, tmpls, profiles, connections] = await Promise.all([
       listTargetLists(),
       listTemplates(),
       listSMTPProfiles(),
+      listMiraged(),
     ])
     targetLists.value = lists ?? []
     templates.value = tmpls ?? []
     smtpProfiles.value = profiles ?? []
+    miragedConnections.value = connections ?? []
     showCreate.value = true
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function onMiragedChange(id: string) {
+  form.value.miraged_id = id
+  form.value.phishlet = ''
+  phishlets.value = []
+  if (!id) return
+  try {
+    phishlets.value = (await listMiragedPhishlets(id)) ?? []
   } catch (e: any) {
     error.value = e.message
   }
@@ -55,7 +74,7 @@ async function create() {
   try {
     const campaign = await createCampaign(form.value)
     campaigns.value.unshift(campaign)
-    form.value = { name: '', template_id: '', smtp_profile_id: '', target_list_id: '' }
+    form.value = { name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '' }
     showCreate.value = false
     router.push(`/campaigns/${campaign.id}`)
   } catch (e: any) {
@@ -85,29 +104,41 @@ onMounted(load)
 <template>
   <div>
     <PageHeader title="Campaigns" :subtitle="`${campaigns.length} campaigns`">
-      <AppButton @click="openCreate">+ New Campaign</AppButton>
+      <AddButton @click="openCreate">New Campaign</AddButton>
     </PageHeader>
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showCreate" class="p-5 mb-4">
-      <form @submit.prevent="create" class="flex flex-col gap-4">
+    <Card v-if="showCreate" class="p-7 mb-4">
+      <form @submit.prevent="create" class="flex flex-col gap-7">
         <AppInput v-model="form.name" placeholder="Campaign name (required)" required />
 
-        <div class="grid grid-cols-3 gap-3">
-          <AppSelect v-model="form.target_list_id" required>
-            <option value="" disabled>Target list...</option>
+        <div class="grid grid-cols-3 gap-5">
+          <AppSelect v-model="form.target_list_id" label="Target list" required>
+            <option value="" disabled></option>
             <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
           </AppSelect>
 
-          <AppSelect v-model="form.template_id" required>
-            <option value="" disabled>Email template...</option>
+          <AppSelect v-model="form.template_id" label="Email template" required>
+            <option value="" disabled></option>
             <option v-for="tmpl in templates" :key="tmpl.id" :value="tmpl.id">{{ tmpl.name }}</option>
           </AppSelect>
 
-          <AppSelect v-model="form.smtp_profile_id" required>
-            <option value="" disabled>SMTP profile...</option>
+          <AppSelect v-model="form.smtp_profile_id" label="SMTP profile" required>
+            <option value="" disabled></option>
             <option v-for="profile in smtpProfiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option>
+          </AppSelect>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5">
+          <AppSelect :modelValue="form.miraged_id" @update:modelValue="onMiragedChange" label="Miraged server">
+            <option value="">None (manual lure URL)</option>
+            <option v-for="conn in miragedConnections" :key="conn.id" :value="conn.id">{{ conn.name }}</option>
+          </AppSelect>
+
+          <AppSelect v-model="form.phishlet" label="Phishlet" :disabled="!form.miraged_id">
+            <option value="" disabled></option>
+            <option v-for="p in phishlets" :key="p.name" :value="p.name">{{ p.name }}{{ p.enabled ? '' : ' (disabled)' }}</option>
           </AppSelect>
         </div>
 

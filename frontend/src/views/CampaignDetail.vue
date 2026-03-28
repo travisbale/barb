@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { getCampaign, startCampaign, listCampaignResults, type Campaign, type CampaignResult } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const route = useRoute()
-const router = useRouter()
 const id = route.params.id as string
 
 const campaign = ref<Campaign | null>(null)
@@ -81,15 +81,11 @@ onUnmounted(stopPolling)
 
 <template>
   <div>
-    <div class="flex items-center gap-3 mb-8">
-      <button
-        @click="router.push('/campaigns')"
-        class="text-dim hover:text-amber font-mono text-sm transition-colors"
-      >&larr;</button>
-      <div class="flex-1">
-        <h1 class="text-xl font-mono font-semibold tracking-tight text-primary">
-          {{ campaign?.name ?? '...' }}
-        </h1>
+    <PageHeader
+      :title="campaign?.name ?? '...'"
+      :breadcrumbs="[{ label: 'Campaigns', to: '/campaigns' }, { label: campaign?.name ?? '...' }]"
+    >
+      <template #subtitle>
         <div class="flex items-center gap-3 mt-1">
           <span class="text-xs font-mono uppercase tracking-wider" :class="{
             'text-dim': campaign?.status === 'draft',
@@ -99,11 +95,11 @@ onUnmounted(stopPolling)
           }">{{ campaign?.status }}</span>
           <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
         </div>
-      </div>
+      </template>
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
         {{ starting ? 'Starting...' : 'Start Campaign' }}
       </AppButton>
-    </div>
+    </PageHeader>
 
     <ErrorBanner :message="error" />
 

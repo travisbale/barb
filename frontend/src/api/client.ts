@@ -156,6 +156,8 @@ export interface Campaign {
   template_id: string
   smtp_profile_id: string
   target_list_id: string
+  miraged_id: string
+  phishlet: string
   lure_url: string
   send_rate: number
   created_at: string
@@ -184,6 +186,8 @@ export function createCampaign(campaign: {
   template_id: string
   smtp_profile_id: string
   target_list_id: string
+  miraged_id?: string
+  phishlet?: string
   lure_url?: string
   send_rate?: number
 }): Promise<Campaign> {
@@ -204,6 +208,55 @@ export function deleteCampaign(id: string): Promise<void> {
 
 export function listCampaignResults(id: string): Promise<CampaignResult[]> {
   return request('GET', `/campaigns/${id}/results`)
+}
+
+// --- Miraged Connections ---
+
+export interface MiragedConnection {
+  id: string
+  name: string
+  address: string
+  secret_hostname: string
+  created_at: string
+}
+
+export interface MiragedStatus {
+  connected: boolean
+  version?: string
+  error?: string
+}
+
+export interface MiragedPhishlet {
+  name: string
+  hostname: string
+  enabled: boolean
+}
+
+export function listMiraged(): Promise<MiragedConnection[]> {
+  return request('GET', '/miraged')
+}
+
+export function createMiraged(conn: {
+  name: string
+  address: string
+  secret_hostname: string
+  cert_pem: string
+  key_pem: string
+  ca_cert_pem: string
+}): Promise<MiragedConnection> {
+  return request('POST', '/miraged', conn)
+}
+
+export function deleteMiraged(id: string): Promise<void> {
+  return request('DELETE', `/miraged/${id}`)
+}
+
+export function testMiraged(id: string): Promise<MiragedStatus> {
+  return request('GET', `/miraged/${id}/status`)
+}
+
+export function listMiragedPhishlets(id: string): Promise<MiragedPhishlet[]> {
+  return request('GET', `/miraged/${id}/phishlets`)
 }
 
 // --- System ---
