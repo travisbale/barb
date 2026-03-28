@@ -28,12 +28,12 @@ type Sender struct {
 
 // Dial connects to the SMTP server described by profile and returns a
 // connection that can send multiple messages before being closed.
-func (s *Sender) Dial(profile *phishing.SMTPProfile) (phishing.MailConn, error) {
+func (s *Sender) Dial(ctx context.Context, profile *phishing.SMTPProfile) (phishing.MailConn, error) {
 	client, err := dialClient(profile)
 	if err != nil {
 		return nil, fmt.Errorf("creating SMTP client: %w", err)
 	}
-	if err := client.DialWithContext(context.Background()); err != nil {
+	if err := client.DialWithContext(ctx); err != nil {
 		return nil, fmt.Errorf("connecting to SMTP server: %w", err)
 	}
 	return &conn{client: client, logger: s.Logger}, nil

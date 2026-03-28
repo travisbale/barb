@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS campaign_results (
 );
 
 CREATE INDEX IF NOT EXISTS idx_results_campaign ON campaign_results(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_results_email ON campaign_results(email);
+CREATE INDEX IF NOT EXISTS idx_results_campaign_email ON campaign_results(campaign_id, email);
+CREATE INDEX IF NOT EXISTS idx_campaigns_miraged_status ON campaigns(miraged_id, status);
 
 CREATE TABLE IF NOT EXISTS miraged_connections (
     id              TEXT    PRIMARY KEY,

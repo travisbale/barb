@@ -26,12 +26,15 @@ const (
 	CampaignCancelled CampaignStatus = "cancelled"
 )
 
+// ResultStatus represents the delivery state of a campaign result.
+type ResultStatus = string
+
 // Result status constants.
 const (
-	ResultPending  = "pending"
-	ResultSent     = "sent"
-	ResultFailed   = "failed"
-	ResultCaptured = "captured"
+	ResultPending  ResultStatus = "pending"
+	ResultSent     ResultStatus = "sent"
+	ResultFailed   ResultStatus = "failed"
+	ResultCaptured ResultStatus = "captured"
 )
 
 // Campaign ties together a target list, email template, and SMTP profile
@@ -103,7 +106,7 @@ type MailConn interface {
 
 // Mailer opens SMTP connections for sending email.
 type Mailer interface {
-	Dial(profile *SMTPProfile) (MailConn, error)
+	Dial(ctx context.Context, profile *SMTPProfile) (MailConn, error)
 }
 
 // CampaignService manages campaign lifecycle.
@@ -189,6 +192,11 @@ func (s *CampaignService) Start(id string) error {
 
 	go func() {
 		defer s.untrackRunning(campaign.ID)
+		defer func() {
+			if r := recover(); r != nil {
+				s.Logger.Error("campaign goroutine panicked", "campaign_id", campaign.ID, "panic", r)
+			}
+		}()
 		s.run(ctx, campaign)
 	}()
 	return nil
@@ -313,7 +321,7 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		return
 	}
 
-	conn, err := s.Mailer.Dial(profile)
+	conn, err := s.Mailer.Dial(ctx, profile)
 	if err != nil {
 		s.Logger.Error("failed to connect to SMTP server", "campaign_id", campaign.ID, "error", err)
 		return

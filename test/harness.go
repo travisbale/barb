@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -28,7 +29,7 @@ type MockEmail struct {
 	Subject string
 }
 
-func (m *MockMailer) Dial(_ *phishing.SMTPProfile) (phishing.MailConn, error) {
+func (m *MockMailer) Dial(_ context.Context, _ *phishing.SMTPProfile) (phishing.MailConn, error) {
 	return &mockConn{mailer: m}, nil
 }
 
