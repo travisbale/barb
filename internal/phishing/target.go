@@ -34,6 +34,7 @@ type targetStore interface {
 	DeleteList(id string) error
 	ListLists() ([]*TargetList, error)
 	CreateTarget(target *Target) error
+	CreateTargets(targets []*Target) error
 	ListTargets(listID string) ([]*Target, error)
 	DeleteTarget(id string) error
 }
@@ -113,35 +114,41 @@ func (s *TargetService) ImportCSV(listID string, r io.Reader) (int, error) {
 		return 0, fmt.Errorf("CSV must have an 'email' column")
 	}
 
-	count := 0
+	var targets []*Target
+	rowNum := 1
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
+		rowNum++
 		if err != nil {
-			return count, fmt.Errorf("reading CSV row %d: %w", count+2, err)
+			return 0, fmt.Errorf("reading CSV row %d: %w", rowNum, err)
 		}
 
-		target := &Target{
-			Email:      getCol(record, colMap, "email"),
+		email := getCol(record, colMap, "email")
+		if email == "" {
+			continue
+		}
+
+		targets = append(targets, &Target{
+			ID:         uuid.New().String(),
+			ListID:     listID,
+			Email:      email,
 			FirstName:  getCol(record, colMap, "first_name"),
 			LastName:   getCol(record, colMap, "last_name"),
 			Department: getCol(record, colMap, "department"),
 			Position:   getCol(record, colMap, "position"),
-		}
-
-		if target.Email == "" {
-			continue
-		}
-
-		if err := s.AddTarget(listID, target); err != nil {
-			return count, fmt.Errorf("importing row %d: %w", count+2, err)
-		}
-		count++
+		})
 	}
 
-	return count, nil
+	if len(targets) > 0 {
+		if err := s.Store.CreateTargets(targets); err != nil {
+			return 0, fmt.Errorf("importing targets: %w", err)
+		}
+	}
+
+	return len(targets), nil
 }
 
 // mapColumns maps normalized header names to column indices.

@@ -67,6 +67,26 @@ func (s *Targets) CreateTarget(target *phishing.Target) error {
 	return err
 }
 
+func (s *Targets) CreateTargets(targets []*phishing.Target) error {
+	return s.db.WithTx(func(tx *sql.Tx) error {
+		stmt, err := tx.Prepare(
+			`INSERT INTO targets (id, list_id, email, first_name, last_name, department, position)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		)
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+
+		for _, t := range targets {
+			if _, err := stmt.Exec(t.ID, t.ListID, t.Email, t.FirstName, t.LastName, t.Department, t.Position); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (s *Targets) ListTargets(listID string) ([]*phishing.Target, error) {
 	rows, err := s.db.db.Query(
 		`SELECT id, list_id, email, first_name, last_name, department, position
