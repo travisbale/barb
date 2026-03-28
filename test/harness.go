@@ -77,16 +77,17 @@ func NewHarness(t *testing.T) *Harness {
 	smtpSvc := &phishing.SMTPService{Store: smtpStore}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
+	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
+
 	campaignSvc := &phishing.CampaignService{
 		Store:     sqlite.NewCampaignStore(db),
 		Targets:   targetStore,
 		Templates: templateStore,
 		SMTP:      smtpStore,
+		Miraged:   miragedSvc,
 		Mailer:    mockMailer,
 		Logger:    logger,
 	}
-
-	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
 
 	apiRouter := &api.Router{
 		Miraged:   miragedSvc,

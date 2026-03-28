@@ -97,16 +97,24 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 	targetSvc := &phishing.TargetService{Store: targetStore}
 	templateSvc := &phishing.TemplateService{Store: templateStore}
 	smtpSvc := &phishing.SMTPService{Store: smtpStore}
+	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
+
+	monitor := &phishing.SessionMonitor{
+		Campaigns: sqlite.NewCampaignStore(db),
+		Miraged:   miragedSvc,
+		Logger:    logger,
+	}
+
 	campaignSvc := &phishing.CampaignService{
 		Store:     sqlite.NewCampaignStore(db),
 		Targets:   targetStore,
 		Templates: templateStore,
 		SMTP:      smtpStore,
+		Miraged:   miragedSvc,
+		Monitor:   monitor,
 		Mailer:    &delivery.Sender{Logger: logger},
 		Logger:    logger,
 	}
-
-	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
 
 	apiRouter := &api.Router{
 		Miraged:   miragedSvc,

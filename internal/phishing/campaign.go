@@ -6,7 +6,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	miragesdk "github.com/travisbale/mirage/sdk"
 )
+
+// clientProvider constructs Mirage SDK clients from stored connection data.
+type clientProvider interface {
+	Client(id string) (*miragesdk.Client, error)
+}
 
 // CampaignStatus represents the lifecycle state of a campaign.
 type CampaignStatus string
@@ -95,6 +101,8 @@ type CampaignService struct {
 	Targets   targetStore
 	Templates templateStore
 	SMTP      smtpStore
+	Miraged   clientProvider
+	Monitor   *SessionMonitor
 	Mailer    Mailer
 	Logger    *slog.Logger
 }
@@ -166,8 +174,57 @@ func (s *CampaignService) Start(id string) error {
 	return nil
 }
 
-// run loads campaign dependencies and sends emails at the configured rate.
+// run orchestrates the campaign: creates the lure, sends emails, and marks complete.
 func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
+	if err := s.createLure(campaign); err != nil {
+		return
+	}
+	if err := s.activate(campaign); err != nil {
+		return
+	}
+
+	if campaign.MiragedID != "" && s.Monitor != nil {
+		go s.Monitor.Watch(ctx, campaign.MiragedID)
+	}
+
+	s.sendEmails(ctx, campaign)
+	s.complete(campaign)
+}
+
+func (s *CampaignService) createLure(campaign *Campaign) error {
+	if campaign.MiragedID == "" || campaign.Phishlet == "" || s.Miraged == nil {
+		return nil
+	}
+	client, err := s.Miraged.Client(campaign.MiragedID)
+	if err != nil {
+		s.Logger.Error("failed to connect to miraged", "error", err)
+		return err
+	}
+	lure, err := client.CreateLure(miragesdk.CreateLureRequest{
+		Phishlet:    campaign.Phishlet,
+		RedirectURL: campaign.LureURL,
+	})
+	if err != nil {
+		s.Logger.Error("failed to create lure", "error", err)
+		return err
+	}
+	campaign.LureURL = lure.URL
+	s.Logger.Info("lure created", "campaign_id", campaign.ID, "lure_url", lure.URL)
+	return nil
+}
+
+func (s *CampaignService) activate(campaign *Campaign) error {
+	now := time.Now()
+	campaign.Status = CampaignActive
+	campaign.StartedAt = &now
+	if err := s.Store.UpdateCampaign(campaign); err != nil {
+		s.Logger.Error("failed to activate campaign", "error", err)
+		return err
+	}
+	return nil
+}
+
+func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 	profile, err := s.SMTP.GetProfile(campaign.SMTPProfileID)
 	if err != nil {
 		s.Logger.Error("failed to load SMTP profile", "error", err)
@@ -194,14 +251,6 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 		targets[t.ID] = t
 	}
 
-	now := time.Now()
-	campaign.Status = CampaignActive
-	campaign.StartedAt = &now
-	if err := s.Store.UpdateCampaign(campaign); err != nil {
-		s.Logger.Error("failed to update campaign status", "error", err)
-		return
-	}
-
 	interval := time.Minute / time.Duration(max(campaign.SendRate, 1))
 
 	for i, result := range results {
@@ -209,7 +258,6 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 			continue
 		}
 
-		// Throttle between sends (not before the first).
 		if i > 0 {
 			select {
 			case <-ctx.Done():
@@ -239,7 +287,9 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 			s.Logger.Error("failed to update result", "error", err)
 		}
 	}
+}
 
+func (s *CampaignService) complete(campaign *Campaign) {
 	completedAt := time.Now()
 	campaign.Status = CampaignCompleted
 	campaign.CompletedAt = &completedAt
