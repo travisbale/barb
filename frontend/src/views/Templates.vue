@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { listTemplates, createTemplate, deleteTemplate, type EmailTemplate } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
+import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -72,16 +73,16 @@ onMounted(load)
 
     <Card v-else-if="templates.length > 0">
       <div
-        v-for="(t, i) in templates"
-        :key="t.id"
+        v-for="(tmpl, i) in templates"
+        :key="tmpl.id"
         :style="{ animationDelay: `${i * 30}ms` }"
         class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover transition-colors"
       >
         <div>
-          <div class="text-sm font-medium text-primary">{{ t.name }}</div>
-          <div class="text-xs text-dim font-mono mt-0.5">Subject: {{ t.subject }}</div>
+          <div class="text-sm font-medium text-primary">{{ tmpl.name }}</div>
+          <div class="text-xs text-dim font-mono mt-0.5">Subject: {{ tmpl.subject }}</div>
         </div>
-        <AppButton variant="danger" @click="remove(t.id)">Del</AppButton>
+        <button @click="remove(tmpl.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
       </div>
     </Card>
   </div>

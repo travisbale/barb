@@ -194,6 +194,10 @@ export function getCampaign(id: string): Promise<Campaign> {
   return request('GET', `/campaigns/${id}`)
 }
 
+export function startCampaign(id: string): Promise<void> {
+  return request('POST', `/campaigns/${id}/start`)
+}
+
 export function deleteCampaign(id: string): Promise<void> {
   return request('DELETE', `/campaigns/${id}`)
 }

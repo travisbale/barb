@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getTargetList, listTargets, addTarget, deleteTarget, importTargetsCSV, type TargetList, type Target } from '../api/client'
 import AppButton from '../components/AppButton.vue'
+import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -82,24 +83,22 @@ onMounted(load)
         @click="router.push('/targets')"
         class="text-dim hover:text-amber font-mono text-sm transition-colors"
       >&larr;</button>
-      <div>
+      <div class="flex-1">
         <h1 class="text-lg font-mono font-semibold tracking-tight text-primary">
           {{ list?.name ?? '...' }}
         </h1>
         <span class="text-xs text-dim font-mono">{{ targets.length }} targets</span>
       </div>
+      <div class="flex gap-2">
+        <AppButton variant="secondary" :disabled="importing" @click="fileInput?.click()">
+          {{ importing ? 'Importing...' : 'Import CSV' }}
+        </AppButton>
+        <AppButton @click="showAdd = true">+ Add Target</AppButton>
+        <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="importCSV" />
+      </div>
     </div>
 
     <ErrorBanner :message="error" />
-
-    <!-- Actions -->
-    <div class="mb-4 flex gap-2">
-      <AppButton @click="showAdd = true">+ Add Target</AppButton>
-      <AppButton variant="secondary" :disabled="importing" @click="fileInput?.click()">
-        {{ importing ? 'Importing...' : 'Import CSV' }}
-      </AppButton>
-      <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="importCSV" />
-    </div>
 
     <!-- Add target form -->
     <Card v-if="showAdd" class="p-4 mb-4">
@@ -132,17 +131,17 @@ onMounted(load)
         </thead>
         <tbody>
           <tr
-            v-for="(t, i) in targets"
-            :key="t.id"
+            v-for="(target, i) in targets"
+            :key="target.id"
             :style="{ animationDelay: `${i * 20}ms` }"
             class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
           >
-            <td class="px-4 py-2.5 text-primary">{{ t.email }}</td>
-            <td class="px-4 py-2.5 text-muted">{{ [t.first_name, t.last_name].filter(Boolean).join(' ') || '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ t.department || '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ t.position || '—' }}</td>
+            <td class="px-4 py-2.5 text-primary">{{ target.email }}</td>
+            <td class="px-4 py-2.5 text-muted">{{ [target.first_name, target.last_name].filter(Boolean).join(' ') || '—' }}</td>
+            <td class="px-4 py-2.5 text-dim">{{ target.department || '—' }}</td>
+            <td class="px-4 py-2.5 text-dim">{{ target.position || '—' }}</td>
             <td class="px-4 py-2.5 text-right">
-              <AppButton variant="danger" @click="remove(t.id)">Del</AppButton>
+              <button @click="remove(target.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
             </td>
           </tr>
         </tbody>

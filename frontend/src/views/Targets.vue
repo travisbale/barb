@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { listTargetLists, createTargetList, deleteTargetList, type TargetList } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
+import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -81,7 +82,7 @@ onMounted(load)
             <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(list.created_at).toLocaleDateString() }}</div>
           </div>
         </div>
-        <AppButton variant="danger" @click.stop="remove(list.id)">Remove</AppButton>
+        <button @click.stop="remove(list.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
       </div>
     </Card>
   </div>

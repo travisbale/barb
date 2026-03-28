@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { listSMTPProfiles, createSMTPProfile, deleteSMTPProfile, type SMTPProfile } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
+import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -93,18 +94,18 @@ onMounted(load)
         </thead>
         <tbody>
           <tr
-            v-for="(p, i) in profiles"
-            :key="p.id"
+            v-for="(profile, i) in profiles"
+            :key="profile.id"
             :style="{ animationDelay: `${i * 20}ms` }"
             class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
           >
-            <td class="px-4 py-2.5 text-primary">{{ p.name }}</td>
-            <td class="px-4 py-2.5 text-muted">{{ p.host }}:{{ p.port }}</td>
+            <td class="px-4 py-2.5 text-primary">{{ profile.name }}</td>
+            <td class="px-4 py-2.5 text-muted">{{ profile.host }}:{{ profile.port }}</td>
             <td class="px-4 py-2.5 text-muted">
-              {{ p.from_name ? `${p.from_name} <${p.from_addr}>` : p.from_addr }}
+              {{ profile.from_name ? `${profile.from_name} <${profile.from_addr}>` : profile.from_addr }}
             </td>
             <td class="px-4 py-2.5 text-right">
-              <AppButton variant="danger" @click="remove(p.id)">Del</AppButton>
+              <button @click="remove(profile.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
             </td>
           </tr>
         </tbody>

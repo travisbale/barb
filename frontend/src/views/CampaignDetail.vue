@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getCampaign, listCampaignResults, type Campaign, type CampaignResult } from '../api/client'
+import { getCampaign, startCampaign, listCampaignResults, type Campaign, type CampaignResult } from '../api/client'
+import AppButton from '../components/AppButton.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
@@ -13,6 +14,10 @@ const id = route.params.id as string
 const campaign = ref<Campaign | null>(null)
 const results = ref<CampaignResult[]>([])
 const error = ref('')
+const starting = ref(false)
+
+const isDraft = computed(() => campaign.value?.status === 'draft')
+const isActive = computed(() => campaign.value?.status === 'active')
 
 async function load() {
   try {
@@ -23,14 +28,55 @@ async function load() {
   }
 }
 
+async function start() {
+  starting.value = true
+  error.value = ''
+  try {
+    await startCampaign(id)
+    await load()
+    startPolling()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    starting.value = false
+  }
+}
+
+// Auto-refresh while the campaign is active.
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+function startPolling() {
+  stopPolling()
+  pollInterval = setInterval(async () => {
+    await load()
+    if (!isActive.value) stopPolling()
+  }, 2000)
+}
+
+function stopPolling() {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
 const statusColor: Record<string, string> = {
   pending: 'text-dim',
   sent: 'text-muted',
+  failed: 'text-danger',
   clicked: 'text-amber',
   captured: 'text-teal',
 }
 
-onMounted(load)
+const sentCount = computed(() => results.value.filter(result => result.status !== 'pending').length)
+const totalCount = computed(() => results.value.length)
+
+onMounted(async () => {
+  await load()
+  if (isActive.value) startPolling()
+})
+
+onUnmounted(stopPolling)
 </script>
 
 <template>
@@ -40,7 +86,7 @@ onMounted(load)
         @click="router.push('/campaigns')"
         class="text-dim hover:text-amber font-mono text-sm transition-colors"
       >&larr;</button>
-      <div>
+      <div class="flex-1">
         <h1 class="text-xl font-mono font-semibold tracking-tight text-primary">
           {{ campaign?.name ?? '...' }}
         </h1>
@@ -51,9 +97,12 @@ onMounted(load)
             'text-amber': campaign?.status === 'paused',
             'text-muted': campaign?.status === 'completed',
           }">{{ campaign?.status }}</span>
-          <span class="text-xs text-dim font-mono">{{ results.length }} targets</span>
+          <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
         </div>
       </div>
+      <AppButton v-if="isDraft" :disabled="starting" @click="start">
+        {{ starting ? 'Starting...' : 'Start Campaign' }}
+      </AppButton>
     </div>
 
     <ErrorBanner :message="error" />
@@ -73,20 +122,20 @@ onMounted(load)
         </thead>
         <tbody>
           <tr
-            v-for="(r, i) in results"
-            :key="r.id"
+            v-for="(result, i) in results"
+            :key="result.id"
             :style="{ animationDelay: `${i * 20}ms` }"
             class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
           >
-            <td class="px-4 py-2.5 text-primary">{{ r.email }}</td>
+            <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
             <td class="px-4 py-2.5">
-              <span :class="statusColor[r.status] ?? 'text-dim'" class="uppercase text-xs tracking-wider">
-                {{ r.status }}
+              <span :class="statusColor[result.status] ?? 'text-dim'" class="uppercase text-xs tracking-wider">
+                {{ result.status }}
               </span>
             </td>
-            <td class="px-4 py-2.5 text-dim">{{ r.sent_at ? new Date(r.sent_at).toLocaleString() : '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ r.clicked_at ? new Date(r.clicked_at).toLocaleString() : '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ r.captured_at ? new Date(r.captured_at).toLocaleString() : '—' }}</td>
+            <td class="px-4 py-2.5 text-dim">{{ result.sent_at ? new Date(result.sent_at).toLocaleString() : '—' }}</td>
+            <td class="px-4 py-2.5 text-dim">{{ result.clicked_at ? new Date(result.clicked_at).toLocaleString() : '—' }}</td>
+            <td class="px-4 py-2.5 text-dim">{{ result.captured_at ? new Date(result.captured_at).toLocaleString() : '—' }}</td>
           </tr>
         </tbody>
       </table>
