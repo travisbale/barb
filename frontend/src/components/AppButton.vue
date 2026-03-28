@@ -9,12 +9,12 @@ defineProps<{
   <button
     :disabled="disabled"
     :class="[
-      'px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50',
+      'px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed',
       {
-        'bg-indigo-500 hover:bg-indigo-600 text-white': variant === 'primary' || !variant,
-        'border border-gray-300 hover:bg-gray-50 text-gray-700': variant === 'secondary',
-        'text-gray-500 hover:text-gray-700': variant === 'ghost',
-        'text-gray-400 hover:text-red-500': variant === 'danger',
+        'bg-amber text-bg hover:bg-amber-dim': variant === 'primary' || !variant,
+        'border border-edge text-muted hover:text-amber hover:border-amber/30 bg-transparent': variant === 'secondary',
+        'text-muted hover:text-amber bg-transparent': variant === 'ghost',
+        'text-dim hover:text-danger bg-transparent': variant === 'danger',
       },
     ]"
   >

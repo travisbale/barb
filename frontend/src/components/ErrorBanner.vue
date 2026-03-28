@@ -5,7 +5,8 @@ defineProps<{
 </script>
 
 <template>
-  <div v-if="message" class="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-3 py-2.5 mb-4">
-    {{ message }}
+  <div v-if="message" class="border border-danger/30 bg-danger-dim px-4 py-2.5 mb-4 flex items-center gap-2">
+    <span class="text-danger text-sm">&#x25cf;</span>
+    <span class="text-danger text-sm font-mono">{{ message }}</span>
   </div>
 </template>

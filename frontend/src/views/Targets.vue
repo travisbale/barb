@@ -50,34 +50,38 @@ onMounted(load)
 
 <template>
   <div>
-    <PageHeader title="Target Lists">
-      <AppButton @click="showCreate = true">New List</AppButton>
+    <PageHeader title="Target Lists" :subtitle="`${lists.length} lists`">
+      <AppButton @click="showCreate = true">+ New List</AppButton>
     </PageHeader>
 
     <ErrorBanner :message="error" />
 
     <Card v-if="showCreate" class="p-4 mb-4">
-      <form @submit.prevent="create" class="flex gap-3">
-        <AppInput v-model="newName" placeholder="List name" autofocus class="flex-1" />
+      <form @submit.prevent="create" class="flex gap-3 items-center">
+        <AppInput v-model="newName" placeholder="List name..." autofocus class="flex-1" />
         <AppButton type="submit">Create</AppButton>
         <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
       </form>
     </Card>
 
-    <EmptyState v-if="lists.length === 0 && !showCreate" message="No target lists yet. Create one to get started." />
+    <EmptyState v-if="lists.length === 0 && !showCreate" message="No target lists. Create one to begin." />
 
-    <Card v-else-if="lists.length > 0" class="divide-y divide-gray-200">
+    <Card v-else-if="lists.length > 0">
       <div
-        v-for="list in lists"
+        v-for="(list, i) in lists"
         :key="list.id"
-        class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer"
+        :style="{ animationDelay: `${i * 30}ms` }"
+        class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
         @click="router.push(`/targets/${list.id}`)"
       >
-        <div>
-          <div class="text-sm font-medium">{{ list.name }}</div>
-          <div class="text-xs text-gray-400">{{ new Date(list.created_at).toLocaleDateString() }}</div>
+        <div class="flex items-center gap-3">
+          <span class="text-amber text-xs font-mono">&#x25C9;</span>
+          <div>
+            <div class="text-sm font-medium text-gray-200">{{ list.name }}</div>
+            <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(list.created_at).toLocaleDateString() }}</div>
+          </div>
         </div>
-        <AppButton variant="danger" @click.stop="remove(list.id)">Delete</AppButton>
+        <AppButton variant="danger" @click.stop="remove(list.id)">Remove</AppButton>
       </div>
     </Card>
   </div>

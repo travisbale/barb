@@ -6,9 +6,9 @@ import EmptyState from '../components/EmptyState.vue'
 
 <template>
   <div>
-    <PageHeader title="Email Templates">
-      <AppButton>New Template</AppButton>
+    <PageHeader title="Email Templates" subtitle="Reusable message templates">
+      <AppButton>+ New Template</AppButton>
     </PageHeader>
-    <EmptyState message="No email templates yet. Create one to get started." />
+    <EmptyState message="No templates. Create one to compose phishing emails." />
   </div>
 </template>

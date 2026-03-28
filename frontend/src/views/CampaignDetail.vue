@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import EmptyState from '../components/EmptyState.vue'
 
 const route = useRoute()
 const id = route.params.id
@@ -7,9 +8,10 @@ const id = route.params.id
 
 <template>
   <div>
-    <h1 class="text-2xl font-semibold mb-6">Campaign {{ id }}</h1>
-    <div class="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-      Campaign details will be shown here.
+    <div class="mb-8">
+      <h1 class="text-lg font-mono font-semibold tracking-tight text-gray-100">Campaign {{ id }}</h1>
+      <p class="text-xs text-dim font-mono mt-0.5">Campaign details</p>
     </div>
+    <EmptyState message="Campaign view coming soon." />
   </div>
 </template>

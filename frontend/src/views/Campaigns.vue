@@ -6,9 +6,9 @@ import EmptyState from '../components/EmptyState.vue'
 
 <template>
   <div>
-    <PageHeader title="Campaigns">
-      <AppButton>New Campaign</AppButton>
+    <PageHeader title="Campaigns" subtitle="Active operations">
+      <AppButton>+ New Campaign</AppButton>
     </PageHeader>
-    <EmptyState message="No campaigns yet. Create one to get started." />
+    <EmptyState message="No campaigns. Create one to begin an operation." />
   </div>
 </template>

@@ -6,9 +6,9 @@ import EmptyState from '../components/EmptyState.vue'
 
 <template>
   <div>
-    <PageHeader title="SMTP Profiles">
-      <AppButton>Add Profile</AppButton>
+    <PageHeader title="SMTP Profiles" subtitle="Mail relay configuration">
+      <AppButton>+ Add Profile</AppButton>
     </PageHeader>
-    <EmptyState message="No SMTP profiles configured. Add one to send emails." />
+    <EmptyState message="No SMTP profiles. Add one to enable email delivery." />
   </div>
 </template>
