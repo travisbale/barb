@@ -219,25 +219,24 @@ func (c *Client) Status() (*StatusResponse, error) {
 // --- Internals ---
 
 func (c *Client) do(method, path string, body any) (*http.Response, error) {
-	var bodyReader *bytes.Reader
+	var req *http.Request
+	var err error
+
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("marshaling request: %w", err)
 		}
-		bodyReader = bytes.NewReader(b)
-	}
-
-	var req *http.Request
-	var err error
-	if bodyReader != nil {
-		req, err = http.NewRequest(method, c.baseURL+path, bodyReader)
+		req, err = http.NewRequest(method, c.baseURL+path, bytes.NewReader(b))
+		if err != nil {
+			return nil, fmt.Errorf("building request: %w", err)
+		}
 		req.Header.Set("Content-Type", "application/json")
 	} else {
 		req, err = http.NewRequest(method, c.baseURL+path, nil)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("building request: %w", err)
+		if err != nil {
+			return nil, fmt.Errorf("building request: %w", err)
+		}
 	}
 
 	return c.httpClient.Do(req)

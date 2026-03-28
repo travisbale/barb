@@ -65,20 +65,20 @@ func (r *Router) deleteMiraged(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) testMiraged(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
-	err := r.Miraged.TestConnection(id)
+	client, err := r.Miraged.Client(id)
 	if errors.Is(err, phishing.ErrNotFound) {
 		r.writeError(w, http.StatusNotFound, "connection not found", err)
 		return
 	}
 
-	resp := sdk.MiragedStatusResponse{Connected: err == nil}
+	resp := sdk.MiragedStatusResponse{}
 	if err != nil {
 		resp.Error = err.Error()
+	} else if status, err := client.Status(); err != nil {
+		resp.Error = err.Error()
 	} else {
-		client, _ := r.Miraged.Client(id)
-		if status, err := client.Status(); err == nil {
-			resp.Version = status.Version
-		}
+		resp.Connected = true
+		resp.Version = status.Version
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

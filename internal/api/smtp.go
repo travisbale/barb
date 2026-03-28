@@ -43,7 +43,7 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 
 	created, err := r.SMTP.CreateProfile(profile)
 	if err != nil {
-		if errors.Is(err, phishing.ErrNameRequired) || errors.Is(err, phishing.ErrHostRequired) || errors.Is(err, phishing.ErrFromAddrRequired) {
+		if isValidationError(err) {
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
 		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)

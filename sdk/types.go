@@ -64,12 +64,8 @@ type CreateTemplateRequest struct {
 	TextBody string `json:"text_body"`
 }
 
-type UpdateTemplateRequest struct {
-	Name     string `json:"name"`
-	Subject  string `json:"subject"`
-	HTMLBody string `json:"html_body"`
-	TextBody string `json:"text_body"`
-}
+// UpdateTemplateRequest is identical to CreateTemplateRequest.
+type UpdateTemplateRequest = CreateTemplateRequest
 
 type TemplateResponse struct {
 	ID        string    `json:"id"`

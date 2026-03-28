@@ -36,9 +36,6 @@ func (p *SMTPProfile) Validate() error {
 	if p.FromAddr == "" {
 		return ErrFromAddrRequired
 	}
-	if p.Port == 0 {
-		p.Port = 587
-	}
 	return nil
 }
 
@@ -52,6 +49,9 @@ func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) 
 		return nil, err
 	}
 
+	if profile.Port == 0 {
+		profile.Port = 587
+	}
 	profile.ID = uuid.New().String()
 	profile.CreatedAt = time.Now()
 

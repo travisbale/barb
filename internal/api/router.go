@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/travisbale/mirador/internal/phishing"
 	"github.com/travisbale/mirador/sdk"
@@ -66,15 +65,13 @@ type Router struct {
 	Version   string
 	Logger    *slog.Logger
 
-	once      sync.Once
-	mux       *http.ServeMux
-	startedAt time.Time
+	once sync.Once
+	mux  *http.ServeMux
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.once.Do(func() {
 		r.mux = http.NewServeMux()
-		r.startedAt = time.Now()
 		r.registerRoutes()
 	})
 

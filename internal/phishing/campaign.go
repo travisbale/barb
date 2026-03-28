@@ -26,9 +26,10 @@ const (
 
 // Result status constants.
 const (
-	ResultPending = "pending"
-	ResultSent    = "sent"
-	ResultFailed  = "failed"
+	ResultPending  = "pending"
+	ResultSent     = "sent"
+	ResultFailed   = "failed"
+	ResultCaptured = "captured"
 )
 
 // Campaign ties together a target list, email template, and SMTP profile

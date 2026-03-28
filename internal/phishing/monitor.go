@@ -100,7 +100,7 @@ func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.Session
 		}
 
 		now := time.Now()
-		result.Status = "captured"
+		result.Status = ResultCaptured
 		result.CapturedAt = &now
 		result.SessionID = session.ID
 
