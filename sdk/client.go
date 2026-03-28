@@ -96,6 +96,36 @@ func (c *Client) DeleteTarget(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTarget, "id", id))
 }
 
+// --- Campaigns ---
+
+func (c *Client) CreateCampaign(req CreateCampaignRequest) (*CampaignResponse, error) {
+	return send[CampaignResponse](c, http.MethodPost, RouteCampaigns, req)
+}
+
+func (c *Client) ListCampaigns() ([]CampaignResponse, error) {
+	resp, err := get[[]CampaignResponse](c, RouteCampaigns)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) GetCampaign(id string) (*CampaignResponse, error) {
+	return get[CampaignResponse](c, ResolveRoute(RouteCampaign, "id", id))
+}
+
+func (c *Client) DeleteCampaign(id string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RouteCampaign, "id", id))
+}
+
+func (c *Client) ListCampaignResults(id string) ([]CampaignResultResponse, error) {
+	resp, err := get[[]CampaignResultResponse](c, ResolveRoute(RouteCampaignResults, "id", id))
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
 // --- Email Templates ---
 
 func (c *Client) CreateTemplate(req CreateTemplateRequest) (*TemplateResponse, error) {

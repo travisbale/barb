@@ -84,6 +84,43 @@ type ImportTargetsResponse struct {
 	Imported int `json:"imported"`
 }
 
+// --- Campaigns ---
+
+type CreateCampaignRequest struct {
+	Name          string `json:"name"`
+	TemplateID    string `json:"template_id"`
+	SMTPProfileID string `json:"smtp_profile_id"`
+	TargetListID  string `json:"target_list_id"`
+	LureURL       string `json:"lure_url"`
+	SendRate      int    `json:"send_rate"`
+}
+
+type CampaignResponse struct {
+	ID            string     `json:"id"`
+	Name          string     `json:"name"`
+	Status        string     `json:"status"`
+	TemplateID    string     `json:"template_id"`
+	SMTPProfileID string     `json:"smtp_profile_id"`
+	TargetListID  string     `json:"target_list_id"`
+	LureURL       string     `json:"lure_url"`
+	SendRate      int        `json:"send_rate"`
+	CreatedAt     time.Time  `json:"created_at"`
+	StartedAt     *time.Time `json:"started_at"`
+	CompletedAt   *time.Time `json:"completed_at"`
+}
+
+type CampaignResultResponse struct {
+	ID         string     `json:"id"`
+	CampaignID string     `json:"campaign_id"`
+	TargetID   string     `json:"target_id"`
+	Email      string     `json:"email"`
+	Status     string     `json:"status"`
+	SentAt     *time.Time `json:"sent_at"`
+	ClickedAt  *time.Time `json:"clicked_at"`
+	CapturedAt *time.Time `json:"captured_at"`
+	SessionID  string     `json:"session_id,omitempty"`
+}
+
 // --- System ---
 
 type StatusResponse struct {

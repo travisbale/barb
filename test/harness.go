@@ -38,13 +38,24 @@ func NewHarness(t *testing.T) *Harness {
 	}
 	t.Cleanup(func() { db.Close() })
 
-	targetSvc := &phishing.TargetService{Store: sqlite.NewTargetStore(db)}
-	templateSvc := &phishing.TemplateService{Store: sqlite.NewTemplateStore(db)}
-	smtpSvc := &phishing.SMTPService{Store: sqlite.NewSMTPStore(db)}
+	targetStore := sqlite.NewTargetStore(db)
+	templateStore := sqlite.NewTemplateStore(db)
+	smtpStore := sqlite.NewSMTPStore(db)
+
+	targetSvc := &phishing.TargetService{Store: targetStore}
+	templateSvc := &phishing.TemplateService{Store: templateStore}
+	smtpSvc := &phishing.SMTPService{Store: smtpStore}
+	campaignSvc := &phishing.CampaignService{
+		Store:     sqlite.NewCampaignStore(db),
+		Targets:   targetStore,
+		Templates: templateStore,
+		SMTP:      smtpStore,
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	apiRouter := &api.Router{
+		Campaigns: campaignSvc,
 		Targets:   targetSvc,
 		Templates: templateSvc,
 		SMTP:      smtpSvc,

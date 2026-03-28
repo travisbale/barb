@@ -147,6 +147,61 @@ export function deleteSMTPProfile(id: string): Promise<void> {
   return request('DELETE', `/smtp-profiles/${id}`)
 }
 
+// --- Campaigns ---
+
+export interface Campaign {
+  id: string
+  name: string
+  status: string
+  template_id: string
+  smtp_profile_id: string
+  target_list_id: string
+  lure_url: string
+  send_rate: number
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface CampaignResult {
+  id: string
+  campaign_id: string
+  target_id: string
+  email: string
+  status: string
+  sent_at: string | null
+  clicked_at: string | null
+  captured_at: string | null
+  session_id: string
+}
+
+export function listCampaigns(): Promise<Campaign[]> {
+  return request('GET', '/campaigns')
+}
+
+export function createCampaign(campaign: {
+  name: string
+  template_id: string
+  smtp_profile_id: string
+  target_list_id: string
+  lure_url?: string
+  send_rate?: number
+}): Promise<Campaign> {
+  return request('POST', '/campaigns', campaign)
+}
+
+export function getCampaign(id: string): Promise<Campaign> {
+  return request('GET', `/campaigns/${id}`)
+}
+
+export function deleteCampaign(id: string): Promise<void> {
+  return request('DELETE', `/campaigns/${id}`)
+}
+
+export function listCampaignResults(id: string): Promise<CampaignResult[]> {
+  return request('GET', `/campaigns/${id}/results`)
+}
+
 // --- System ---
 
 export interface Status {

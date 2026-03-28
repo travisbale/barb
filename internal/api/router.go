@@ -11,6 +11,14 @@ import (
 	"github.com/travisbale/mirador/sdk"
 )
 
+type campaignManager interface {
+	Create(campaign *phishing.Campaign) (*phishing.Campaign, error)
+	Get(id string) (*phishing.Campaign, error)
+	Delete(id string) error
+	List() ([]*phishing.Campaign, error)
+	Results(campaignID string) ([]*phishing.CampaignResult, error)
+}
+
 type templateManager interface {
 	Create(template *phishing.EmailTemplate) (*phishing.EmailTemplate, error)
 	Get(id string) (*phishing.EmailTemplate, error)
@@ -39,6 +47,7 @@ type targetManager interface {
 
 // Router is the HTTP handler for the Mirador API.
 type Router struct {
+	Campaigns campaignManager
 	Targets   targetManager
 	Templates templateManager
 	SMTP      smtpManager
@@ -90,4 +99,11 @@ func (r *Router) registerRoutes() {
 	h("POST", sdk.RouteSMTPProfiles, r.createSMTPProfile)
 	h("GET", sdk.RouteSMTPProfile, r.getSMTPProfile)
 	h("DELETE", sdk.RouteSMTPProfile, r.deleteSMTPProfile)
+
+	// Campaigns
+	h("GET", sdk.RouteCampaigns, r.listCampaigns)
+	h("POST", sdk.RouteCampaigns, r.createCampaign)
+	h("GET", sdk.RouteCampaign, r.getCampaign)
+	h("DELETE", sdk.RouteCampaign, r.deleteCampaign)
+	h("GET", sdk.RouteCampaignResults, r.listCampaignResults)
 }

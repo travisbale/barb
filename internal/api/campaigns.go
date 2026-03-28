@@ -1,0 +1,128 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"github.com/travisbale/mirador/internal/phishing"
+	"github.com/travisbale/mirador/sdk"
+)
+
+func (r *Router) listCampaigns(w http.ResponseWriter, req *http.Request) {
+	campaigns, err := r.Campaigns.List()
+	if err != nil {
+		r.writeError(w, http.StatusInternalServerError, "failed to list campaigns", err)
+		return
+	}
+	items := make([]sdk.CampaignResponse, len(campaigns))
+	for i, c := range campaigns {
+		items[i] = campaignToResponse(c)
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
+	var body sdk.CreateCampaignRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	campaign := &phishing.Campaign{
+		Name:          body.Name,
+		TemplateID:    body.TemplateID,
+		SMTPProfileID: body.SMTPProfileID,
+		TargetListID:  body.TargetListID,
+		LureURL:       body.LureURL,
+		SendRate:      body.SendRate,
+	}
+
+	created, err := r.Campaigns.Create(campaign)
+	if err != nil {
+		if isValidationError(err) || isReferenceError(err) {
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to create campaign", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, campaignToResponse(created))
+}
+
+func (r *Router) getCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	campaign, err := r.Campaigns.Get(id)
+	if err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to get campaign", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, campaignToResponse(campaign))
+}
+
+func (r *Router) deleteCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	if err := r.Campaigns.Delete(id); err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to delete campaign", err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) listCampaignResults(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	results, err := r.Campaigns.Results(id)
+	if err != nil {
+		r.writeError(w, http.StatusInternalServerError, "failed to list results", err)
+		return
+	}
+	items := make([]sdk.CampaignResultResponse, len(results))
+	for i, res := range results {
+		items[i] = resultToResponse(res)
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func campaignToResponse(c *phishing.Campaign) sdk.CampaignResponse {
+	return sdk.CampaignResponse{
+		ID:            c.ID,
+		Name:          c.Name,
+		Status:        string(c.Status),
+		TemplateID:    c.TemplateID,
+		SMTPProfileID: c.SMTPProfileID,
+		TargetListID:  c.TargetListID,
+		LureURL:       c.LureURL,
+		SendRate:      c.SendRate,
+		CreatedAt:     c.CreatedAt,
+		StartedAt:     c.StartedAt,
+		CompletedAt:   c.CompletedAt,
+	}
+}
+
+func resultToResponse(r *phishing.CampaignResult) sdk.CampaignResultResponse {
+	return sdk.CampaignResultResponse{
+		ID:         r.ID,
+		CampaignID: r.CampaignID,
+		TargetID:   r.TargetID,
+		Email:      r.Email,
+		Status:     r.Status,
+		SentAt:     r.SentAt,
+		ClickedAt:  r.ClickedAt,
+		CapturedAt: r.CapturedAt,
+		SessionID:  r.SessionID,
+	}
+}
+
+func isReferenceError(err error) bool {
+	return errors.Is(err, phishing.ErrTemplateNotFound) ||
+		errors.Is(err, phishing.ErrSMTPProfileNotFound) ||
+		errors.Is(err, phishing.ErrTargetListNotFound)
+}
