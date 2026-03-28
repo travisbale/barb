@@ -18,6 +18,7 @@ var (
 	ErrSMTPProfileNotFound    = errors.New("SMTP profile not found")
 	ErrTargetListNotFound     = errors.New("target list not found")
 	ErrCampaignNotDraft       = errors.New("campaign can only be started from draft status")
+	ErrCampaignNotRunning     = errors.New("campaign is not running")
 	ErrAddressRequired        = errors.New("address is required")
 	ErrSecretHostnameRequired = errors.New("secret hostname is required")
 	ErrCertsRequired          = errors.New("certificate, key, and CA cert are required")

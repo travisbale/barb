@@ -3,6 +3,7 @@ package phishing
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +23,7 @@ const (
 	CampaignActive    CampaignStatus = "active"
 	CampaignPaused    CampaignStatus = "paused"
 	CampaignCompleted CampaignStatus = "completed"
+	CampaignCancelled CampaignStatus = "cancelled"
 )
 
 // Result status constants.
@@ -106,6 +108,9 @@ type CampaignService struct {
 	Monitor   *SessionMonitor
 	Mailer    Mailer
 	Logger    *slog.Logger
+
+	running   map[string]context.CancelFunc
+	runningMu sync.Mutex
 }
 
 func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
@@ -171,8 +176,61 @@ func (s *CampaignService) Start(id string) error {
 		return ErrCampaignNotDraft
 	}
 
-	go s.run(context.Background(), campaign)
+	ctx, cancel := context.WithCancel(context.Background())
+	s.trackRunning(campaign.ID, cancel)
+
+	go func() {
+		defer s.untrackRunning(campaign.ID)
+		s.run(ctx, campaign)
+	}()
 	return nil
+}
+
+// Cancel stops a running campaign and sets its status to cancelled.
+func (s *CampaignService) Cancel(id string) error {
+	s.runningMu.Lock()
+	cancel, ok := s.running[id]
+	s.runningMu.Unlock()
+
+	if !ok {
+		return ErrCampaignNotRunning
+	}
+
+	cancel()
+
+	campaign, err := s.Store.GetCampaign(id)
+	if err != nil {
+		return err
+	}
+	campaign.Status = CampaignCancelled
+	return s.Store.UpdateCampaign(campaign)
+}
+
+// Shutdown cancels all running campaigns.
+func (s *CampaignService) Shutdown() {
+	s.runningMu.Lock()
+	defer s.runningMu.Unlock()
+
+	for id, cancel := range s.running {
+		cancel()
+		s.Logger.Info("cancelled running campaign", "campaign_id", id)
+	}
+	s.running = nil
+}
+
+func (s *CampaignService) trackRunning(id string, cancel context.CancelFunc) {
+	s.runningMu.Lock()
+	defer s.runningMu.Unlock()
+	if s.running == nil {
+		s.running = make(map[string]context.CancelFunc)
+	}
+	s.running[id] = cancel
+}
+
+func (s *CampaignService) untrackRunning(id string) {
+	s.runningMu.Lock()
+	defer s.runningMu.Unlock()
+	delete(s.running, id)
 }
 
 // run orchestrates the campaign: creates the lure, sends emails, and marks complete.

@@ -14,10 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/travisbale/mirador/internal/api"
+	"github.com/travisbale/mirador/internal/app"
 	"github.com/travisbale/mirador/internal/delivery"
-	"github.com/travisbale/mirador/internal/phishing"
-	"github.com/travisbale/mirador/internal/server"
 	"github.com/travisbale/mirador/internal/store/sqlite"
 )
 
@@ -90,47 +88,18 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 		return fmt.Errorf("loading embedded frontend: %w", err)
 	}
 
-	targetStore := sqlite.NewTargetStore(db)
-	templateStore := sqlite.NewTemplateStore(db)
-	smtpStore := sqlite.NewSMTPStore(db)
-
-	targetSvc := &phishing.TargetService{Store: targetStore}
-	templateSvc := &phishing.TemplateService{Store: templateStore}
-	smtpSvc := &phishing.SMTPService{Store: smtpStore}
-	miragedSvc := &phishing.MiragedService{Store: sqlite.NewMiragedStore(db)}
-
-	monitor := &phishing.SessionMonitor{
-		Campaigns: sqlite.NewCampaignStore(db),
-		Miraged:   miragedSvc,
-		Logger:    logger,
-	}
-
-	campaignSvc := &phishing.CampaignService{
-		Store:     sqlite.NewCampaignStore(db),
-		Targets:   targetStore,
-		Templates: templateStore,
-		SMTP:      smtpStore,
-		Miraged:   miragedSvc,
-		Monitor:   monitor,
-		Mailer:    &delivery.Sender{Logger: logger},
-		Logger:    logger,
-	}
-
-	apiRouter := &api.Router{
-		Miraged:   miragedSvc,
-		Campaigns: campaignSvc,
-		Targets:   targetSvc,
-		Templates: templateSvc,
-		SMTP:      smtpSvc,
-		Version:   Version,
-		Logger:    logger,
-	}
-
-	srv := server.New(server.Config{
-		Addr:     addr,
-		API:      apiRouter,
+	application := app.New(app.Config{
+		DB:       db,
 		Frontend: frontendDist,
+		Mailer:   &delivery.Sender{Logger: logger},
+		Version:  Version,
+		Logger:   logger,
 	})
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: application.Handler(),
+	}
 
 	go func() {
 		logger.Info("mirador starting", "addr", addr, "version", Version)
@@ -142,6 +111,8 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 
 	<-ctx.Done()
 	logger.Info("shutting down")
+
+	application.Shutdown()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

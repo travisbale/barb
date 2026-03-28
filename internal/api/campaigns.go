@@ -114,6 +114,23 @@ func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "starting"})
 }
 
+func (r *Router) cancelCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	err := r.Campaigns.Cancel(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrCampaignNotRunning):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to cancel campaign", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "cancelled"})
+}
+
 func campaignToResponse(c *phishing.Campaign) sdk.CampaignResponse {
 	return sdk.CampaignResponse{
 		ID:            c.ID,

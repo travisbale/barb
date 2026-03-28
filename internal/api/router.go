@@ -26,6 +26,7 @@ type campaignManager interface {
 	Delete(id string) error
 	List() ([]*phishing.Campaign, error)
 	Start(id string) error
+	Cancel(id string) error
 	Results(campaignID string) ([]*phishing.CampaignResult, error)
 }
 
@@ -115,6 +116,7 @@ func (r *Router) registerRoutes() {
 	h("GET", sdk.RouteCampaign, r.getCampaign)
 	h("DELETE", sdk.RouteCampaign, r.deleteCampaign)
 	h("POST", sdk.RouteCampaignStart, r.startCampaign)
+	h("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
 	h("GET", sdk.RouteCampaignResults, r.listCampaignResults)
 
 	// Miraged connections
