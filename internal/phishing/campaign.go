@@ -90,6 +90,8 @@ type campaignStore interface {
 	CreateResults(results []*CampaignResult) error
 	UpdateResult(result *CampaignResult) error
 	ListResults(campaignID string) ([]*CampaignResult, error)
+	ListActiveCampaignsByMiraged(miragedID string) ([]*Campaign, error)
+	GetResultByEmail(campaignID, email string) (*CampaignResult, error)
 }
 
 // Mailer sends a single rendered email. Implementations may reuse

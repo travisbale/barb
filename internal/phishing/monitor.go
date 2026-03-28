@@ -3,7 +3,6 @@ package phishing
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"time"
 
 	miragesdk "github.com/travisbale/mirage/sdk"
@@ -63,56 +62,41 @@ func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEv
 		return
 	}
 
-	// Find active campaigns that use this miraged instance and phishlet.
-	campaigns, err := m.Campaigns.ListCampaigns()
+	campaigns, err := m.Campaigns.ListActiveCampaignsByMiraged(miragedID)
 	if err != nil {
 		m.Logger.Error("failed to list campaigns for correlation", "error", err)
 		return
 	}
 
 	for _, campaign := range campaigns {
-		if campaign.MiragedID != miragedID {
-			continue
-		}
-		if campaign.Status != CampaignActive && campaign.Status != CampaignCompleted {
-			continue
-		}
 		if campaign.Phishlet != "" && campaign.Phishlet != session.Phishlet {
 			continue
 		}
-
 		m.correlate(campaign, session)
 	}
 }
 
 func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.SessionResponse) {
-	results, err := m.Campaigns.ListResults(campaign.ID)
+	result, err := m.Campaigns.GetResultByEmail(campaign.ID, session.Username)
 	if err != nil {
-		return
+		return // not found or DB error — nothing to correlate
+	}
+	if result.SessionID != "" {
+		return // already correlated
 	}
 
-	for _, result := range results {
-		if !strings.EqualFold(result.Email, session.Username) {
-			continue
-		}
-		if result.SessionID != "" {
-			continue // already correlated
-		}
+	now := time.Now()
+	result.Status = ResultCaptured
+	result.CapturedAt = &now
+	result.SessionID = session.ID
 
-		now := time.Now()
-		result.Status = ResultCaptured
-		result.CapturedAt = &now
-		result.SessionID = session.ID
-
-		if err := m.Campaigns.UpdateResult(result); err != nil {
-			m.Logger.Error("failed to update result", "result_id", result.ID, "error", err)
-		} else {
-			m.Logger.Info("session correlated",
-				"campaign_id", campaign.ID,
-				"email", result.Email,
-				"session_id", session.ID,
-			)
-		}
-		return
+	if err := m.Campaigns.UpdateResult(result); err != nil {
+		m.Logger.Error("failed to update result", "result_id", result.ID, "error", err)
+	} else {
+		m.Logger.Info("session correlated",
+			"campaign_id", campaign.ID,
+			"email", result.Email,
+			"session_id", session.ID,
+		)
 	}
 }
