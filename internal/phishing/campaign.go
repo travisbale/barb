@@ -1,6 +1,8 @@
 package phishing
 
 import (
+	"context"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +16,13 @@ const (
 	CampaignActive    CampaignStatus = "active"
 	CampaignPaused    CampaignStatus = "paused"
 	CampaignCompleted CampaignStatus = "completed"
+)
+
+// Result status constants.
+const (
+	ResultPending = "pending"
+	ResultSent    = "sent"
+	ResultFailed  = "failed"
 )
 
 // Campaign ties together a target list, email template, and SMTP profile
@@ -68,7 +77,14 @@ type campaignStore interface {
 	DeleteCampaign(id string) error
 	ListCampaigns() ([]*Campaign, error)
 	CreateResults(results []*CampaignResult) error
+	UpdateResult(result *CampaignResult) error
 	ListResults(campaignID string) ([]*CampaignResult, error)
+}
+
+// Mailer sends a single rendered email. Implementations may reuse
+// connections across calls.
+type Mailer interface {
+	Send(profile *SMTPProfile, tmpl *EmailTemplate, target *Target, lureURL string) error
 }
 
 // CampaignService manages campaign lifecycle.
@@ -77,6 +93,8 @@ type CampaignService struct {
 	Targets   targetStore
 	Templates templateStore
 	SMTP      smtpStore
+	Mailer    Mailer
+	Logger    *slog.Logger
 }
 
 func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
@@ -119,7 +137,7 @@ func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
 			CampaignID: campaign.ID,
 			TargetID:   t.ID,
 			Email:      t.Email,
-			Status:     "pending",
+			Status:     ResultPending,
 		}
 	}
 	if len(results) > 0 {
@@ -129,6 +147,103 @@ func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
 	}
 
 	return campaign, nil
+}
+
+// Start validates the campaign is in draft status and begins sending
+// emails in a background goroutine.
+func (s *CampaignService) Start(id string) error {
+	campaign, err := s.Store.GetCampaign(id)
+	if err != nil {
+		return err
+	}
+	if campaign.Status != CampaignDraft {
+		return ErrCampaignNotDraft
+	}
+
+	go s.run(context.Background(), campaign)
+	return nil
+}
+
+// run loads campaign dependencies and sends emails at the configured rate.
+func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
+	profile, err := s.SMTP.GetProfile(campaign.SMTPProfileID)
+	if err != nil {
+		s.Logger.Error("failed to load SMTP profile", "error", err)
+		return
+	}
+	tmpl, err := s.Templates.GetTemplate(campaign.TemplateID)
+	if err != nil {
+		s.Logger.Error("failed to load template", "error", err)
+		return
+	}
+	targetList, err := s.Targets.ListTargets(campaign.TargetListID)
+	if err != nil {
+		s.Logger.Error("failed to load targets", "error", err)
+		return
+	}
+	results, err := s.Store.ListResults(campaign.ID)
+	if err != nil {
+		s.Logger.Error("failed to load results", "error", err)
+		return
+	}
+
+	targets := make(map[string]*Target, len(targetList))
+	for _, t := range targetList {
+		targets[t.ID] = t
+	}
+
+	now := time.Now()
+	campaign.Status = CampaignActive
+	campaign.StartedAt = &now
+	if err := s.Store.UpdateCampaign(campaign); err != nil {
+		s.Logger.Error("failed to update campaign status", "error", err)
+		return
+	}
+
+	interval := time.Minute / time.Duration(max(campaign.SendRate, 1))
+
+	for i, result := range results {
+		if result.Status != ResultPending {
+			continue
+		}
+
+		// Throttle between sends (not before the first).
+		if i > 0 {
+			select {
+			case <-ctx.Done():
+				s.Logger.Info("campaign sending cancelled", "campaign_id", campaign.ID)
+				return
+			case <-time.After(interval):
+			}
+		}
+
+		target := targets[result.TargetID]
+		if target == nil {
+			continue
+		}
+
+		sentAt := time.Now()
+		result.SentAt = &sentAt
+
+		if err := s.Mailer.Send(profile, tmpl, target, campaign.LureURL); err != nil {
+			result.Status = ResultFailed
+			s.Logger.Error("failed to send email", "campaign_id", campaign.ID, "email", target.Email, "error", err)
+		} else {
+			result.Status = ResultSent
+			s.Logger.Info("email sent", "campaign_id", campaign.ID, "email", target.Email)
+		}
+
+		if err := s.Store.UpdateResult(result); err != nil {
+			s.Logger.Error("failed to update result", "error", err)
+		}
+	}
+
+	completedAt := time.Now()
+	campaign.Status = CampaignCompleted
+	campaign.CompletedAt = &completedAt
+	if err := s.Store.UpdateCampaign(campaign); err != nil {
+		s.Logger.Error("failed to mark campaign completed", "error", err)
+	}
 }
 
 func (s *CampaignService) Get(id string) (*Campaign, error) {

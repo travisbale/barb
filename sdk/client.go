@@ -116,6 +116,10 @@ func (c *Client) GetCampaign(id string) (*CampaignResponse, error) {
 	return get[CampaignResponse](c, ResolveRoute(RouteCampaign, "id", id))
 }
 
+func (c *Client) StartCampaign(id string) error {
+	return discard(c, http.MethodPost, ResolveRoute(RouteCampaignStart, "id", id))
+}
+
 func (c *Client) DeleteCampaign(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteCampaign, "id", id))
 }

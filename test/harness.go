@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,10 +19,37 @@ import (
 	"os"
 )
 
+// MockMailer records Send calls instead of sending real emails.
+type MockMailer struct {
+	mu   sync.Mutex
+	Sent []MockEmail
+}
+
+type MockEmail struct {
+	To      string
+	Subject string
+}
+
+func (m *MockMailer) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, lureURL string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Sent = append(m.Sent, MockEmail{To: target.Email, Subject: tmpl.Subject})
+	return nil
+}
+
+func (m *MockMailer) Count() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.Sent)
+}
+
 // Harness is a fully-wired test environment. Obtain one via NewHarness.
 type Harness struct {
 	// Client is the SDK client pointed at the test server.
 	Client *sdk.Client
+
+	// Mailer is the mock mailer used by the campaign service.
+	Mailer *MockMailer
 
 	// Addr is the listen address of the test server (e.g. "127.0.0.1:PORT").
 	Addr string
@@ -38,6 +66,8 @@ func NewHarness(t *testing.T) *Harness {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
+	mockMailer := &MockMailer{}
+
 	targetStore := sqlite.NewTargetStore(db)
 	templateStore := sqlite.NewTemplateStore(db)
 	smtpStore := sqlite.NewSMTPStore(db)
@@ -45,14 +75,16 @@ func NewHarness(t *testing.T) *Harness {
 	targetSvc := &phishing.TargetService{Store: targetStore}
 	templateSvc := &phishing.TemplateService{Store: templateStore}
 	smtpSvc := &phishing.SMTPService{Store: smtpStore}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+
 	campaignSvc := &phishing.CampaignService{
 		Store:     sqlite.NewCampaignStore(db),
 		Targets:   targetStore,
 		Templates: templateStore,
 		SMTP:      smtpStore,
+		Mailer:    mockMailer,
+		Logger:    logger,
 	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	apiRouter := &api.Router{
 		Campaigns: campaignSvc,
@@ -98,6 +130,7 @@ func NewHarness(t *testing.T) *Harness {
 
 	return &Harness{
 		Client: client,
+		Mailer: mockMailer,
 		Addr:   addr,
 	}
 }

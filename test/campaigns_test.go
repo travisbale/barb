@@ -2,6 +2,7 @@ package test_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/travisbale/mirador/sdk"
 	"github.com/travisbale/mirador/test"
@@ -189,6 +190,77 @@ func TestCampaigns_RejectsInvalidReferences(t *testing.T) {
 	})
 	if err == nil {
 		t.Error("expected error for invalid target list reference")
+	}
+}
+
+func TestCampaigns_Start(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Start Test",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		SendRate:      600, // fast — 10 per second
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	if err := h.Client.StartCampaign(created.ID); err != nil {
+		t.Fatalf("StartCampaign: %v", err)
+	}
+
+	// Wait for the background goroutine to finish sending.
+	time.Sleep(1 * time.Second)
+
+	// Verify the campaign status changed.
+	got, err := h.Client.GetCampaign(created.ID)
+	if err != nil {
+		t.Fatalf("GetCampaign: %v", err)
+	}
+	if got.Status != "completed" {
+		t.Errorf("Status = %q, want %q", got.Status, "completed")
+	}
+
+	// Verify results were updated.
+	results, err := h.Client.ListCampaignResults(created.ID)
+	if err != nil {
+		t.Fatalf("ListCampaignResults: %v", err)
+	}
+	for _, r := range results {
+		if r.Status != "sent" {
+			t.Errorf("result %s status = %q, want %q", r.Email, r.Status, "sent")
+		}
+	}
+
+	// Verify the mock mailer was called.
+	if h.Mailer.Count() != 2 {
+		t.Errorf("expected 2 emails sent, got %d", h.Mailer.Count())
+	}
+}
+
+func TestCampaigns_StartRequiresDraft(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Draft Test",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		SendRate:      600,
+	})
+
+	// Start it once.
+	h.Client.StartCampaign(created.ID)
+	time.Sleep(500 * time.Millisecond)
+
+	// Starting again should fail — it's now completed, not draft.
+	err := h.Client.StartCampaign(created.ID)
+	if err == nil {
+		t.Error("expected error starting a non-draft campaign")
 	}
 }
 

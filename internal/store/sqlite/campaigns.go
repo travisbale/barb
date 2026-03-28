@@ -93,6 +93,18 @@ func (s *Campaigns) CreateResults(results []*phishing.CampaignResult) error {
 	})
 }
 
+func (s *Campaigns) UpdateResult(r *phishing.CampaignResult) error {
+	res, err := s.db.db.Exec(
+		`UPDATE campaign_results SET status = ?, sent_at = ?, clicked_at = ?, captured_at = ?, session_id = ?
+		 WHERE id = ?`,
+		r.Status, timeToUnix(r.SentAt), timeToUnix(r.ClickedAt), timeToUnix(r.CapturedAt), r.SessionID, r.ID,
+	)
+	if err != nil {
+		return err
+	}
+	return requireOneRow(res)
+}
+
 func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, error) {
 	rows, err := s.db.db.Query(
 		`SELECT id, campaign_id, target_id, email, status, sent_at, clicked_at, captured_at, session_id

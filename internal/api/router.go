@@ -16,6 +16,7 @@ type campaignManager interface {
 	Get(id string) (*phishing.Campaign, error)
 	Delete(id string) error
 	List() ([]*phishing.Campaign, error)
+	Start(id string) error
 	Results(campaignID string) ([]*phishing.CampaignResult, error)
 }
 
@@ -105,5 +106,6 @@ func (r *Router) registerRoutes() {
 	h("POST", sdk.RouteCampaigns, r.createCampaign)
 	h("GET", sdk.RouteCampaign, r.getCampaign)
 	h("DELETE", sdk.RouteCampaign, r.deleteCampaign)
+	h("POST", sdk.RouteCampaignStart, r.startCampaign)
 	h("GET", sdk.RouteCampaignResults, r.listCampaignResults)
 }

@@ -91,6 +91,27 @@ func (r *Router) listCampaignResults(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, items)
 }
 
+func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	err := r.Campaigns.Start(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		case errors.Is(err, phishing.ErrCampaignNotDraft):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		case isReferenceError(err):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to start campaign", err)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusAccepted, map[string]string{"status": "starting"})
+}
+
 func campaignToResponse(c *phishing.Campaign) sdk.CampaignResponse {
 	return sdk.CampaignResponse{
 		ID:            c.ID,

@@ -17,4 +17,5 @@ var (
 	ErrTemplateNotFound    = errors.New("template not found")
 	ErrSMTPProfileNotFound = errors.New("SMTP profile not found")
 	ErrTargetListNotFound  = errors.New("target list not found")
+	ErrCampaignNotDraft    = errors.New("campaign can only be started from draft status")
 )

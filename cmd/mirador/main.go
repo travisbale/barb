@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/travisbale/mirador/internal/api"
+	"github.com/travisbale/mirador/internal/delivery"
 	"github.com/travisbale/mirador/internal/phishing"
 	"github.com/travisbale/mirador/internal/server"
 	"github.com/travisbale/mirador/internal/store/sqlite"
@@ -101,6 +102,8 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 		Targets:   targetStore,
 		Templates: templateStore,
 		SMTP:      smtpStore,
+		Mailer:    &delivery.Sender{Logger: logger},
+		Logger:    logger,
 	}
 
 	apiRouter := &api.Router{

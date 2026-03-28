@@ -13,6 +13,7 @@ const (
 	// Campaigns
 	RouteCampaigns       = "/api/campaigns"
 	RouteCampaign        = "/api/campaigns/{id}"
+	RouteCampaignStart   = "/api/campaigns/{id}/start"
 	RouteCampaignResults = "/api/campaigns/{id}/results"
 
 	// Email Templates
