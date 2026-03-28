@@ -60,12 +60,15 @@ func main() {
 
 	root.AddCommand(serveCmd, versionCmd)
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
-
-	if err := root.ExecuteContext(ctx); err != nil {
+	if err := run(root); err != nil {
 		os.Exit(1)
 	}
+}
+
+func run(root *cobra.Command) error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	return root.ExecuteContext(ctx)
 }
 
 func runServe(ctx context.Context, addr, dbPath string, debug bool) error {

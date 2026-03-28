@@ -36,7 +36,7 @@ func NewHarness(t *testing.T) *Harness {
 	if err != nil {
 		t.Fatalf("sqlite.Open: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	targetStore := sqlite.NewTargetStore(db)
 	templateStore := sqlite.NewTemplateStore(db)
@@ -81,7 +81,7 @@ func NewHarness(t *testing.T) *Harness {
 			t.Logf("server error: %v", err)
 		}
 	}()
-	t.Cleanup(func() { srv.Close() })
+	t.Cleanup(func() { _ = srv.Close() })
 
 	// Wait for server to be ready.
 	deadline := time.Now().Add(2 * time.Second)

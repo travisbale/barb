@@ -67,7 +67,9 @@ func (c *Client) ImportTargetsCSV(listID string, csvData io.Reader) (*ImportTarg
 	if _, err := io.Copy(part, csvData); err != nil {
 		return nil, fmt.Errorf("copying CSV data: %w", err)
 	}
-	w.Close()
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("closing multipart writer: %w", err)
+	}
 
 	req, err := http.NewRequest(http.MethodPost, c.baseURL+ResolveRoute(RouteTargetsImport, "id", listID), &buf)
 	if err != nil {

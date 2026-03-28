@@ -78,11 +78,12 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 		TextBody: body.TextBody,
 	})
 	if err != nil {
-		if errors.Is(err, phishing.ErrNotFound) {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
 			r.writeError(w, http.StatusNotFound, "template not found", err)
-		} else if isValidationError(err) {
+		case isValidationError(err):
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
+		default:
 			r.writeError(w, http.StatusInternalServerError, "failed to update template", err)
 		}
 		return
