@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2
+	github.com/travisbale/mirage v0.2.0
 	github.com/wneessen/go-mail v0.7.2
 	modernc.org/sqlite v1.48.0
 )
@@ -16,7 +17,6 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	github.com/travisbale/mirage v0.2.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	modernc.org/libc v1.70.0 // indirect
