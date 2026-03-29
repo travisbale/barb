@@ -139,6 +139,79 @@ func TestSMTPProfiles_PasswordNotInResponse(t *testing.T) {
 	_ = got
 }
 
+func TestSMTPProfiles_Update(t *testing.T) {
+	h := test.NewHarness(t)
+
+	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name:     "Original",
+		Host:     "smtp.old.com",
+		Port:     587,
+		FromAddr: "old@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateSMTPProfile: %v", err)
+	}
+
+	updated, err := h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
+		Name:     "Updated",
+		Host:     "smtp.new.com",
+		Port:     465,
+		FromAddr: "new@example.com",
+		FromName: "New Name",
+	})
+	if err != nil {
+		t.Fatalf("UpdateSMTPProfile: %v", err)
+	}
+	if updated.Name != "Updated" {
+		t.Errorf("Name = %q, want %q", updated.Name, "Updated")
+	}
+	if updated.Host != "smtp.new.com" {
+		t.Errorf("Host = %q, want %q", updated.Host, "smtp.new.com")
+	}
+	if updated.Port != 465 {
+		t.Errorf("Port = %d, want 465", updated.Port)
+	}
+	if updated.FromAddr != "new@example.com" {
+		t.Errorf("FromAddr = %q, want %q", updated.FromAddr, "new@example.com")
+	}
+	if updated.FromName != "New Name" {
+		t.Errorf("FromName = %q, want %q", updated.FromName, "New Name")
+	}
+}
+
+func TestSMTPProfiles_UpdatePreservesPassword(t *testing.T) {
+	h := test.NewHarness(t)
+
+	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name:     "With Password",
+		Host:     "smtp.example.com",
+		Password: "original-secret",
+		FromAddr: "from@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateSMTPProfile: %v", err)
+	}
+
+	// Update without sending a password — should keep the original.
+	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
+		Name:     "Renamed",
+		Host:     "smtp.example.com",
+		FromAddr: "from@example.com",
+	})
+	if err != nil {
+		t.Fatalf("UpdateSMTPProfile: %v", err)
+	}
+
+	// Verify the profile still works (password was preserved, not blanked).
+	got, err := h.Client.GetSMTPProfile(created.ID)
+	if err != nil {
+		t.Fatalf("GetSMTPProfile: %v", err)
+	}
+	if got.Name != "Renamed" {
+		t.Errorf("Name = %q, want %q", got.Name, "Renamed")
+	}
+}
+
 func TestSMTPProfiles_DeleteNotFound(t *testing.T) {
 	h := test.NewHarness(t)
 

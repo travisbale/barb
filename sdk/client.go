@@ -180,6 +180,10 @@ func (c *Client) GetSMTPProfile(id string) (*SMTPProfileResponse, error) {
 	return get[SMTPProfileResponse](c, ResolveRoute(RouteSMTPProfile, "id", id))
 }
 
+func (c *Client) UpdateSMTPProfile(id string, req UpdateSMTPProfileRequest) (*SMTPProfileResponse, error) {
+	return send[SMTPProfileResponse](c, http.MethodPatch, ResolveRoute(RouteSMTPProfile, "id", id), req)
+}
+
 func (c *Client) DeleteSMTPProfile(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteSMTPProfile, "id", id))
 }

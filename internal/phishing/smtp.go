@@ -22,6 +22,7 @@ type SMTPProfile struct {
 type smtpStore interface {
 	CreateProfile(p *SMTPProfile) error
 	GetProfile(id string) (*SMTPProfile, error)
+	UpdateProfile(p *SMTPProfile) error
 	DeleteProfile(id string) error
 	ListProfiles() ([]*SMTPProfile, error)
 }
@@ -59,6 +60,38 @@ func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) 
 		return nil, err
 	}
 	return profile, nil
+}
+
+func (s *SMTPService) UpdateProfile(id string, profile *SMTPProfile) (*SMTPProfile, error) {
+	existing, err := s.Store.GetProfile(id)
+	if err != nil {
+		return nil, err
+	}
+
+	existing.Name = profile.Name
+	existing.Host = profile.Host
+	existing.Port = profile.Port
+	existing.Username = profile.Username
+	existing.FromAddr = profile.FromAddr
+	existing.FromName = profile.FromName
+
+	// Only update password if a new one was provided.
+	if profile.Password != "" {
+		existing.Password = profile.Password
+	}
+
+	if existing.Port == 0 {
+		existing.Port = 587
+	}
+
+	if err := existing.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.Store.UpdateProfile(existing); err != nil {
+		return nil, err
+	}
+	return existing, nil
 }
 
 func (s *SMTPService) GetProfile(id string) (*SMTPProfile, error) {

@@ -69,6 +69,38 @@ func (r *Router) getSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, smtpProfileToResponse(profile))
 }
 
+func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	var body sdk.UpdateSMTPProfileRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	updated, err := r.SMTP.UpdateProfile(id, &phishing.SMTPProfile{
+		Name:     body.Name,
+		Host:     body.Host,
+		Port:     body.Port,
+		Username: body.Username,
+		Password: body.Password,
+		FromAddr: body.FromAddr,
+		FromName: body.FromName,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
+		case isValidationError(err):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to update SMTP profile", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, smtpProfileToResponse(updated))
+}
+
 func (r *Router) deleteSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.SMTP.DeleteProfile(id); err != nil {

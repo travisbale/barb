@@ -40,6 +40,18 @@ func (s *SMTP) DeleteProfile(id string) error {
 	return requireOneRow(res)
 }
 
+func (s *SMTP) UpdateProfile(p *phishing.SMTPProfile) error {
+	res, err := s.db.db.Exec(
+		`UPDATE smtp_profiles SET name = ?, host = ?, port = ?, username = ?, password = ?, from_addr = ?, from_name = ?
+		 WHERE id = ?`,
+		p.Name, p.Host, p.Port, p.Username, p.Password, p.FromAddr, p.FromName, p.ID,
+	)
+	if err != nil {
+		return err
+	}
+	return requireOneRow(res)
+}
+
 func (s *SMTP) ListProfiles() ([]*phishing.SMTPProfile, error) {
 	rows, err := s.db.db.Query(
 		`SELECT id, name, host, port, username, password, from_addr, from_name, created_at

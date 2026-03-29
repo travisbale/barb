@@ -44,6 +44,10 @@ type CreateSMTPProfileRequest struct {
 	FromName string `json:"from_name"`
 }
 
+// UpdateSMTPProfileRequest is identical to CreateSMTPProfileRequest.
+// An empty password field preserves the existing password.
+type UpdateSMTPProfileRequest = CreateSMTPProfileRequest
+
 type SMTPProfileResponse struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

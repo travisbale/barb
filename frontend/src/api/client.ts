@@ -143,6 +143,10 @@ export function getSMTPProfile(id: string): Promise<SMTPProfile> {
   return request('GET', `/smtp-profiles/${id}`)
 }
 
+export function updateSMTPProfile(id: string, profile: Omit<SMTPProfile, 'id' | 'created_at'> & { password?: string }): Promise<SMTPProfile> {
+  return request('PATCH', `/smtp-profiles/${id}`, profile)
+}
+
 export function deleteSMTPProfile(id: string): Promise<void> {
   return request('DELETE', `/smtp-profiles/${id}`)
 }

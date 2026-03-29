@@ -41,6 +41,7 @@ type templateManager interface {
 type smtpManager interface {
 	CreateProfile(profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
 	GetProfile(id string) (*phishing.SMTPProfile, error)
+	UpdateProfile(id string, profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
 	DeleteProfile(id string) error
 	ListProfiles() ([]*phishing.SMTPProfile, error)
 }
@@ -108,6 +109,7 @@ func (r *Router) registerRoutes() {
 	h("GET", sdk.RouteSMTPProfiles, r.listSMTPProfiles)
 	h("POST", sdk.RouteSMTPProfiles, r.createSMTPProfile)
 	h("GET", sdk.RouteSMTPProfile, r.getSMTPProfile)
+	h("PATCH", sdk.RouteSMTPProfile, r.updateSMTPProfile)
 	h("DELETE", sdk.RouteSMTPProfile, r.deleteSMTPProfile)
 
 	// Campaigns
