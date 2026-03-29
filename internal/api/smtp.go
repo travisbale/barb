@@ -78,7 +78,7 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	updated, err := r.SMTP.UpdateProfile(id, &phishing.SMTPProfile{
+	updated, err := r.SMTP.UpdateProfile(id, &phishing.SMTPProfileUpdate{
 		Name:     body.Name,
 		Host:     body.Host,
 		Port:     body.Port,

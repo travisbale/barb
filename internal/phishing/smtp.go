@@ -62,22 +62,44 @@ func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) 
 	return profile, nil
 }
 
-func (s *SMTPService) UpdateProfile(id string, profile *SMTPProfile) (*SMTPProfile, error) {
+// SMTPProfileUpdate holds optional fields for a partial SMTP profile update.
+// Nil fields are left unchanged.
+type SMTPProfileUpdate struct {
+	Name     *string
+	Host     *string
+	Port     *int
+	Username *string
+	Password *string
+	FromAddr *string
+	FromName *string
+}
+
+func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTPProfile, error) {
 	existing, err := s.Store.GetProfile(id)
 	if err != nil {
 		return nil, err
 	}
 
-	existing.Name = profile.Name
-	existing.Host = profile.Host
-	existing.Port = profile.Port
-	existing.Username = profile.Username
-	existing.FromAddr = profile.FromAddr
-	existing.FromName = profile.FromName
-
-	// Only update password if a new one was provided.
-	if profile.Password != "" {
-		existing.Password = profile.Password
+	if update.Name != nil {
+		existing.Name = *update.Name
+	}
+	if update.Host != nil {
+		existing.Host = *update.Host
+	}
+	if update.Port != nil {
+		existing.Port = *update.Port
+	}
+	if update.Username != nil {
+		existing.Username = *update.Username
+	}
+	if update.Password != nil {
+		existing.Password = *update.Password
+	}
+	if update.FromAddr != nil {
+		existing.FromAddr = *update.FromAddr
+	}
+	if update.FromName != nil {
+		existing.FromName = *update.FromName
 	}
 
 	if existing.Port == 0 {

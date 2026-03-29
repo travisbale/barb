@@ -153,11 +153,11 @@ func TestSMTPProfiles_Update(t *testing.T) {
 	}
 
 	updated, err := h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
-		Name:     "Updated",
-		Host:     "smtp.new.com",
-		Port:     465,
-		FromAddr: "new@example.com",
-		FromName: "New Name",
+		Name:     strPtr("Updated"),
+		Host:     strPtr("smtp.new.com"),
+		Port:     intPtr(465),
+		FromAddr: strPtr("new@example.com"),
+		FromName: strPtr("New Name"),
 	})
 	if err != nil {
 		t.Fatalf("UpdateSMTPProfile: %v", err)
@@ -192,11 +192,9 @@ func TestSMTPProfiles_UpdatePreservesPassword(t *testing.T) {
 		t.Fatalf("CreateSMTPProfile: %v", err)
 	}
 
-	// Update without sending a password — should keep the original.
+	// Update only the name — password (nil) should be preserved.
 	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
-		Name:     "Renamed",
-		Host:     "smtp.example.com",
-		FromAddr: "from@example.com",
+		Name: strPtr("Renamed"),
 	})
 	if err != nil {
 		t.Fatalf("UpdateSMTPProfile: %v", err)

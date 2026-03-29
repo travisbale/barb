@@ -110,7 +110,7 @@ export function getTemplate(id: string): Promise<EmailTemplate> {
   return request('GET', `/templates/${id}`)
 }
 
-export function updateTemplate(id: string, template: Omit<EmailTemplate, 'id' | 'created_at'>): Promise<EmailTemplate> {
+export function updateTemplate(id: string, template: Partial<Omit<EmailTemplate, 'id' | 'created_at'>>): Promise<EmailTemplate> {
   return request('PATCH', `/templates/${id}`, template)
 }
 
@@ -143,7 +143,7 @@ export function getSMTPProfile(id: string): Promise<SMTPProfile> {
   return request('GET', `/smtp-profiles/${id}`)
 }
 
-export function updateSMTPProfile(id: string, profile: Omit<SMTPProfile, 'id' | 'created_at'> & { password?: string }): Promise<SMTPProfile> {
+export function updateSMTPProfile(id: string, profile: Partial<Omit<SMTPProfile, 'id' | 'created_at'>> & { password?: string }): Promise<SMTPProfile> {
   return request('PATCH', `/smtp-profiles/${id}`, profile)
 }
 

@@ -60,16 +60,33 @@ func (s *TemplateService) Get(id string) (*EmailTemplate, error) {
 	return s.Store.GetTemplate(id)
 }
 
-func (s *TemplateService) Update(id string, template *EmailTemplate) (*EmailTemplate, error) {
+// TemplateUpdate holds optional fields for a partial template update.
+// Nil fields are left unchanged.
+type TemplateUpdate struct {
+	Name     *string
+	Subject  *string
+	HTMLBody *string
+	TextBody *string
+}
+
+func (s *TemplateService) Update(id string, update *TemplateUpdate) (*EmailTemplate, error) {
 	existing, err := s.Store.GetTemplate(id)
 	if err != nil {
 		return nil, err
 	}
 
-	existing.Name = template.Name
-	existing.Subject = template.Subject
-	existing.HTMLBody = template.HTMLBody
-	existing.TextBody = template.TextBody
+	if update.Name != nil {
+		existing.Name = *update.Name
+	}
+	if update.Subject != nil {
+		existing.Subject = *update.Subject
+	}
+	if update.HTMLBody != nil {
+		existing.HTMLBody = *update.HTMLBody
+	}
+	if update.TextBody != nil {
+		existing.TextBody = *update.TextBody
+	}
 
 	if err := existing.Validate(); err != nil {
 		return nil, err

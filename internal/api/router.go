@@ -33,7 +33,7 @@ type campaignManager interface {
 type templateManager interface {
 	Create(template *phishing.EmailTemplate) (*phishing.EmailTemplate, error)
 	Get(id string) (*phishing.EmailTemplate, error)
-	Update(id string, template *phishing.EmailTemplate) (*phishing.EmailTemplate, error)
+	Update(id string, update *phishing.TemplateUpdate) (*phishing.EmailTemplate, error)
 	Delete(id string) error
 	List() ([]*phishing.EmailTemplate, error)
 }
@@ -41,7 +41,7 @@ type templateManager interface {
 type smtpManager interface {
 	CreateProfile(profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
 	GetProfile(id string) (*phishing.SMTPProfile, error)
-	UpdateProfile(id string, profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
+	UpdateProfile(id string, update *phishing.SMTPProfileUpdate) (*phishing.SMTPProfile, error)
 	DeleteProfile(id string) error
 	ListProfiles() ([]*phishing.SMTPProfile, error)
 }

@@ -44,9 +44,17 @@ type CreateSMTPProfileRequest struct {
 	FromName string `json:"from_name"`
 }
 
-// UpdateSMTPProfileRequest is identical to CreateSMTPProfileRequest.
-// An empty password field preserves the existing password.
-type UpdateSMTPProfileRequest = CreateSMTPProfileRequest
+// UpdateSMTPProfileRequest supports partial updates. Only non-nil fields
+// are applied; nil fields leave the existing value unchanged.
+type UpdateSMTPProfileRequest struct {
+	Name     *string `json:"name,omitempty"`
+	Host     *string `json:"host,omitempty"`
+	Port     *int    `json:"port,omitempty"`
+	Username *string `json:"username,omitempty"`
+	Password *string `json:"password,omitempty"`
+	FromAddr *string `json:"from_addr,omitempty"`
+	FromName *string `json:"from_name,omitempty"`
+}
 
 type SMTPProfileResponse struct {
 	ID        string    `json:"id"`
@@ -68,8 +76,14 @@ type CreateTemplateRequest struct {
 	TextBody string `json:"text_body"`
 }
 
-// UpdateTemplateRequest is identical to CreateTemplateRequest.
-type UpdateTemplateRequest = CreateTemplateRequest
+// UpdateTemplateRequest supports partial updates. Only non-nil fields
+// are applied; nil fields leave the existing value unchanged.
+type UpdateTemplateRequest struct {
+	Name     *string `json:"name,omitempty"`
+	Subject  *string `json:"subject,omitempty"`
+	HTMLBody *string `json:"html_body,omitempty"`
+	TextBody *string `json:"text_body,omitempty"`
+}
 
 type TemplateResponse struct {
 	ID        string    `json:"id"`

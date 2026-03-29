@@ -37,10 +37,8 @@ func TestTemplates_CRUD(t *testing.T) {
 
 	// Update.
 	updated, err := h.Client.UpdateTemplate(created.ID, sdk.UpdateTemplateRequest{
-		Name:     "Password Expiry",
-		Subject:  "Action required: password expiring",
-		HTMLBody: got.HTMLBody,
-		TextBody: got.TextBody,
+		Name:    strPtr("Password Expiry"),
+		Subject: strPtr("Action required: password expiring"),
 	})
 	if err != nil {
 		t.Fatalf("UpdateTemplate: %v", err)
@@ -156,9 +154,8 @@ func TestTemplates_UpdateNotFound(t *testing.T) {
 	h := test.NewHarness(t)
 
 	_, err := h.Client.UpdateTemplate("nonexistent", sdk.UpdateTemplateRequest{
-		Name:     "Test",
-		Subject:  "Test",
-		HTMLBody: "<p>test</p>",
+		Name:    strPtr("Test"),
+		Subject: strPtr("Test"),
 	})
 	if err == nil {
 		t.Error("expected error for nonexistent template")

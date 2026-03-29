@@ -71,7 +71,7 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	updated, err := r.Templates.Update(id, &phishing.EmailTemplate{
+	updated, err := r.Templates.Update(id, &phishing.TemplateUpdate{
 		Name:     body.Name,
 		Subject:  body.Subject,
 		HTMLBody: body.HTMLBody,
