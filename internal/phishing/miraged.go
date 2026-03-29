@@ -73,8 +73,8 @@ func (s *MiragedService) List() ([]*MiragedConnection, error) {
 	return s.Store.ListConnections()
 }
 
-// Client constructs a Mirage SDK client for the given connection ID.
-func (s *MiragedService) Client(id string) (*miragesdk.Client, error) {
+// client constructs a Mirage SDK client for the given connection ID.
+func (s *MiragedService) client(id string) (*miragesdk.Client, error) {
 	conn, err := s.Store.GetConnection(id)
 	if err != nil {
 		return nil, err
@@ -82,12 +82,52 @@ func (s *MiragedService) Client(id string) (*miragesdk.Client, error) {
 	return miragesdk.NewClient(conn.Address, conn.SecretHostname, conn.CertPEM, conn.KeyPEM, conn.CACertPEM)
 }
 
-// TestConnection verifies that a connection to the miraged instance works.
-func (s *MiragedService) TestConnection(id string) error {
-	client, err := s.Client(id)
+// MiragedStatus holds the result of a connectivity test to a miraged instance.
+type MiragedStatus struct {
+	Connected bool
+	Version   string
+	Error     string
+}
+
+// TestConnection verifies connectivity to the miraged instance and returns
+// its status. A connection or protocol error is reported in the returned
+// status, not as a Go error — the only errors returned are lookup failures.
+func (s *MiragedService) TestConnection(id string) (*MiragedStatus, error) {
+	client, err := s.client(id)
 	if err != nil {
-		return err
+		return &MiragedStatus{Error: err.Error()}, nil
 	}
-	_, err = client.Status()
-	return err
+	status, err := client.Status()
+	if err != nil {
+		return &MiragedStatus{Error: err.Error()}, nil
+	}
+	return &MiragedStatus{Connected: true, Version: status.Version}, nil
+}
+
+// MiragedPhishlet is a phishlet reported by a miraged instance.
+type MiragedPhishlet struct {
+	Name     string
+	Hostname string
+	Enabled  bool
+}
+
+// ListPhishlets retrieves the phishlet list from the miraged instance.
+func (s *MiragedService) ListPhishlets(id string) ([]MiragedPhishlet, error) {
+	client, err := s.client(id)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.ListPhishlets()
+	if err != nil {
+		return nil, err
+	}
+	phishlets := make([]MiragedPhishlet, len(resp.Items))
+	for i, p := range resp.Items {
+		phishlets[i] = MiragedPhishlet{
+			Name:     p.Name,
+			Hostname: p.Hostname,
+			Enabled:  p.Enabled,
+		}
+	}
+	return phishlets, nil
 }

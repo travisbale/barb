@@ -20,7 +20,7 @@ type SessionMonitor struct {
 // Watch connects to the miraged instance's SSE stream and processes
 // session events until the context is cancelled or the stream ends.
 func (m *SessionMonitor) Watch(ctx context.Context, miragedID string) {
-	client, err := m.Miraged.Client(miragedID)
+	client, err := m.Miraged.client(miragedID)
 	if err != nil {
 		m.Logger.Error("failed to connect to miraged for monitoring", "miraged_id", miragedID, "error", err)
 		return

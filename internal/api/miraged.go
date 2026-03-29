@@ -65,44 +65,36 @@ func (r *Router) deleteMiraged(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) testMiraged(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
-	client, err := r.Miraged.Client(id)
-	if errors.Is(err, phishing.ErrNotFound) {
-		r.writeError(w, http.StatusNotFound, "connection not found", err)
-		return
-	}
-
-	resp := sdk.MiragedStatusResponse{}
-	if err != nil {
-		resp.Error = err.Error()
-	} else if status, err := client.Status(); err != nil {
-		resp.Error = err.Error()
-	} else {
-		resp.Connected = true
-		resp.Version = status.Version
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
-
-func (r *Router) listMiragedPhishlets(w http.ResponseWriter, req *http.Request) {
-	id := req.PathValue("id")
-	client, err := r.Miraged.Client(id)
+	status, err := r.Miraged.TestConnection(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
 			r.writeError(w, http.StatusNotFound, "connection not found", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to connect", err)
+			r.writeError(w, http.StatusInternalServerError, "failed to test connection", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, sdk.MiragedStatusResponse{
+		Connected: status.Connected,
+		Version:   status.Version,
+		Error:     status.Error,
+	})
+}
+
+func (r *Router) listMiragedPhishlets(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	phishlets, err := r.Miraged.ListPhishlets(id)
+	if err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "connection not found", err)
+		} else {
+			r.writeError(w, http.StatusBadGateway, "failed to list phishlets from miraged", err)
 		}
 		return
 	}
 
-	phishlets, err := client.ListPhishlets()
-	if err != nil {
-		r.writeError(w, http.StatusBadGateway, "failed to list phishlets from miraged", err)
-		return
-	}
-
-	items := make([]sdk.MiragedPhishletResponse, len(phishlets.Items))
-	for i, p := range phishlets.Items {
+	items := make([]sdk.MiragedPhishletResponse, len(phishlets))
+	for i, p := range phishlets {
 		items[i] = sdk.MiragedPhishletResponse{
 			Name:     p.Name,
 			Hostname: p.Hostname,

@@ -12,7 +12,7 @@ import (
 
 // clientProvider constructs Mirage SDK clients from stored connection data.
 type clientProvider interface {
-	Client(id string) (*miragesdk.Client, error)
+	client(id string) (*miragesdk.Client, error)
 }
 
 // CampaignStatus represents the lifecycle state of a campaign.
@@ -270,7 +270,7 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 	if campaign.MiragedID == "" || campaign.Phishlet == "" || s.Miraged == nil {
 		return nil
 	}
-	client, err := s.Miraged.Client(campaign.MiragedID)
+	client, err := s.Miraged.client(campaign.MiragedID)
 	if err != nil {
 		s.Logger.Error("failed to connect to miraged", "error", err)
 		return err

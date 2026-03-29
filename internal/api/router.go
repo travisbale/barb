@@ -8,7 +8,6 @@ import (
 
 	"github.com/travisbale/mirador/internal/phishing"
 	"github.com/travisbale/mirador/sdk"
-	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
 type miragedManager interface {
@@ -16,8 +15,8 @@ type miragedManager interface {
 	Get(id string) (*phishing.MiragedConnection, error)
 	Delete(id string) error
 	List() ([]*phishing.MiragedConnection, error)
-	Client(id string) (*miragesdk.Client, error)
-	TestConnection(id string) error
+	TestConnection(id string) (*phishing.MiragedStatus, error)
+	ListPhishlets(id string) ([]phishing.MiragedPhishlet, error)
 }
 
 type campaignManager interface {
