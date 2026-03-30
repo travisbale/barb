@@ -1,4 +1,14 @@
-# Barb
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logo-dark.png" />
+    <img src="logo-light.png" alt="Barb" width="350" />
+  </picture>
+</p>
+<p align="center">
+  <a href="https://github.com/travisbale/barb/actions/workflows/ci.yml"><img src="https://github.com/travisbale/barb/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://golang.org/doc/go1.26"><img src="https://img.shields.io/badge/go-1.26-blue?logo=go" alt="Go 1.26" /></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/license-GPLv3-green.svg" alt="License: GPL v3" /></a>
+</p>
 
 Campaign management console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
 
