@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
 import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
+import CodeEditor from '../components/CodeEditor.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
@@ -106,7 +107,7 @@ onMounted(load)
             <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
           </label>
         </div>
-        <AppInput v-model="form.yaml" multiline :rows="16" placeholder="Phishlet YAML config (required)" required />
+        <CodeEditor v-model="form.yaml" placeholder="Phishlet YAML config" />
         <div class="flex gap-2">
           <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
           <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
