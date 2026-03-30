@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/travisbale/mirador/internal/phishing"
+	"github.com/travisbale/barb/internal/phishing"
 )
 
 type SMTP struct{ db *DB }

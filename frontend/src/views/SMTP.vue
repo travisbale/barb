@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useConfirm } from '../composables/useConfirm'
 import { listSMTPProfiles, createSMTPProfile, updateSMTPProfile, deleteSMTPProfile, type SMTPProfile } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -10,6 +11,7 @@ import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
 import AddButton from '../components/AddButton.vue'
 
+const { confirm } = useConfirm()
 const profiles = ref<SMTPProfile[]>([])
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
@@ -79,6 +81,7 @@ async function submit() {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this SMTP profile?')) return
   try {
     await deleteSMTPProfile(id)
     profiles.value = profiles.value.filter(p => p.id !== id)

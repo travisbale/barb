@@ -3,8 +3,8 @@ package test_test
 import (
 	"testing"
 
-	"github.com/travisbale/mirador/sdk"
-	"github.com/travisbale/mirador/test"
+	"github.com/travisbale/barb/sdk"
+	"github.com/travisbale/barb/test"
 )
 
 func TestTemplates_CRUD(t *testing.T) {

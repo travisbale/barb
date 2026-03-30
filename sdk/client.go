@@ -9,13 +9,13 @@ import (
 	"net/http"
 )
 
-// Client communicates with the Mirador API.
+// Client communicates with the Barb API.
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-// NewClient creates a Client that talks to the Mirador API at baseURL.
+// NewClient creates a Client that talks to the Barb API at baseURL.
 func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL:    baseURL,

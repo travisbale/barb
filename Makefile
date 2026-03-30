@@ -10,19 +10,19 @@ frontend:
 
 build: frontend
 	@mkdir -p build
-	@go build $(LDFLAGS) -o build/mirador ./cmd/mirador
-	@echo "  build/mirador"
+	@go build $(LDFLAGS) -o build/barb ./cmd/barb
+	@echo "  build/barb"
 
 release: frontend
 	@mkdir -p build
-	@GOOS=linux   GOARCH=amd64 go build $(LDFLAGS) -o build/mirador-linux-amd64       ./cmd/mirador
-	@GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o build/mirador-linux-arm64       ./cmd/mirador
-	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o build/mirador-windows-amd64.exe ./cmd/mirador
+	@GOOS=linux   GOARCH=amd64 go build $(LDFLAGS) -o build/barb-linux-amd64       ./cmd/barb
+	@GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o build/barb-linux-arm64       ./cmd/barb
+	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o build/barb-windows-amd64.exe ./cmd/barb
 
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf build/
-	@rm -rf cmd/mirador/dist/
+	@rm -rf cmd/barb/dist/
 
 test:
 	@echo "Running all tests..."
@@ -42,7 +42,7 @@ lint:
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
 
 dev-backend:
-	@go run ./cmd/mirador --debug
+	@go run ./cmd/barb --debug
 
 dev-frontend:
 	@cd frontend && npm install --silent && npm run dev

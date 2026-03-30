@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   build: {
-    outDir: '../cmd/mirador/dist',
+    outDir: '../cmd/barb/dist',
     emptyOutDir: true,
   },
   server: {

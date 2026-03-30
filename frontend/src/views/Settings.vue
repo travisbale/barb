@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useConfirm } from '../composables/useConfirm'
 import { listMiraged, createMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -10,6 +11,7 @@ import Card from '../components/Card.vue'
 import IconTrash from '../components/IconTrash.vue'
 import AddButton from '../components/AddButton.vue'
 
+const { confirm } = useConfirm()
 const connections = ref<MiragedConnection[]>([])
 const statuses = ref<Record<string, MiragedStatus>>({})
 const showAdd = ref(false)
@@ -40,6 +42,7 @@ async function add() {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this connection?')) return
   try {
     await deleteMiraged(id)
     connections.value = connections.value.filter(c => c.id !== id)

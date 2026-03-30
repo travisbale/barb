@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/travisbale/mirador/sdk"
-	"github.com/travisbale/mirador/test"
+	"github.com/travisbale/barb/sdk"
+	"github.com/travisbale/barb/test"
 )
 
 func TestTargetLists_CRUD(t *testing.T) {

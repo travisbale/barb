@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/travisbale/mirador/sdk"
+	"github.com/travisbale/barb/sdk"
 )
 
 func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {

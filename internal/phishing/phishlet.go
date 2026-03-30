@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Phishlet is a stored phishlet YAML config managed by Mirador.
+// Phishlet is a stored phishlet YAML config managed by Barb.
 // The Name is extracted automatically from the YAML content.
 type Phishlet struct {
 	ID        string
@@ -40,7 +40,7 @@ type phishletStore interface {
 	ListPhishlets() ([]*Phishlet, error)
 }
 
-// PhishletService manages phishlet YAML configs stored in Mirador.
+// PhishletService manages phishlet YAML configs stored in Barb.
 type PhishletService struct {
 	Store phishletStore
 }

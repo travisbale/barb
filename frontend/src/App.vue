@@ -7,6 +7,7 @@ import IconTemplate from './components/IconTemplate.vue'
 import IconPhishlet from './components/IconPhishlet.vue'
 import IconSMTP from './components/IconSMTP.vue'
 import IconSettings from './components/IconSettings.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 
 const { isDark, toggle } = useTheme()
 
@@ -25,7 +26,7 @@ const nav = [
     <!-- Sidebar -->
     <nav class="w-52 bg-surface border-r border-edge flex flex-col">
       <div class="px-5 py-5 border-b border-edge">
-        <div class="font-mono text-base font-bold tracking-widest text-amber uppercase">Mirador</div>
+        <div class="font-mono text-base font-bold tracking-widest text-amber uppercase">Barb</div>
         <div class="font-mono text-xs text-dim mt-0.5 tracking-wider">Operations Console</div>
       </div>
 
@@ -53,6 +54,8 @@ const nav = [
         </button>
       </div>
     </nav>
+
+    <ConfirmDialog />
 
     <!-- Main content -->
     <main class="flex-1 p-8 overflow-auto">

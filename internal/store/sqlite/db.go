@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/travisbale/mirador/internal/phishing"
+	"github.com/travisbale/barb/internal/phishing"
 	_ "modernc.org/sqlite"
 )
 

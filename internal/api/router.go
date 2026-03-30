@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/travisbale/mirador/internal/phishing"
-	"github.com/travisbale/mirador/sdk"
+	"github.com/travisbale/barb/internal/phishing"
+	"github.com/travisbale/barb/sdk"
 )
 
 type miragedManager interface {
@@ -65,7 +65,7 @@ type targetManager interface {
 	DeleteTarget(id string) error
 }
 
-// Router is the HTTP handler for the Mirador API.
+// Router is the HTTP handler for the Barb API.
 type Router struct {
 	Miraged   miragedManager
 	Campaigns campaignManager

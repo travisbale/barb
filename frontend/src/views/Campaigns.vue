@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useConfirm } from '../composables/useConfirm'
 import {
   listCampaigns, createCampaign, deleteCampaign,
   listTargetLists, listTemplates, listSMTPProfiles,
@@ -19,6 +20,7 @@ import Card from '../components/Card.vue'
 import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
+const { confirm } = useConfirm()
 const campaigns = ref<Campaign[]>([])
 const showCreate = ref(false)
 const error = ref('')
@@ -73,6 +75,7 @@ async function create() {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this campaign?')) return
   try {
     await deleteCampaign(id)
     campaigns.value = campaigns.value.filter(c => c.id !== id)

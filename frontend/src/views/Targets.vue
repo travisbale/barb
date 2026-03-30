@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useConfirm } from '../composables/useConfirm'
 import { listTargetLists, createTargetList, deleteTargetList, type TargetList } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -12,6 +13,7 @@ import Card from '../components/Card.vue'
 import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
+const { confirm } = useConfirm()
 const lists = ref<TargetList[]>([])
 const showCreate = ref(false)
 const newName = ref('')
@@ -39,6 +41,7 @@ async function create() {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this target list?')) return
   try {
     await deleteTargetList(id)
     lists.value = lists.value.filter(l => l.id !== id)

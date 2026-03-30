@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/travisbale/mirador/internal/phishing"
-	"github.com/travisbale/mirador/sdk"
+	"github.com/travisbale/barb/internal/phishing"
+	"github.com/travisbale/barb/sdk"
 )
 
 func (r *Router) listMiraged(w http.ResponseWriter, req *http.Request) {

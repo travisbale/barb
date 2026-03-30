@@ -1,4 +1,4 @@
-module github.com/travisbale/mirador
+module github.com/travisbale/barb
 
 go 1.26
 

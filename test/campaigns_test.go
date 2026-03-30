@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/travisbale/mirador/sdk"
-	"github.com/travisbale/mirador/test"
+	"github.com/travisbale/barb/sdk"
+	"github.com/travisbale/barb/test"
 )
 
 // createPrerequisites sets up a target list, template, and SMTP profile

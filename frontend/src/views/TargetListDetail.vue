@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useConfirm } from '../composables/useConfirm'
 import { getTargetList, listTargets, addTarget, deleteTarget, importTargetsCSV, type TargetList, type Target } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import IconTrash from '../components/IconTrash.vue'
@@ -12,6 +13,7 @@ import AddButton from '../components/AddButton.vue'
 import PageHeader from '../components/PageHeader.vue'
 
 const route = useRoute()
+const { confirm } = useConfirm()
 const id = route.params.id as string
 
 const list = ref<TargetList | null>(null)
@@ -65,6 +67,7 @@ async function importCSV(event: Event) {
 }
 
 async function remove(targetId: string) {
+  if (!await confirm('Delete this target?')) return
   try {
     await deleteTarget(targetId)
     targets.value = targets.value.filter(t => t.id !== targetId)

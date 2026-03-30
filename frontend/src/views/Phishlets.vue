@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useConfirm } from '../composables/useConfirm'
 import { listPhishlets, createPhishlet, updatePhishlet, deletePhishlet, type Phishlet } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -10,6 +11,7 @@ import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
 import AddButton from '../components/AddButton.vue'
 
+const { confirm } = useConfirm()
 const phishlets = ref<Phishlet[]>([])
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
@@ -68,6 +70,7 @@ async function handleFileUpload(event: Event) {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this phishlet?')) return
   try {
     await deletePhishlet(id)
     phishlets.value = phishlets.value.filter(p => p.id !== id)
@@ -112,7 +115,7 @@ onMounted(load)
         @click="openEdit(phishlet)"
       >
         <div>
-          <div class="text-sm font-medium text-primary">{{ phishlet.name }}</div>
+          <div class="text-base font-mono font-medium text-primary">{{ phishlet.name }}</div>
           <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(phishlet.created_at).toLocaleDateString() }}</div>
         </div>
         <button @click.stop="remove(phishlet.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>

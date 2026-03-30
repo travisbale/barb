@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/travisbale/mirador/internal/app"
-	"github.com/travisbale/mirador/internal/delivery"
-	"github.com/travisbale/mirador/internal/store/sqlite"
+	"github.com/travisbale/barb/internal/app"
+	"github.com/travisbale/barb/internal/delivery"
+	"github.com/travisbale/barb/internal/store/sqlite"
 )
 
 //go:embed all:dist
@@ -32,14 +32,14 @@ func main() {
 	)
 
 	root := &cobra.Command{
-		Use:          "mirador",
-		Short:        "Mirador — campaign management console for Mirage",
+		Use:          "barb",
+		Short:        "Barb — campaign management console for Mirage",
 		RunE:         func(cmd *cobra.Command, args []string) error { return cmd.Help() },
 		SilenceUsage: true,
 	}
 
 	root.PersistentFlags().StringVar(&addr, "addr", ":8080", "listen address")
-	root.PersistentFlags().StringVar(&dbPath, "db", "mirador.db", "SQLite database path")
+	root.PersistentFlags().StringVar(&dbPath, "db", "barb.db", "SQLite database path")
 	root.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
 
 	serveCmd := &cobra.Command{
@@ -102,7 +102,7 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 	}
 
 	go func() {
-		logger.Info("mirador starting", "addr", addr, "version", Version)
+		logger.Info("barb starting", "addr", addr, "version", Version)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("server error", "error", err)
 			os.Exit(1)

@@ -20,7 +20,7 @@ const container = ref<HTMLDivElement>()
 const view = shallowRef<EditorView>()
 
 // Custom highlight style matching the app's color palette.
-const miradorHighlight = HighlightStyle.define([
+const barbHighlight = HighlightStyle.define([
   { tag: tags.keyword, color: 'var(--color-amber)' },
   { tag: tags.atom, color: 'var(--color-teal)' },
   { tag: tags.bool, color: 'var(--color-teal)' },
@@ -89,7 +89,7 @@ function createState(doc: string): EditorState {
       highlightActiveLineGutter(),
       history(),
       yaml(),
-      syntaxHighlighting(miradorHighlight),
+      syntaxHighlighting(barbHighlight),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       theme,

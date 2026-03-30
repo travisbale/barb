@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useConfirm } from '../composables/useConfirm'
 import { listTemplates, createTemplate, updateTemplate, previewTemplate, deleteTemplate, type EmailTemplate, type PreviewResult } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -10,6 +11,7 @@ import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
 import AddButton from '../components/AddButton.vue'
 
+const { confirm } = useConfirm()
 const templates = ref<EmailTemplate[]>([])
 const showForm = ref(false)
 const editingId = ref<string | null>(null)
@@ -92,6 +94,7 @@ async function runPreview() {
 }
 
 async function remove(id: string) {
+  if (!await confirm('Delete this template?')) return
   try {
     await deleteTemplate(id)
     templates.value = templates.value.filter(t => t.id !== id)

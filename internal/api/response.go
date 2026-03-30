@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/travisbale/mirador/sdk"
+	"github.com/travisbale/barb/sdk"
 )
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/travisbale/mirador/internal/app"
-	"github.com/travisbale/mirador/internal/phishing"
-	"github.com/travisbale/mirador/internal/store/sqlite"
-	"github.com/travisbale/mirador/sdk"
+	"github.com/travisbale/barb/internal/app"
+	"github.com/travisbale/barb/internal/phishing"
+	"github.com/travisbale/barb/internal/store/sqlite"
+	"github.com/travisbale/barb/sdk"
 )
 
 // MockMailer records Send calls instead of sending real emails.

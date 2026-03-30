@@ -10,7 +10,7 @@ import (
 
 	mail "github.com/wneessen/go-mail"
 
-	"github.com/travisbale/mirador/internal/phishing"
+	"github.com/travisbale/barb/internal/phishing"
 )
 
 // TemplateData holds the variables available in email templates.

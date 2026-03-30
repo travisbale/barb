@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/travisbale/mirador/internal/api"
-	"github.com/travisbale/mirador/internal/phishing"
-	"github.com/travisbale/mirador/internal/store/sqlite"
+	"github.com/travisbale/barb/internal/api"
+	"github.com/travisbale/barb/internal/phishing"
+	"github.com/travisbale/barb/internal/store/sqlite"
 )
 
 // Config holds the parameters needed to construct an App.

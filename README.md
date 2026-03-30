@@ -1,16 +1,16 @@
-# Mirador
+# Barb
 
-Campaign management console for [Mirage](https://github.com/travisbale/mirage). Mirador handles the operational side of phishing engagements — target lists, email templates, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
+Campaign management console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
 
 ## Architecture
 
 ```
-Operator's browser → Mirador (campaign management, email delivery)
+Operator's browser → Barb (campaign management, email delivery)
                         ↓ Mirage API (mTLS)
                      miraged (reverse proxy, session capture)
 ```
 
-Mirador is a single Go binary with an embedded Vue frontend. It communicates with `miraged` over its mTLS API to create lures and monitor captured sessions.
+Barb is a single Go binary with an embedded Vue frontend. It communicates with `miraged` over its mTLS API to create lures and monitor captured sessions.
 
 ## Requirements
 
@@ -21,13 +21,13 @@ Mirador is a single Go binary with an embedded Vue frontend. It communicates wit
 
 ```bash
 make build
-# Produces build/mirador
+# Produces build/barb
 ```
 
 ## Running
 
 ```bash
-./mirador --debug
+./barb --debug
 # Starts on :8080 by default
 ```
 
@@ -38,7 +38,7 @@ Open `http://localhost:8080` in your browser.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--addr` | `:8080` | Listen address |
-| `--db` | `mirador.db` | SQLite database path |
+| `--db` | `barb.db` | SQLite database path |
 | `--debug` | `false` | Enable debug logging |
 
 ## Development
@@ -77,7 +77,7 @@ Integration tests start the full server in-process with an in-memory SQLite data
 ## Project Structure
 
 ```
-cmd/mirador/          # entry point, embeds frontend
+cmd/barb/          # entry point, embeds frontend
 internal/
   api/                # HTTP handlers
   phishing/           # domain types, services, validation
@@ -95,4 +95,4 @@ test/                 # integration tests
 
 ## License
 
-Mirador is licensed under the [GNU General Public License v3.0](LICENSE).
+Barb is licensed under the [GNU General Public License v3.0](LICENSE).
