@@ -22,32 +22,23 @@ func (r *Router) listMiraged(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, items)
 }
 
-func (r *Router) createMiraged(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreateMiragedRequest
+func (r *Router) enrollMiraged(w http.ResponseWriter, req *http.Request) {
+	var body sdk.EnrollMiragedRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
 		return
 	}
 
-	conn := &phishing.MiragedConnection{
-		Name:           body.Name,
-		Address:        body.Address,
-		SecretHostname: body.SecretHostname,
-		CertPEM:        []byte(body.CertPEM),
-		KeyPEM:         []byte(body.KeyPEM),
-		CACertPEM:      []byte(body.CACertPEM),
-	}
-
-	created, err := r.Miraged.Create(conn)
+	conn, err := r.Miraged.Enroll(body.Name, body.Address, body.SecretHostname, body.Token)
 	if err != nil {
 		if isValidationError(err) {
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create connection", err)
+			r.writeError(w, http.StatusInternalServerError, "enrollment failed", err)
 		}
 		return
 	}
-	writeJSON(w, http.StatusCreated, miragedToResponse(created))
+	writeJSON(w, http.StatusCreated, miragedToResponse(conn))
 }
 
 func (r *Router) deleteMiraged(w http.ResponseWriter, req *http.Request) {

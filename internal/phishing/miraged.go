@@ -1,6 +1,20 @@
 package phishing
 
 import (
+	"bytes"
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,18 +61,113 @@ type MiragedService struct {
 	Store miragedStore
 }
 
-func (s *MiragedService) Create(conn *MiragedConnection) (*MiragedConnection, error) {
-	if err := conn.Validate(); err != nil {
+// Enroll connects to a miraged instance using an invite token, generates
+// a keypair, enrolls via the API, and stores the resulting credentials.
+func (s *MiragedService) Enroll(name, address, secretHostname, token string) (*MiragedConnection, error) {
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+	if address == "" {
+		return nil, ErrAddressRequired
+	}
+	if secretHostname == "" {
+		return nil, ErrSecretHostnameRequired
+	}
+	if token == "" {
+		return nil, ErrTokenRequired
+	}
+
+	// Generate ECDSA P-256 keypair.
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("generating key: %w", err)
+	}
+
+	// Create CSR.
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject: pkix.Name{CommonName: "barb"},
+	}, key)
+	if err != nil {
+		return nil, fmt.Errorf("creating CSR: %w", err)
+	}
+	csrPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
+
+	// Call the enrollment endpoint (no mTLS — we don't have certs yet).
+	enrollResp, err := enrollHTTP(address, secretHostname, token, string(csrPEM))
+	if err != nil {
 		return nil, err
 	}
 
-	conn.ID = uuid.New().String()
-	conn.CreatedAt = time.Now()
+	// Marshal the private key.
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling key: %w", err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+
+	conn := &MiragedConnection{
+		ID:             uuid.New().String(),
+		Name:           name,
+		Address:        address,
+		SecretHostname: secretHostname,
+		CertPEM:        []byte(enrollResp.CertPEM),
+		KeyPEM:         keyPEM,
+		CACertPEM:      []byte(enrollResp.CACertPEM),
+		CreatedAt:      time.Now(),
+	}
 
 	if err := s.Store.CreateConnection(conn); err != nil {
 		return nil, err
 	}
 	return conn, nil
+}
+
+// enrollHTTP sends a CSR to the miraged enrollment endpoint and returns the
+// signed certificate and CA cert. TLS verification is skipped because we
+// don't have the CA cert yet — the invite token authenticates the exchange.
+func enrollHTTP(address, secretHostname, token, csrPEM string) (*miragesdk.EnrollResponse, error) {
+	reqBody := miragesdk.EnrollRequest{Token: token, CSRPEM: csrPEM}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling request: %w", err)
+	}
+
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				ServerName:         secretHostname,
+				InsecureSkipVerify: true, //nolint:gosec // enrollment bootstrap
+			},
+			DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, network, address)
+			},
+		},
+	}
+
+	enrollURL := fmt.Sprintf("https://%s%s", secretHostname, miragesdk.RouteEnroll)
+	httpReq, err := http.NewRequest(http.MethodPost, enrollURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("building request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("enrollment request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("enrollment failed: %s", body)
+	}
+
+	var enrollResp miragesdk.EnrollResponse
+	if err := json.NewDecoder(resp.Body).Decode(&enrollResp); err != nil {
+		return nil, fmt.Errorf("decoding enrollment response: %w", err)
+	}
+	return &enrollResp, nil
 }
 
 func (s *MiragedService) Get(id string) (*MiragedConnection, error) {
@@ -90,8 +199,7 @@ type MiragedStatus struct {
 }
 
 // TestConnection verifies connectivity to the miraged instance and returns
-// its status. A connection or protocol error is reported in the returned
-// status, not as a Go error — the only errors returned are lookup failures.
+// its status.
 func (s *MiragedService) TestConnection(id string) (*MiragedStatus, error) {
 	client, err := s.client(id)
 	if err != nil {
