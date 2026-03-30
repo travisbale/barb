@@ -17,6 +17,7 @@ import AppSelect from '../components/AppSelect.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
@@ -103,47 +104,45 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showCreate" class="p-7 mb-4">
-      <form @submit.prevent="create" class="flex flex-col gap-7">
-        <AppInput v-model="form.name" placeholder="Campaign name (required)" required />
+    <FormCard v-if="showCreate" @submit="create">
+      <AppInput v-model="form.name" placeholder="Campaign name (required)" required />
 
-        <div class="grid grid-cols-3 gap-5">
-          <AppSelect v-model="form.target_list_id" label="Target list" required>
-            <option value="" disabled></option>
-            <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
-          </AppSelect>
+      <div class="grid grid-cols-3 gap-5">
+        <AppSelect v-model="form.target_list_id" label="Target list" required>
+          <option value="" disabled></option>
+          <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
+        </AppSelect>
 
-          <AppSelect v-model="form.template_id" label="Email template" required>
-            <option value="" disabled></option>
-            <option v-for="tmpl in templates" :key="tmpl.id" :value="tmpl.id">{{ tmpl.name }}</option>
-          </AppSelect>
+        <AppSelect v-model="form.template_id" label="Email template" required>
+          <option value="" disabled></option>
+          <option v-for="tmpl in templates" :key="tmpl.id" :value="tmpl.id">{{ tmpl.name }}</option>
+        </AppSelect>
 
-          <AppSelect v-model="form.smtp_profile_id" label="SMTP profile" required>
-            <option value="" disabled></option>
-            <option v-for="profile in smtpProfiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option>
-          </AppSelect>
-        </div>
+        <AppSelect v-model="form.smtp_profile_id" label="SMTP profile" required>
+          <option value="" disabled></option>
+          <option v-for="profile in smtpProfiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option>
+        </AppSelect>
+      </div>
 
-        <div class="grid grid-cols-3 gap-5">
-          <AppSelect v-model="form.miraged_id" label="Miraged server">
-            <option value="">None (manual lure URL)</option>
-            <option v-for="conn in miragedConnections" :key="conn.id" :value="conn.id">{{ conn.name }}</option>
-          </AppSelect>
+      <div class="grid grid-cols-3 gap-5">
+        <AppSelect v-model="form.miraged_id" label="Miraged server">
+          <option value="">None (manual lure URL)</option>
+          <option v-for="conn in miragedConnections" :key="conn.id" :value="conn.id">{{ conn.name }}</option>
+        </AppSelect>
 
-          <AppSelect v-model="form.phishlet" label="Phishlet">
-            <option value="" disabled></option>
-            <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
-          </AppSelect>
+        <AppSelect v-model="form.phishlet" label="Phishlet">
+          <option value="" disabled></option>
+          <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
+        </AppSelect>
 
-          <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (per min)" />
-        </div>
+        <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (per min)" />
+      </div>
 
-        <div class="flex gap-2 pt-1">
-          <AppButton type="submit">Create</AppButton>
-          <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+      <template #actions>
+        <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
+        <AppButton type="submit">Create</AppButton>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="campaigns.length === 0 && !showCreate" message="No campaigns. Create one to begin an operation." />
 

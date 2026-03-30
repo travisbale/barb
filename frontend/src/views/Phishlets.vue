@@ -9,6 +9,7 @@ import CodeEditor from '../components/CodeEditor.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
 const { confirm } = useConfirm()
@@ -90,19 +91,17 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showForm" class="p-7 mb-4">
-      <form @submit.prevent="submit" class="flex flex-col gap-5">
-        <CodeEditor v-model="yaml" />
-        <div class="flex gap-2">
-          <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
-          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
-            Upload
-            <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
-          </label>
-          <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+    <FormCard v-if="showForm" @submit="submit">
+      <CodeEditor v-model="yaml" />
+      <template #actions>
+        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
+          Upload
+          <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
+        </label>
+        <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
+        <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="phishlets.length === 0 && !showForm" message="No phishlets. Add one to define phishing site configurations." />
 

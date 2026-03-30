@@ -9,6 +9,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
 const { confirm } = useConfirm()
@@ -101,8 +102,8 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showForm" class="p-7 mb-4">
-      <form @submit.prevent="submit" class="grid grid-cols-2 gap-7">
+    <FormCard v-if="showForm" @submit="submit">
+      <div class="grid grid-cols-2 gap-7">
         <AppInput v-model="form.name" placeholder="Profile name (required)" required class="col-span-2" />
         <AppInput v-model="form.host" placeholder="SMTP host (required)" required />
         <AppInput v-model="form.port" placeholder="Port" type="number" />
@@ -110,12 +111,12 @@ onMounted(load)
         <AppInput v-model="form.password" :placeholder="editingId ? 'Password (leave blank to keep)' : 'Password'" type="password" />
         <AppInput v-model="form.from_addr" placeholder="From address (required)" required />
         <AppInput v-model="form.from_name" placeholder="From name" />
-        <div class="col-span-2 flex gap-2">
-          <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
-          <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+      </div>
+      <template #actions>
+        <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
+        <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="profiles.length === 0 && !showForm" message="No SMTP profiles. Add one to enable email delivery." />
 

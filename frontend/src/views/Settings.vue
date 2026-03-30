@@ -8,6 +8,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import IconTrash from '../components/IconTrash.vue'
 import AddButton from '../components/AddButton.vue'
 
@@ -74,23 +75,20 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showAdd" class="p-7 mb-4">
-      <form @submit.prevent="add" class="flex flex-col gap-7">
-        <div class="grid grid-cols-2 gap-5">
-          <AppInput v-model="form.name" placeholder="Name (required)" required />
-          <AppInput v-model="form.address" placeholder="Address (host:port)" required />
-        </div>
-        <div class="grid grid-cols-2 gap-5">
-          <AppInput v-model="form.secret_hostname" placeholder="Secret hostname" required />
-          <AppInput v-model="form.token" placeholder="Invite token" required />
-        </div>
-
-        <div class="flex gap-2 pt-1">
-          <AppButton type="submit" :disabled="enrolling">{{ enrolling ? 'Enrolling...' : 'Enroll' }}</AppButton>
-          <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+    <FormCard v-if="showAdd" @submit="add">
+      <div class="grid grid-cols-2 gap-5">
+        <AppInput v-model="form.name" placeholder="Name (required)" required />
+        <AppInput v-model="form.address" placeholder="Address (host:port)" required />
+      </div>
+      <div class="grid grid-cols-2 gap-5">
+        <AppInput v-model="form.secret_hostname" placeholder="Secret hostname" required />
+        <AppInput v-model="form.token" placeholder="Invite token" required />
+      </div>
+      <template #actions>
+        <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
+        <AppButton type="submit" :disabled="enrolling">{{ enrolling ? 'Enrolling...' : 'Enroll' }}</AppButton>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="connections.length === 0 && !showAdd" message="No miraged connections configured." />
 

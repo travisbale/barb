@@ -64,8 +64,8 @@ onMounted(load)
     <Card v-if="showCreate" class="p-7 mb-4">
       <form @submit.prevent="create" class="flex gap-3 items-center">
         <AppInput v-model="newName" placeholder="List name..." autofocus class="flex-1" />
-        <AppButton type="submit">Create</AppButton>
         <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
+        <AppButton type="submit">Create</AppButton>
       </form>
     </Card>
 

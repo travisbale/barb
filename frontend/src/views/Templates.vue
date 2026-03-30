@@ -9,6 +9,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
 const { confirm } = useConfirm()
@@ -115,20 +116,18 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <Card v-if="showForm" class="p-7 mb-4">
-      <form @submit.prevent="submit" class="flex flex-col gap-7">
-        <div class="grid grid-cols-2 gap-5">
-          <AppInput v-model="form.name" placeholder="Template name (required)" required />
-          <AppInput v-model="form.subject" placeholder="Email subject (required)" required />
-        </div>
-        <AppInput v-model="form.html_body" multiline :rows="8" placeholder="HTML body" />
-        <AppInput v-model="form.text_body" multiline :rows="4" placeholder="Plain text body (optional)" />
-        <div class="flex gap-2">
-          <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
-          <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+    <FormCard v-if="showForm" @submit="submit">
+      <div class="grid grid-cols-2 gap-5">
+        <AppInput v-model="form.name" placeholder="Template name (required)" required />
+        <AppInput v-model="form.subject" placeholder="Email subject (required)" required />
+      </div>
+      <AppInput v-model="form.html_body" multiline :rows="8" placeholder="HTML body" />
+      <AppInput v-model="form.text_body" multiline :rows="4" placeholder="Plain text body (optional)" />
+      <template #actions>
+        <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
+        <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
+      </template>
+    </FormCard>
 
     <!-- Preview panel -->
     <Card v-if="previewId" class="p-7 mb-4">
@@ -140,9 +139,9 @@ onMounted(load)
           <AppInput v-model="previewData.email" placeholder="Email" />
           <AppInput v-model="previewData.url" placeholder="Lure URL" />
         </div>
-        <div class="flex gap-2">
-          <AppButton :disabled="previewing" @click="runPreview">{{ previewing ? 'Rendering...' : 'Render' }}</AppButton>
+        <div class="flex gap-2 justify-end">
           <AppButton variant="ghost" @click="closePreview">Close</AppButton>
+          <AppButton :disabled="previewing" @click="runPreview">{{ previewing ? 'Rendering...' : 'Render' }}</AppButton>
         </div>
         <div v-if="previewResult" class="flex flex-col gap-4 mt-2">
           <div>

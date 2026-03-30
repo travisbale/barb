@@ -9,6 +9,7 @@ import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 import PageHeader from '../components/PageHeader.vue'
 
@@ -96,19 +97,19 @@ onMounted(load)
     <ErrorBanner :message="error" />
 
     <!-- Add target form -->
-    <Card v-if="showAdd" class="p-7 mb-4">
-      <form @submit.prevent="add" class="grid grid-cols-2 gap-7">
+    <FormCard v-if="showAdd" @submit="add">
+      <div class="grid grid-cols-2 gap-7">
         <AppInput v-model="form.email" type="email" placeholder="Email (required)" required class="col-span-2" />
         <AppInput v-model="form.first_name" placeholder="First name" />
         <AppInput v-model="form.last_name" placeholder="Last name" />
         <AppInput v-model="form.department" placeholder="Department" />
         <AppInput v-model="form.position" placeholder="Position" />
-        <div class="col-span-2 flex gap-2">
-          <AppButton type="submit">Add</AppButton>
-          <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
-        </div>
-      </form>
-    </Card>
+      </div>
+      <template #actions>
+        <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
+        <AppButton type="submit">Add</AppButton>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="targets.length === 0 && !showAdd" message="No targets. Add manually or import a CSV." />
 
