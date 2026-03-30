@@ -114,6 +114,16 @@ export function updateTemplate(id: string, template: Partial<Omit<EmailTemplate,
   return request('PATCH', `/templates/${id}`, template)
 }
 
+export interface PreviewResult {
+  subject: string
+  html_body: string
+  text_body: string
+}
+
+export function previewTemplate(id: string, data: { first_name: string; last_name: string; email: string; url: string }): Promise<PreviewResult> {
+  return request('POST', `/templates/${id}/preview`, data)
+}
+
 export function deleteTemplate(id: string): Promise<void> {
   return request('DELETE', `/templates/${id}`)
 }

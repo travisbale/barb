@@ -91,6 +91,37 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, templateToResponse(updated))
 }
 
+func (r *Router) previewTemplate(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	var body sdk.PreviewTemplateRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	rendered, err := r.Templates.Preview(id, phishing.PreviewData{
+		FirstName: body.FirstName,
+		LastName:  body.LastName,
+		Email:     body.Email,
+		URL:       body.URL,
+	})
+	if err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "template not found", err)
+		} else {
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sdk.PreviewTemplateResponse{
+		Subject:  rendered.Subject,
+		HTMLBody: rendered.HTMLBody,
+		TextBody: rendered.TextBody,
+	})
+}
+
 func (r *Router) deleteTemplate(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Templates.Delete(id); err != nil {

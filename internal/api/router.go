@@ -35,6 +35,7 @@ type templateManager interface {
 	Update(id string, update *phishing.TemplateUpdate) (*phishing.EmailTemplate, error)
 	Delete(id string) error
 	List() ([]*phishing.EmailTemplate, error)
+	Preview(id string, data phishing.PreviewData) (*phishing.RenderedTemplate, error)
 }
 
 type smtpManager interface {
@@ -100,6 +101,7 @@ func (r *Router) registerRoutes() {
 	// Email Templates
 	h("GET", sdk.RouteTemplates, r.listTemplates)
 	h("POST", sdk.RouteTemplates, r.createTemplate)
+	h("POST", sdk.RouteTemplatePreview, r.previewTemplate)
 	h("GET", sdk.RouteTemplate, r.getTemplate)
 	h("PATCH", sdk.RouteTemplate, r.updateTemplate)
 	h("DELETE", sdk.RouteTemplate, r.deleteTemplate)

@@ -158,6 +158,10 @@ func (c *Client) UpdateTemplate(id string, req UpdateTemplateRequest) (*Template
 	return send[TemplateResponse](c, http.MethodPatch, ResolveRoute(RouteTemplate, "id", id), req)
 }
 
+func (c *Client) PreviewTemplate(id string, req PreviewTemplateRequest) (*PreviewTemplateResponse, error) {
+	return send[PreviewTemplateResponse](c, http.MethodPost, ResolveRoute(RouteTemplatePreview, "id", id), req)
+}
+
 func (c *Client) DeleteTemplate(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTemplate, "id", id))
 }

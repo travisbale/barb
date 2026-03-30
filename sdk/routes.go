@@ -18,8 +18,9 @@ const (
 	RouteCampaignResults = "/api/campaigns/{id}/results"
 
 	// Email Templates
-	RouteTemplates = "/api/templates"
-	RouteTemplate  = "/api/templates/{id}"
+	RouteTemplates       = "/api/templates"
+	RouteTemplate        = "/api/templates/{id}"
+	RouteTemplatePreview = "/api/templates/{id}/preview"
 
 	// SMTP Profiles
 	RouteSMTPProfiles = "/api/smtp-profiles"

@@ -94,6 +94,19 @@ type TemplateResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type PreviewTemplateRequest struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	URL       string `json:"url"`
+}
+
+type PreviewTemplateResponse struct {
+	Subject  string `json:"subject"`
+	HTMLBody string `json:"html_body"`
+	TextBody string `json:"text_body"`
+}
+
 type ImportTargetsResponse struct {
 	Imported int `json:"imported"`
 }
