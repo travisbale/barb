@@ -4,7 +4,6 @@ import { listPhishlets, createPhishlet, updatePhishlet, deletePhishlet, type Phi
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
 import IconTrash from '../components/IconTrash.vue'
-import AppInput from '../components/AppInput.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -16,8 +15,7 @@ const showForm = ref(false)
 const editingId = ref<string | null>(null)
 const error = ref('')
 
-const emptyForm = { name: '', yaml: '' }
-const form = ref({ ...emptyForm })
+const yaml = ref('')
 
 async function load() {
   try {
@@ -29,30 +27,30 @@ async function load() {
 
 function openCreate() {
   editingId.value = null
-  form.value = { ...emptyForm }
+  yaml.value = ''
   showForm.value = true
 }
 
 function openEdit(phishlet: Phishlet) {
   editingId.value = phishlet.id
-  form.value = { name: phishlet.name, yaml: phishlet.yaml }
+  yaml.value = phishlet.yaml
   showForm.value = true
 }
 
 function closeForm() {
   showForm.value = false
   editingId.value = null
-  form.value = { ...emptyForm }
+  yaml.value = ''
 }
 
 async function submit() {
   try {
     if (editingId.value) {
-      const updated = await updatePhishlet(editingId.value, form.value)
+      const updated = await updatePhishlet(editingId.value, yaml.value)
       const idx = phishlets.value.findIndex(p => p.id === editingId.value)
       if (idx !== -1) phishlets.value[idx] = updated
     } else {
-      const created = await createPhishlet(form.value)
+      const created = await createPhishlet(yaml.value)
       phishlets.value.unshift(created)
     }
     closeForm()
@@ -65,14 +63,7 @@ async function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-
-  const text = await file.text()
-  form.value.yaml = text
-
-  if (!form.value.name) {
-    form.value.name = file.name.replace(/\.(yaml|yml)$/i, '')
-  }
-
+  yaml.value = await file.text()
   input.value = ''
 }
 
@@ -97,19 +88,14 @@ onMounted(load)
     <ErrorBanner :message="error" />
 
     <Card v-if="showForm" class="p-7 mb-4">
-      <form @submit.prevent="submit" class="flex flex-col gap-7">
-        <div class="flex items-end gap-5">
-          <div class="flex-1">
-            <AppInput v-model="form.name" placeholder="Phishlet name (required)" required />
-          </div>
-          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
-            Upload YAML
-            <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
-          </label>
-        </div>
-        <CodeEditor v-model="form.yaml" placeholder="Phishlet YAML config" />
+      <form @submit.prevent="submit" class="flex flex-col gap-5">
+        <CodeEditor v-model="yaml" />
         <div class="flex gap-2">
           <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
+          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
+            Upload
+            <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
+          </label>
           <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
         </div>
       </form>

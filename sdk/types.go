@@ -110,13 +110,11 @@ type PreviewTemplateResponse struct {
 // --- Phishlets ---
 
 type CreatePhishletRequest struct {
-	Name string `json:"name"`
 	YAML string `json:"yaml"`
 }
 
 type UpdatePhishletRequest struct {
-	Name *string `json:"name,omitempty"`
-	YAML *string `json:"yaml,omitempty"`
+	YAML string `json:"yaml"`
 }
 
 type PhishletResponse struct {

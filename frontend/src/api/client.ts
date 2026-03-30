@@ -141,16 +141,16 @@ export function listPhishlets(): Promise<Phishlet[]> {
   return request('GET', '/phishlets')
 }
 
-export function createPhishlet(phishlet: { name: string; yaml: string }): Promise<Phishlet> {
-  return request('POST', '/phishlets', phishlet)
+export function createPhishlet(yaml: string): Promise<Phishlet> {
+  return request('POST', '/phishlets', { yaml })
 }
 
 export function getPhishlet(id: string): Promise<Phishlet> {
   return request('GET', `/phishlets/${id}`)
 }
 
-export function updatePhishlet(id: string, phishlet: { name?: string; yaml?: string }): Promise<Phishlet> {
-  return request('PATCH', `/phishlets/${id}`, phishlet)
+export function updatePhishlet(id: string, yaml: string): Promise<Phishlet> {
+  return request('PATCH', `/phishlets/${id}`, { yaml })
 }
 
 export function deletePhishlet(id: string): Promise<void> {

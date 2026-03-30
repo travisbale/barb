@@ -39,9 +39,9 @@ type templateManager interface {
 }
 
 type phishletManager interface {
-	Create(phishlet *phishing.Phishlet) (*phishing.Phishlet, error)
+	Create(yaml string) (*phishing.Phishlet, error)
 	Get(id string) (*phishing.Phishlet, error)
-	Update(id string, update *phishing.PhishletUpdate) (*phishing.Phishlet, error)
+	Update(id string, yaml string) (*phishing.Phishlet, error)
 	Delete(id string) error
 	List() ([]*phishing.Phishlet, error)
 }

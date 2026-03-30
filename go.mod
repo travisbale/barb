@@ -7,6 +7,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/travisbale/mirage v0.2.0
 	github.com/wneessen/go-mail v0.7.2
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.48.0
 )
 

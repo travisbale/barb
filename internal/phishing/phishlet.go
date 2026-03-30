@@ -1,12 +1,15 @@
 package phishing
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 // Phishlet is a stored phishlet YAML config managed by Mirador.
+// The Name is extracted automatically from the YAML content.
 type Phishlet struct {
 	ID        string
 	Name      string
@@ -14,14 +17,18 @@ type Phishlet struct {
 	CreatedAt time.Time
 }
 
-func (p *Phishlet) Validate() error {
-	if p.Name == "" {
-		return ErrNameRequired
+// extractName parses just the top-level name field from the YAML.
+func extractName(yamlContent string) (string, error) {
+	var header struct {
+		Name string `yaml:"name"`
 	}
-	if p.YAML == "" {
-		return ErrYAMLRequired
+	if err := yaml.Unmarshal([]byte(yamlContent), &header); err != nil {
+		return "", fmt.Errorf("invalid YAML: %w", err)
 	}
-	return nil
+	if header.Name == "" {
+		return "", ErrNameRequired
+	}
+	return header.Name, nil
 }
 
 type phishletStore interface {
@@ -33,24 +40,27 @@ type phishletStore interface {
 	ListPhishlets() ([]*Phishlet, error)
 }
 
-// PhishletUpdate holds optional fields for a partial phishlet update.
-type PhishletUpdate struct {
-	Name *string
-	YAML *string
-}
-
 // PhishletService manages phishlet YAML configs stored in Mirador.
 type PhishletService struct {
 	Store phishletStore
 }
 
-func (s *PhishletService) Create(phishlet *Phishlet) (*Phishlet, error) {
-	if err := phishlet.Validate(); err != nil {
+func (s *PhishletService) Create(yamlContent string) (*Phishlet, error) {
+	if yamlContent == "" {
+		return nil, ErrYAMLRequired
+	}
+
+	name, err := extractName(yamlContent)
+	if err != nil {
 		return nil, err
 	}
 
-	phishlet.ID = uuid.New().String()
-	phishlet.CreatedAt = time.Now()
+	phishlet := &Phishlet{
+		ID:        uuid.New().String(),
+		Name:      name,
+		YAML:      yamlContent,
+		CreatedAt: time.Now(),
+	}
 
 	if err := s.Store.CreatePhishlet(phishlet); err != nil {
 		return nil, err
@@ -66,22 +76,23 @@ func (s *PhishletService) GetByName(name string) (*Phishlet, error) {
 	return s.Store.GetPhishletByName(name)
 }
 
-func (s *PhishletService) Update(id string, update *PhishletUpdate) (*Phishlet, error) {
+func (s *PhishletService) Update(id string, yamlContent string) (*Phishlet, error) {
 	existing, err := s.Store.GetPhishlet(id)
 	if err != nil {
 		return nil, err
 	}
 
-	if update.Name != nil {
-		existing.Name = *update.Name
-	}
-	if update.YAML != nil {
-		existing.YAML = *update.YAML
+	if yamlContent == "" {
+		return nil, ErrYAMLRequired
 	}
 
-	if err := existing.Validate(); err != nil {
+	name, err := extractName(yamlContent)
+	if err != nil {
 		return nil, err
 	}
+
+	existing.Name = name
+	existing.YAML = yamlContent
 
 	if err := s.Store.UpdatePhishlet(existing); err != nil {
 		return nil, err

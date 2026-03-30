@@ -29,10 +29,7 @@ func (r *Router) createPhishlet(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	created, err := r.Phishlets.Create(&phishing.Phishlet{
-		Name: body.Name,
-		YAML: body.YAML,
-	})
+	created, err := r.Phishlets.Create(body.YAML)
 	if err != nil {
 		if isValidationError(err) {
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
@@ -67,10 +64,7 @@ func (r *Router) updatePhishlet(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	updated, err := r.Phishlets.Update(id, &phishing.PhishletUpdate{
-		Name: body.Name,
-		YAML: body.YAML,
-	})
+	updated, err := r.Phishlets.Update(id, body.YAML)
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
