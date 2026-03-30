@@ -102,15 +102,18 @@ onUnmounted(stopPolling)
       :breadcrumbs="[{ label: 'Campaigns', to: '/campaigns' }, { label: campaign?.name ?? '...' }]"
     >
       <template #subtitle>
-        <div class="flex items-center gap-3 mt-1">
-          <span class="text-xs font-mono uppercase tracking-wider" :class="{
-            'text-dim': campaign?.status === 'draft',
-            'text-teal': campaign?.status === 'active',
-            'text-amber': campaign?.status === 'paused',
-            'text-muted': campaign?.status === 'completed',
-            'text-danger': campaign?.status === 'cancelled',
-          }">{{ campaign?.status }}</span>
-          <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
+        <div class="flex flex-col gap-1 mt-1">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-mono uppercase tracking-wider" :class="{
+              'text-dim': campaign?.status === 'draft',
+              'text-teal': campaign?.status === 'active',
+              'text-amber': campaign?.status === 'paused',
+              'text-muted': campaign?.status === 'completed',
+              'text-danger': campaign?.status === 'cancelled',
+            }">{{ campaign?.status }}</span>
+            <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
+          </div>
+          <span v-if="campaign?.lure_url" class="text-xs text-dim font-mono select-all">{{ campaign.lure_url }}</span>
         </div>
       </template>
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
