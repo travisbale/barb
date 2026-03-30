@@ -87,6 +87,31 @@ const statusColor: Record<string, string> = {
 const sentCount = computed(() => results.value.filter(result => result.status !== 'pending').length)
 const totalCount = computed(() => results.value.length)
 
+function exportCSV() {
+  if (results.value.length === 0) return
+
+  const headers = ['email', 'status', 'sent_at', 'clicked_at', 'captured_at', 'session_id']
+  const rows = results.value.map(result => [
+    result.email,
+    result.status,
+    result.sent_at ?? '',
+    result.clicked_at ?? '',
+    result.captured_at ?? '',
+    result.session_id,
+  ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+
+  const csv = [headers.join(','), ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `${campaign.value?.name ?? 'campaign'}-results.csv`
+  anchor.click()
+
+  URL.revokeObjectURL(url)
+}
+
 onMounted(async () => {
   await load()
   if (isActive.value) startPolling()
@@ -116,6 +141,7 @@ onUnmounted(stopPolling)
           <span v-if="campaign?.lure_url" class="text-xs text-dim font-mono select-all">{{ campaign.lure_url }}</span>
         </div>
       </template>
+      <AppButton v-if="results.length > 0" variant="secondary" @click="exportCSV">Export CSV</AppButton>
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
         {{ starting ? 'Starting...' : 'Start Campaign' }}
       </AppButton>
