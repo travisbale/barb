@@ -171,13 +171,11 @@ type CampaignResultResponse struct {
 
 // --- Miraged Connections ---
 
-type CreateMiragedRequest struct {
+type EnrollMiragedRequest struct {
 	Name           string `json:"name"`
 	Address        string `json:"address"`
 	SecretHostname string `json:"secret_hostname"`
-	CertPEM        string `json:"cert_pem"`
-	KeyPEM         string `json:"key_pem"`
-	CACertPEM      string `json:"ca_cert_pem"`
+	Token          string `json:"token"`
 }
 
 type MiragedResponse struct {

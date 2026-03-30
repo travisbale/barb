@@ -11,7 +11,7 @@ import (
 )
 
 type miragedManager interface {
-	Create(conn *phishing.MiragedConnection) (*phishing.MiragedConnection, error)
+	Enroll(name, address, secretHostname, token string) (*phishing.MiragedConnection, error)
 	Get(id string) (*phishing.MiragedConnection, error)
 	Delete(id string) error
 	List() ([]*phishing.MiragedConnection, error)
@@ -140,7 +140,7 @@ func (r *Router) registerRoutes() {
 
 	// Miraged connections
 	h("GET", sdk.RouteMiraged, r.listMiraged)
-	h("POST", sdk.RouteMiraged, r.createMiraged)
+	h("POST", sdk.RouteMiraged, r.enrollMiraged)
 	h("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
 	h("GET", sdk.RouteMiragedStatus, r.testMiraged)
 	h("GET", sdk.RouteMiragedPhishlets, r.listMiragedPhishlets)

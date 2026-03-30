@@ -283,13 +283,11 @@ export function listMiraged(): Promise<MiragedConnection[]> {
   return request('GET', '/miraged')
 }
 
-export function createMiraged(conn: {
+export function enrollMiraged(conn: {
   name: string
   address: string
   secret_hostname: string
-  cert_pem: string
-  key_pem: string
-  ca_cert_pem: string
+  token: string
 }): Promise<MiragedConnection> {
   return request('POST', '/miraged', conn)
 }

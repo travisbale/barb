@@ -220,7 +220,7 @@ func (c *Client) DeleteSMTPProfile(id string) error {
 
 // --- Miraged Connections ---
 
-func (c *Client) CreateMiraged(req CreateMiragedRequest) (*MiragedResponse, error) {
+func (c *Client) EnrollMiraged(req EnrollMiragedRequest) (*MiragedResponse, error) {
 	return send[MiragedResponse](c, http.MethodPost, RouteMiraged, req)
 }
 

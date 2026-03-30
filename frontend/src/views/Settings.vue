@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useConfirm } from '../composables/useConfirm'
-import { listMiraged, createMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
+import { listMiraged, enrollMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
@@ -15,12 +15,10 @@ const { confirm } = useConfirm()
 const connections = ref<MiragedConnection[]>([])
 const statuses = ref<Record<string, MiragedStatus>>({})
 const showAdd = ref(false)
+const enrolling = ref(false)
 const error = ref('')
 
-const form = ref({
-  name: '', address: '', secret_hostname: '',
-  cert_pem: '', key_pem: '', ca_cert_pem: '',
-})
+const form = ref({ name: '', address: '', secret_hostname: '', token: '' })
 
 async function load() {
   try {
@@ -31,13 +29,17 @@ async function load() {
 }
 
 async function add() {
+  enrolling.value = true
+  error.value = ''
   try {
-    const conn = await createMiraged(form.value)
+    const conn = await enrollMiraged(form.value)
     connections.value.unshift(conn)
-    form.value = { name: '', address: '', secret_hostname: '', cert_pem: '', key_pem: '', ca_cert_pem: '' }
+    form.value = { name: '', address: '', secret_hostname: '', token: '' }
     showAdd.value = false
   } catch (e: any) {
     error.value = e.message
+  } finally {
+    enrolling.value = false
   }
 }
 
@@ -61,13 +63,6 @@ async function test(id: string) {
   }
 }
 
-async function readFile(event: Event, field: 'cert_pem' | 'key_pem' | 'ca_cert_pem') {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  form.value[field] = await file.text()
-}
-
 onMounted(load)
 </script>
 
@@ -81,32 +76,17 @@ onMounted(load)
 
     <Card v-if="showAdd" class="p-7 mb-4">
       <form @submit.prevent="add" class="flex flex-col gap-7">
-        <div class="grid grid-cols-3 gap-5">
+        <div class="grid grid-cols-2 gap-5">
           <AppInput v-model="form.name" placeholder="Name (required)" required />
           <AppInput v-model="form.address" placeholder="Address (host:port)" required />
-          <AppInput v-model="form.secret_hostname" placeholder="Secret hostname" required />
         </div>
-
-        <div class="grid grid-cols-3 gap-5">
-          <div>
-            <label class="block text-xs text-dim font-mono mb-1 uppercase tracking-wider">Client Cert</label>
-            <input type="file" accept=".crt,.pem" @change="readFile($event, 'cert_pem')"
-              class="text-xs text-muted font-mono file:mr-2 file:px-3 file:py-1 file:border file:border-edge file:bg-surface file:text-muted file:font-mono file:text-xs file:cursor-pointer" />
-          </div>
-          <div>
-            <label class="block text-xs text-dim font-mono mb-1 uppercase tracking-wider">Client Key</label>
-            <input type="file" accept=".key,.pem" @change="readFile($event, 'key_pem')"
-              class="text-xs text-muted font-mono file:mr-2 file:px-3 file:py-1 file:border file:border-edge file:bg-surface file:text-muted file:font-mono file:text-xs file:cursor-pointer" />
-          </div>
-          <div>
-            <label class="block text-xs text-dim font-mono mb-1 uppercase tracking-wider">CA Cert</label>
-            <input type="file" accept=".crt,.pem" @change="readFile($event, 'ca_cert_pem')"
-              class="text-xs text-muted font-mono file:mr-2 file:px-3 file:py-1 file:border file:border-edge file:bg-surface file:text-muted file:font-mono file:text-xs file:cursor-pointer" />
-          </div>
+        <div class="grid grid-cols-2 gap-5">
+          <AppInput v-model="form.secret_hostname" placeholder="Secret hostname" required />
+          <AppInput v-model="form.token" placeholder="Invite token" required />
         </div>
 
         <div class="flex gap-2 pt-1">
-          <AppButton type="submit">Add</AppButton>
+          <AppButton type="submit" :disabled="enrolling">{{ enrolling ? 'Enrolling...' : 'Enroll' }}</AppButton>
           <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
         </div>
       </form>
