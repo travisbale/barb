@@ -53,10 +53,10 @@ const theme = EditorView.theme({
     borderLeftColor: 'var(--color-amber)',
   },
   '.cm-activeLine': {
-    backgroundColor: 'var(--color-surface-hover)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: 'var(--color-surface-hover)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   '.cm-gutters': {
     backgroundColor: 'var(--color-surface)',
