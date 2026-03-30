@@ -11,8 +11,15 @@ defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const selectEl = ref<HTMLSelectElement>()
 const focused = ref(false)
-const isActive = () => focused.value || props.modelValue
+const hasSelection = () => {
+  const el = selectEl.value
+  if (!el) return !!props.modelValue
+  const selected = el.options[el.selectedIndex]
+  return selected ? !selected.disabled : !!props.modelValue
+}
+const isActive = () => focused.value || hasSelection()
 </script>
 
 <template>
@@ -25,6 +32,7 @@ const isActive = () => focused.value || props.modelValue
         : 'text-sm top-2.5 text-dim'"
     >{{ label }}</label>
     <select
+      ref="selectEl"
       :value="modelValue"
       @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
       @focus="focused = true"

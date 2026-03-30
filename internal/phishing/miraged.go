@@ -131,3 +131,13 @@ func (s *MiragedService) ListPhishlets(id string) ([]MiragedPhishlet, error) {
 	}
 	return phishlets, nil
 }
+
+// PushPhishlet deploys a phishlet YAML config to the miraged instance.
+func (s *MiragedService) PushPhishlet(connectionID, yamlContent string) error {
+	mirageClient, err := s.client(connectionID)
+	if err != nil {
+		return err
+	}
+	_, err = mirageClient.PushPhishlet(miragesdk.PushPhishletRequest{YAML: yamlContent})
+	return err
+}

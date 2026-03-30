@@ -131,7 +131,7 @@ onMounted(load)
           </AppSelect>
         </div>
 
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-3 gap-5">
           <AppSelect :modelValue="form.miraged_id" @update:modelValue="onMiragedChange" label="Miraged server">
             <option value="">None (manual lure URL)</option>
             <option v-for="conn in miragedConnections" :key="conn.id" :value="conn.id">{{ conn.name }}</option>
@@ -141,9 +141,9 @@ onMounted(load)
             <option value="" disabled></option>
             <option v-for="p in phishlets" :key="p.name" :value="p.name">{{ p.name }}{{ p.enabled ? '' : ' (disabled)' }}</option>
           </AppSelect>
-        </div>
 
-        <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (emails per minute)" />
+          <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (per min)" />
+        </div>
 
         <div class="flex gap-2 pt-1">
           <AppButton type="submit">Create</AppButton>
