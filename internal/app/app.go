@@ -32,11 +32,13 @@ func New(cfg Config) *App {
 	smtpStore := sqlite.NewSMTPStore(cfg.DB)
 	campaignStore := sqlite.NewCampaignStore(cfg.DB)
 	miragedStore := sqlite.NewMiragedStore(cfg.DB)
+	phishletStore := sqlite.NewPhishletStore(cfg.DB)
 
 	targetSvc := &phishing.TargetService{Store: targetStore}
 	templateSvc := &phishing.TemplateService{Store: templateStore}
 	smtpSvc := &phishing.SMTPService{Store: smtpStore}
 	miragedSvc := &phishing.MiragedService{Store: miragedStore}
+	phishletSvc := &phishing.PhishletService{Store: phishletStore}
 
 	monitor := &phishing.SessionMonitor{
 		Campaigns: campaignStore,
@@ -49,6 +51,7 @@ func New(cfg Config) *App {
 		Targets:   targetStore,
 		Templates: templateStore,
 		SMTP:      smtpStore,
+		Phishlets: phishletStore,
 		Miraged:   miragedSvc,
 		Monitor:   monitor,
 		Mailer:    cfg.Mailer,
@@ -60,6 +63,7 @@ func New(cfg Config) *App {
 		Campaigns: campaignSvc,
 		Targets:   targetSvc,
 		Templates: templateSvc,
+		Phishlets: phishletSvc,
 		SMTP:      smtpSvc,
 		Version:   cfg.Version,
 		Logger:    cfg.Logger,

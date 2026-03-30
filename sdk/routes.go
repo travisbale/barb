@@ -22,6 +22,10 @@ const (
 	RouteTemplate        = "/api/templates/{id}"
 	RouteTemplatePreview = "/api/templates/{id}/preview"
 
+	// Phishlets
+	RoutePhishlets = "/api/phishlets"
+	RoutePhishlet  = "/api/phishlets/{id}"
+
 	// SMTP Profiles
 	RouteSMTPProfiles = "/api/smtp-profiles"
 	RouteSMTPProfile  = "/api/smtp-profiles/{id}"

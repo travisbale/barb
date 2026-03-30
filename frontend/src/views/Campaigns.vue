@@ -4,9 +4,9 @@ import { useRouter } from 'vue-router'
 import {
   listCampaigns, createCampaign, deleteCampaign,
   listTargetLists, listTemplates, listSMTPProfiles,
-  listMiraged, listMiragedPhishlets,
+  listMiraged, listPhishlets,
   type Campaign, type TargetList, type EmailTemplate, type SMTPProfile,
-  type MiragedConnection, type MiragedPhishlet,
+  type MiragedConnection, type Phishlet,
 } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -28,7 +28,7 @@ const targetLists = ref<TargetList[]>([])
 const templates = ref<EmailTemplate[]>([])
 const smtpProfiles = ref<SMTPProfile[]>([])
 const miragedConnections = ref<MiragedConnection[]>([])
-const phishlets = ref<MiragedPhishlet[]>([])
+const localPhishlets = ref<Phishlet[]>([])
 
 const form = ref({ name: '', template_id: '', smtp_profile_id: '', target_list_id: '', miraged_id: '', phishlet: '', send_rate: '10' })
 
@@ -42,29 +42,19 @@ async function load() {
 
 async function openCreate() {
   try {
-    const [lists, tmpls, profiles, connections] = await Promise.all([
+    const [lists, tmpls, profiles, connections, phishletsList] = await Promise.all([
       listTargetLists(),
       listTemplates(),
       listSMTPProfiles(),
       listMiraged(),
+      listPhishlets(),
     ])
     targetLists.value = lists ?? []
     templates.value = tmpls ?? []
     smtpProfiles.value = profiles ?? []
     miragedConnections.value = connections ?? []
+    localPhishlets.value = phishletsList ?? []
     showCreate.value = true
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-async function onMiragedChange(id: string) {
-  form.value.miraged_id = id
-  form.value.phishlet = ''
-  phishlets.value = []
-  if (!id) return
-  try {
-    phishlets.value = (await listMiragedPhishlets(id)) ?? []
   } catch (e: any) {
     error.value = e.message
   }
@@ -132,14 +122,14 @@ onMounted(load)
         </div>
 
         <div class="grid grid-cols-3 gap-5">
-          <AppSelect :modelValue="form.miraged_id" @update:modelValue="onMiragedChange" label="Miraged server">
+          <AppSelect v-model="form.miraged_id" label="Miraged server">
             <option value="">None (manual lure URL)</option>
             <option v-for="conn in miragedConnections" :key="conn.id" :value="conn.id">{{ conn.name }}</option>
           </AppSelect>
 
-          <AppSelect v-model="form.phishlet" label="Phishlet" :disabled="!form.miraged_id">
+          <AppSelect v-model="form.phishlet" label="Phishlet">
             <option value="" disabled></option>
-            <option v-for="p in phishlets" :key="p.name" :value="p.name">{{ p.name }}{{ p.enabled ? '' : ' (disabled)' }}</option>
+            <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
           </AppSelect>
 
           <AppInput v-model="form.send_rate" type="number" placeholder="Send rate (per min)" />

@@ -128,6 +128,35 @@ export function deleteTemplate(id: string): Promise<void> {
   return request('DELETE', `/templates/${id}`)
 }
 
+// --- Phishlets ---
+
+export interface Phishlet {
+  id: string
+  name: string
+  yaml: string
+  created_at: string
+}
+
+export function listPhishlets(): Promise<Phishlet[]> {
+  return request('GET', '/phishlets')
+}
+
+export function createPhishlet(phishlet: { name: string; yaml: string }): Promise<Phishlet> {
+  return request('POST', '/phishlets', phishlet)
+}
+
+export function getPhishlet(id: string): Promise<Phishlet> {
+  return request('GET', `/phishlets/${id}`)
+}
+
+export function updatePhishlet(id: string, phishlet: { name?: string; yaml?: string }): Promise<Phishlet> {
+  return request('PATCH', `/phishlets/${id}`, phishlet)
+}
+
+export function deletePhishlet(id: string): Promise<void> {
+  return request('DELETE', `/phishlets/${id}`)
+}
+
 // --- SMTP Profiles ---
 
 export interface SMTPProfile {

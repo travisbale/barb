@@ -38,6 +38,14 @@ type templateManager interface {
 	Preview(id string, data phishing.PreviewData) (*phishing.RenderedTemplate, error)
 }
 
+type phishletManager interface {
+	Create(phishlet *phishing.Phishlet) (*phishing.Phishlet, error)
+	Get(id string) (*phishing.Phishlet, error)
+	Update(id string, update *phishing.PhishletUpdate) (*phishing.Phishlet, error)
+	Delete(id string) error
+	List() ([]*phishing.Phishlet, error)
+}
+
 type smtpManager interface {
 	CreateProfile(profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
 	GetProfile(id string) (*phishing.SMTPProfile, error)
@@ -63,6 +71,7 @@ type Router struct {
 	Campaigns campaignManager
 	Targets   targetManager
 	Templates templateManager
+	Phishlets phishletManager
 	SMTP      smtpManager
 	Version   string
 	Logger    *slog.Logger
@@ -105,6 +114,13 @@ func (r *Router) registerRoutes() {
 	h("GET", sdk.RouteTemplate, r.getTemplate)
 	h("PATCH", sdk.RouteTemplate, r.updateTemplate)
 	h("DELETE", sdk.RouteTemplate, r.deleteTemplate)
+
+	// Phishlets
+	h("GET", sdk.RoutePhishlets, r.listPhishlets)
+	h("POST", sdk.RoutePhishlets, r.createPhishlet)
+	h("GET", sdk.RoutePhishlet, r.getPhishlet)
+	h("PATCH", sdk.RoutePhishlet, r.updatePhishlet)
+	h("DELETE", sdk.RoutePhishlet, r.deletePhishlet)
 
 	// SMTP Profiles
 	h("GET", sdk.RouteSMTPProfiles, r.listSMTPProfiles)

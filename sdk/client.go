@@ -166,6 +166,32 @@ func (c *Client) DeleteTemplate(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTemplate, "id", id))
 }
 
+// --- Phishlets ---
+
+func (c *Client) CreatePhishlet(req CreatePhishletRequest) (*PhishletResponse, error) {
+	return send[PhishletResponse](c, http.MethodPost, RoutePhishlets, req)
+}
+
+func (c *Client) ListPhishlets() ([]PhishletResponse, error) {
+	resp, err := get[[]PhishletResponse](c, RoutePhishlets)
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) GetPhishlet(id string) (*PhishletResponse, error) {
+	return get[PhishletResponse](c, ResolveRoute(RoutePhishlet, "id", id))
+}
+
+func (c *Client) UpdatePhishlet(id string, req UpdatePhishletRequest) (*PhishletResponse, error) {
+	return send[PhishletResponse](c, http.MethodPatch, ResolveRoute(RoutePhishlet, "id", id), req)
+}
+
+func (c *Client) DeletePhishlet(id string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RoutePhishlet, "id", id))
+}
+
 // --- SMTP Profiles ---
 
 func (c *Client) CreateSMTPProfile(req CreateSMTPProfileRequest) (*SMTPProfileResponse, error) {

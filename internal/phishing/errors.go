@@ -22,4 +22,6 @@ var (
 	ErrAddressRequired        = errors.New("address is required")
 	ErrSecretHostnameRequired = errors.New("secret hostname is required")
 	ErrCertsRequired          = errors.New("certificate, key, and CA cert are required")
+	ErrYAMLRequired           = errors.New("YAML content is required")
+	ErrPhishletNotFound       = errors.New("phishlet not found")
 )

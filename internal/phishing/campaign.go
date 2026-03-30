@@ -10,11 +10,6 @@ import (
 	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
-// clientProvider constructs Mirage SDK clients from stored connection data.
-type clientProvider interface {
-	client(id string) (*miragesdk.Client, error)
-}
-
 // CampaignStatus represents the lifecycle state of a campaign.
 type CampaignStatus string
 
@@ -115,7 +110,8 @@ type CampaignService struct {
 	Targets   targetStore
 	Templates templateStore
 	SMTP      smtpStore
-	Miraged   clientProvider
+	Phishlets phishletStore
+	Miraged   *MiragedService
 	Monitor   *SessionMonitor
 	Mailer    Mailer
 	Logger    *slog.Logger
@@ -270,6 +266,19 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 	if campaign.MiragedID == "" || campaign.Phishlet == "" || s.Miraged == nil {
 		return nil
 	}
+
+	// Push the phishlet YAML to miraged if we have it stored locally.
+	if s.Phishlets != nil {
+		phishlet, err := s.Phishlets.GetPhishletByName(campaign.Phishlet)
+		if err == nil {
+			if err := s.Miraged.PushPhishlet(campaign.MiragedID, phishlet.YAML); err != nil {
+				s.Logger.Error("failed to push phishlet to miraged", "phishlet", campaign.Phishlet, "error", err)
+				return err
+			}
+			s.Logger.Info("phishlet pushed to miraged", "phishlet", campaign.Phishlet)
+		}
+	}
+
 	client, err := s.Miraged.client(campaign.MiragedID)
 	if err != nil {
 		s.Logger.Error("failed to connect to miraged", "error", err)

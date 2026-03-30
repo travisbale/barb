@@ -107,6 +107,25 @@ type PreviewTemplateResponse struct {
 	TextBody string `json:"text_body"`
 }
 
+// --- Phishlets ---
+
+type CreatePhishletRequest struct {
+	Name string `json:"name"`
+	YAML string `json:"yaml"`
+}
+
+type UpdatePhishletRequest struct {
+	Name *string `json:"name,omitempty"`
+	YAML *string `json:"yaml,omitempty"`
+}
+
+type PhishletResponse struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	YAML      string    `json:"yaml"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ImportTargetsResponse struct {
 	Imported int `json:"imported"`
 }

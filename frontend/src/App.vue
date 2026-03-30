@@ -4,6 +4,7 @@ import { useTheme } from './composables/useTheme'
 import IconCampaign from './components/IconCampaign.vue'
 import IconTarget from './components/IconTarget.vue'
 import IconTemplate from './components/IconTemplate.vue'
+import IconPhishlet from './components/IconPhishlet.vue'
 import IconSMTP from './components/IconSMTP.vue'
 import IconSettings from './components/IconSettings.vue'
 
@@ -13,6 +14,7 @@ const nav = [
   { to: '/campaigns', label: 'Campaigns', icon: IconCampaign },
   { to: '/targets', label: 'Targets', icon: IconTarget },
   { to: '/templates', label: 'Templates', icon: IconTemplate },
+  { to: '/phishlets', label: 'Phishlets', icon: IconPhishlet },
   { to: '/smtp', label: 'SMTP', icon: IconSMTP },
   { to: '/settings', label: 'Miraged', icon: IconSettings },
 ]

@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/targets', component: () => import('./views/Targets.vue') },
     { path: '/targets/:id', component: () => import('./views/TargetListDetail.vue') },
     { path: '/templates', component: () => import('./views/Templates.vue') },
+    { path: '/phishlets', component: () => import('./views/Phishlets.vue') },
     { path: '/smtp', component: () => import('./views/SMTP.vue') },
     { path: '/settings', component: () => import('./views/Settings.vue') },
   ],
