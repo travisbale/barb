@@ -10,7 +10,7 @@
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/license-GPLv3-green.svg" alt="License: GPL v3" /></a>
 </p>
 
-Campaign management console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
+Campaign management console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, phishlet management, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
 
 ## Architecture
 
@@ -20,12 +20,24 @@ Operator's browser → Barb (campaign management, email delivery)
                      miraged (reverse proxy, session capture)
 ```
 
-Barb is a single Go binary with an embedded Vue frontend. It communicates with `miraged` over its mTLS API to create lures and monitor captured sessions.
+Barb is a single Go binary with an embedded Vue frontend. It communicates with `miraged` over its mTLS API to push phishlets, create lures, and monitor captured sessions in real time.
+
+## Features
+
+- **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment)
+- **Phishlet management** — store phishlet YAML configs with a syntax-highlighted editor; automatically pushed to miraged on campaign start
+- **Target lists** — manage recipients manually or import from CSV
+- **Email templates** — compose phishing emails with Go template variables, preview rendered output before sending
+- **SMTP profiles** — configure mail relay servers with encrypted credential storage (AES-256-GCM)
+- **Campaigns** — tie targets, templates, SMTP profiles, and phishlets together; configurable send rate; start, cancel, and monitor from the UI
+- **Session monitoring** — real-time correlation of miraged session captures to campaign targets via SSE
+- **Result export** — download campaign results as CSV for reporting
+- **Dark/light theme** — tactical operations console aesthetic with theme toggle
 
 ## Requirements
 
 - Go 1.26+
-- Node.js 18+ (for building the frontend)
+- Node.js 22+ (for building the frontend)
 
 ## Building
 
@@ -37,7 +49,7 @@ make build
 ## Running
 
 ```bash
-./barb --debug
+./barb serve --debug
 # Starts on :8080 by default
 ```
 
@@ -51,56 +63,51 @@ Open `http://localhost:8080` in your browser.
 | `--db` | `barb.db` | SQLite database path |
 | `--debug` | `false` | Enable debug logging |
 
+On first run, Barb generates an encryption key at `encryption.key` (next to the database file) used to encrypt SMTP passwords at rest.
+
 ## Development
 
 Run the Go backend and Vue dev server separately for hot reload:
 
-Terminal 1:
 ```bash
+# Terminal 1
 make dev-backend
-```
 
-Terminal 2:
-```bash
+# Terminal 2
 make dev-frontend
 ```
 
-Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend.
+Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on `:8080`.
 
 ## Testing
 
 ```bash
-make test    # all tests
+make test    # all tests (integration + unit)
 make unit    # unit tests only
 ```
 
-Integration tests start the full server in-process with an in-memory SQLite database.
-
-## Features
-
-- **Target lists** — manage recipients manually or import from CSV
-- **Email templates** — compose phishing emails with HTML and plain text bodies
-- **SMTP profiles** — configure mail relay servers for delivery
-- **Campaigns** — tie targets, templates, and SMTP profiles together into operations
-- **Dark theme** — tactical operations console aesthetic with light mode support via CSS variables
+Integration tests start the full server in-process with an in-memory SQLite database and a mock mailer.
 
 ## Project Structure
 
 ```
-cmd/barb/          # entry point, embeds frontend
+cmd/barb/               # entry point, embeds frontend
 internal/
-  api/                # HTTP handlers
-  phishing/           # domain types, services, validation
-  server/             # HTTP server, SPA routing
-  store/sqlite/       # SQLite persistence
+  api/                  # HTTP handlers
+  app/                  # service wiring, SPA routing
+  crypto/               # encryption key management
+    aes/                # AES-256-GCM cipher
+  delivery/             # SMTP email sending (go-mail)
+  phishing/             # domain types, services, validation
+  store/sqlite/         # SQLite persistence
 frontend/
   src/
-    api/              # TypeScript API client
-    components/       # reusable Vue components
-    views/            # page-level views
-    composables/      # Vue composables (theme, etc.)
-sdk/                  # Go SDK (types, routes, client)
-test/                 # integration tests
+    api/                # TypeScript API client
+    components/         # reusable Vue components (FormCard, CodeEditor, etc.)
+    composables/        # Vue composables (theme, confirm dialog)
+    views/              # page-level views
+sdk/                    # Go SDK (types, routes, HTTP client)
+test/                   # integration tests + test harness
 ```
 
 ## License
