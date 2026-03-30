@@ -12,9 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 
 	"github.com/travisbale/barb/internal/app"
+	"github.com/travisbale/barb/internal/crypto"
+	"github.com/travisbale/barb/internal/crypto/aes"
 	"github.com/travisbale/barb/internal/delivery"
 	"github.com/travisbale/barb/internal/store/sqlite"
 )
@@ -83,6 +87,13 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 	}
 	defer db.Close()
 
+	keyPath := filepath.Join(filepath.Dir(dbPath), "encryption.key")
+	encryptionKey, err := crypto.LoadOrGenerateKey(keyPath)
+	if err != nil {
+		return err
+	}
+	enc := aes.NewCipher(encryptionKey)
+
 	frontendDist, err := fs.Sub(frontendFS, "dist")
 	if err != nil {
 		return fmt.Errorf("loading embedded frontend: %w", err)
@@ -90,6 +101,7 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 
 	application := app.New(app.Config{
 		DB:       db,
+		Cipher:   enc,
 		Frontend: frontendDist,
 		Mailer:   &delivery.Sender{Logger: logger},
 		Version:  Version,

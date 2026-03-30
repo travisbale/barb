@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/travisbale/barb/internal/api"
+	"github.com/travisbale/barb/internal/crypto/aes"
 	"github.com/travisbale/barb/internal/phishing"
 	"github.com/travisbale/barb/internal/store/sqlite"
 )
@@ -13,6 +14,7 @@ import (
 // Config holds the parameters needed to construct an App.
 type Config struct {
 	DB       *sqlite.DB
+	Cipher   *aes.Cipher
 	Frontend fs.FS
 	Mailer   phishing.Mailer
 	Version  string
@@ -29,7 +31,7 @@ type App struct {
 func New(cfg Config) *App {
 	targetStore := sqlite.NewTargetStore(cfg.DB)
 	templateStore := sqlite.NewTemplateStore(cfg.DB)
-	smtpStore := sqlite.NewSMTPStore(cfg.DB)
+	smtpStore := sqlite.NewSMTPStore(cfg.DB, cfg.Cipher)
 	campaignStore := sqlite.NewCampaignStore(cfg.DB)
 	miragedStore := sqlite.NewMiragedStore(cfg.DB)
 	phishletStore := sqlite.NewPhishletStore(cfg.DB)

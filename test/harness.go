@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/travisbale/barb/internal/app"
+	"github.com/travisbale/barb/internal/crypto/aes"
 	"github.com/travisbale/barb/internal/phishing"
 	"github.com/travisbale/barb/internal/store/sqlite"
 	"github.com/travisbale/barb/sdk"
@@ -73,8 +74,15 @@ func NewHarness(t *testing.T) *Harness {
 	mockMailer := &MockMailer{}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
+	// Use a fixed test key for deterministic encryption.
+	testKey := make([]byte, 32)
+	for i := range testKey {
+		testKey[i] = byte(i)
+	}
+
 	application := app.New(app.Config{
 		DB:       db,
+		Cipher:   aes.NewCipher(testKey),
 		Frontend: emptyFS{},
 		Mailer:   mockMailer,
 		Version:  "test",
