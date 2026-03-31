@@ -31,10 +31,13 @@ const (
 	RouteSMTPProfile  = "/api/smtp-profiles/{id}"
 
 	// Miraged connections
-	RouteMiraged          = "/api/miraged"
-	RouteMiragedInstance  = "/api/miraged/{id}"
-	RouteMiragedStatus    = "/api/miraged/{id}/status"
-	RouteMiragedPhishlets = "/api/miraged/{id}/phishlets"
+	RouteMiraged                = "/api/miraged"
+	RouteMiragedInstance        = "/api/miraged/{id}"
+	RouteMiragedStatus          = "/api/miraged/{id}/status"
+	RouteMiragedPhishlets       = "/api/miraged/{id}/phishlets"
+	RouteMiragedPhishletPush    = "/api/miraged/{id}/phishlets/push"
+	RouteMiragedPhishletEnable  = "/api/miraged/{id}/phishlets/{name}/enable"
+	RouteMiragedPhishletDisable = "/api/miraged/{id}/phishlets/{name}/disable"
 
 	// Auth
 	RouteLogin          = "/api/auth/login"

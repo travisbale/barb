@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: () => import('./views/Dashboard.vue') },
     { path: '/campaigns', component: () => import('./views/Campaigns.vue') },
+    { path: '/campaigns/new', component: () => import('./views/CampaignWizard.vue') },
     { path: '/campaigns/:id', component: () => import('./views/CampaignDetail.vue') },
     { path: '/targets', component: () => import('./views/Targets.vue') },
     { path: '/targets/:id', component: () => import('./views/TargetListDetail.vue') },

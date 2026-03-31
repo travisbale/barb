@@ -103,4 +103,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
 	auth("GET", sdk.RouteMiragedStatus, r.testMiraged)
 	auth("GET", sdk.RouteMiragedPhishlets, r.listMiragedPhishlets)
+	auth("POST", sdk.RouteMiragedPhishletPush, r.pushMiragedPhishlet)
+	auth("POST", sdk.RouteMiragedPhishletEnable, r.enableMiragedPhishlet)
+	auth("POST", sdk.RouteMiragedPhishletDisable, r.disableMiragedPhishlet)
 }

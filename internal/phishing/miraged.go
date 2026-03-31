@@ -214,30 +214,71 @@ func (s *MiragedService) TestConnection(id string) (*MiragedStatus, error) {
 
 // MiragedPhishlet is a phishlet reported by a miraged instance.
 type MiragedPhishlet struct {
-	Name     string
-	Hostname string
-	Enabled  bool
+	Name        string
+	Hostname    string
+	BaseDomain  string
+	DNSProvider string
+	SpoofURL    string
+	Enabled     bool
+}
+
+func phishletFromSDK(p miragesdk.PhishletResponse) MiragedPhishlet {
+	return MiragedPhishlet{
+		Name:        p.Name,
+		Hostname:    p.Hostname,
+		BaseDomain:  p.BaseDomain,
+		DNSProvider: p.DNSProvider,
+		SpoofURL:    p.SpoofURL,
+		Enabled:     p.Enabled,
+	}
 }
 
 // ListPhishlets retrieves the phishlet list from the miraged instance.
 func (s *MiragedService) ListPhishlets(id string) ([]MiragedPhishlet, error) {
-	client, err := s.client(id)
+	mirageClient, err := s.client(id)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.ListPhishlets()
+	resp, err := mirageClient.ListPhishlets()
 	if err != nil {
 		return nil, err
 	}
 	phishlets := make([]MiragedPhishlet, len(resp.Items))
 	for i, p := range resp.Items {
-		phishlets[i] = MiragedPhishlet{
-			Name:     p.Name,
-			Hostname: p.Hostname,
-			Enabled:  p.Enabled,
-		}
+		phishlets[i] = phishletFromSDK(p)
 	}
 	return phishlets, nil
+}
+
+// EnablePhishlet enables a phishlet on the miraged instance with the given hostname.
+func (s *MiragedService) EnablePhishlet(connectionID, name, hostname, dnsProvider string) (*MiragedPhishlet, error) {
+	mirageClient, err := s.client(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mirageClient.EnablePhishlet(name, miragesdk.EnablePhishletRequest{
+		Hostname:    hostname,
+		DNSProvider: dnsProvider,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := phishletFromSDK(*resp)
+	return &result, nil
+}
+
+// DisablePhishlet disables a phishlet on the miraged instance.
+func (s *MiragedService) DisablePhishlet(connectionID, name string) (*MiragedPhishlet, error) {
+	mirageClient, err := s.client(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mirageClient.DisablePhishlet(name)
+	if err != nil {
+		return nil, err
+	}
+	result := phishletFromSDK(*resp)
+	return &result, nil
 }
 
 // PushPhishlet deploys a phishlet YAML config to the miraged instance.

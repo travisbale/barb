@@ -86,13 +86,67 @@ func (r *Router) listMiragedPhishlets(w http.ResponseWriter, req *http.Request) 
 
 	items := make([]sdk.MiragedPhishletResponse, len(phishlets))
 	for i, p := range phishlets {
-		items[i] = sdk.MiragedPhishletResponse{
-			Name:     p.Name,
-			Hostname: p.Hostname,
-			Enabled:  p.Enabled,
-		}
+		items[i] = miragedPhishletToResponse(p)
 	}
 	writeJSON(w, http.StatusOK, items)
+}
+
+func (r *Router) pushMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
+	connectionID := req.PathValue("id")
+
+	var body sdk.PushMiragedPhishletRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	if err := r.Miraged.PushPhishlet(connectionID, body.YAML); err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to push phishlet", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) enableMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
+	connectionID := req.PathValue("id")
+	name := req.PathValue("name")
+
+	var body sdk.EnableMiragedPhishletRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	phishlet, err := r.Miraged.EnablePhishlet(connectionID, name, body.Hostname, body.DNSProvider)
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to enable phishlet", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*phishlet))
+}
+
+func (r *Router) disableMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
+	connectionID := req.PathValue("id")
+	name := req.PathValue("name")
+
+	phishlet, err := r.Miraged.DisablePhishlet(connectionID, name)
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to disable phishlet", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*phishlet))
+}
+
+func miragedPhishletToResponse(p phishing.MiragedPhishlet) sdk.MiragedPhishletResponse {
+	return sdk.MiragedPhishletResponse{
+		Name:        p.Name,
+		Hostname:    p.Hostname,
+		BaseDomain:  p.BaseDomain,
+		DNSProvider: p.DNSProvider,
+		SpoofURL:    p.SpoofURL,
+		Enabled:     p.Enabled,
+	}
 }
 
 func miragedToResponse(c *phishing.MiragedConnection) sdk.MiragedResponse {

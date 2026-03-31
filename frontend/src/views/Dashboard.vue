@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDashboard, type DashboardStats } from '../api/client'
+import AppButton from '../components/AppButton.vue'
 import Card from '../components/Card.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 
 const router = useRouter()
 const stats = ref<DashboardStats | null>(null)
 const error = ref('')
+
+const isEmpty = computed(() =>
+  stats.value != null &&
+  stats.value.campaigns.total === 0 &&
+  stats.value.miraged_count === 0
+)
 
 async function load() {
   try {
@@ -29,7 +36,16 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <div v-if="stats" class="flex flex-col gap-6">
+    <!-- Empty state onboarding -->
+    <Card v-if="isEmpty" class="p-10 text-center">
+      <div class="font-mono text-2xl font-bold tracking-widest text-amber uppercase mb-5">Welcome to Barb</div>
+      <p class="text-sm text-muted font-mono mb-10">
+        Get started by creating your first campaign. The wizard will walk you through connecting to a miraged server, configuring a phishlet, importing targets, and launching.
+      </p>
+      <AppButton @click="router.push('/campaigns/new')">Create Your First Campaign</AppButton>
+    </Card>
+
+    <div v-else-if="stats" class="flex flex-col gap-6">
       <!-- Summary cards -->
       <div class="grid grid-cols-4 gap-4">
         <Card class="p-5">

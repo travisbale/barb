@@ -193,9 +193,21 @@ type MiragedStatusResponse struct {
 }
 
 type MiragedPhishletResponse struct {
-	Name     string `json:"name"`
-	Hostname string `json:"hostname"`
-	Enabled  bool   `json:"enabled"`
+	Name        string `json:"name"`
+	Hostname    string `json:"hostname"`
+	BaseDomain  string `json:"base_domain"`
+	DNSProvider string `json:"dns_provider"`
+	SpoofURL    string `json:"spoof_url"`
+	Enabled     bool   `json:"enabled"`
+}
+
+type PushMiragedPhishletRequest struct {
+	YAML string `json:"yaml"`
+}
+
+type EnableMiragedPhishletRequest struct {
+	Hostname    string `json:"hostname"`
+	DNSProvider string `json:"dns_provider"`
 }
 
 // --- Auth ---

@@ -306,6 +306,9 @@ export interface MiragedStatus {
 export interface MiragedPhishlet {
   name: string
   hostname: string
+  base_domain: string
+  dns_provider: string
+  spoof_url: string
   enabled: boolean
 }
 
@@ -332,6 +335,18 @@ export function testMiraged(id: string): Promise<MiragedStatus> {
 
 export function listMiragedPhishlets(id: string): Promise<MiragedPhishlet[]> {
   return request('GET', `/miraged/${id}/phishlets`)
+}
+
+export function pushMiragedPhishlet(id: string, yaml: string): Promise<void> {
+  return request('POST', `/miraged/${id}/phishlets/push`, { yaml })
+}
+
+export function enableMiragedPhishlet(id: string, name: string, hostname: string, dnsProvider: string): Promise<MiragedPhishlet> {
+  return request('POST', `/miraged/${id}/phishlets/${name}/enable`, { hostname, dns_provider: dnsProvider })
+}
+
+export function disableMiragedPhishlet(id: string, name: string): Promise<MiragedPhishlet> {
+  return request('POST', `/miraged/${id}/phishlets/${name}/disable`)
 }
 
 // --- Dashboard ---
