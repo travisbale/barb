@@ -30,6 +30,7 @@ const (
 	ResultPending  ResultStatus = "pending"
 	ResultSent     ResultStatus = "sent"
 	ResultFailed   ResultStatus = "failed"
+	ResultClicked  ResultStatus = "clicked"
 	ResultCaptured ResultStatus = "captured"
 )
 

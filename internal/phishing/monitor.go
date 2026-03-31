@@ -85,6 +85,10 @@ func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.Session
 		return // already correlated
 	}
 
+	// Record the click time from when the session started (target first visited the lure).
+	clickedAt := session.StartedAt
+	result.ClickedAt = &clickedAt
+
 	now := time.Now()
 	result.Status = ResultCaptured
 	result.CapturedAt = &now
