@@ -265,6 +265,36 @@ func TestCampaigns_StartRequiresDraft(t *testing.T) {
 	}
 }
 
+func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name: "Results Test", TemplateID: tmplID, SMTPProfileID: smtpID, TargetListID: listID, SendRate: 600,
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+	h.Client.StartCampaign(created.ID)
+	time.Sleep(1 * time.Second)
+
+	results, err := h.Client.ListCampaignResults(created.ID)
+	if err != nil {
+		t.Fatalf("ListCampaignResults: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	for _, result := range results {
+		if result.Status != "sent" {
+			t.Errorf("result %s status = %q, want %q", result.Email, result.Status, "sent")
+		}
+		if result.SentAt == nil {
+			t.Errorf("result %s SentAt is nil, expected a timestamp", result.Email)
+		}
+	}
+}
+
 func TestCampaigns_Cancel(t *testing.T) {
 	h := test.NewHarness(t)
 

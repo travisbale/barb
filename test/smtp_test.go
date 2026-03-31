@@ -210,6 +210,42 @@ func TestSMTPProfiles_UpdatePreservesPassword(t *testing.T) {
 	}
 }
 
+func TestSMTPProfiles_UpdateRejectsEmptyName(t *testing.T) {
+	h := test.NewHarness(t)
+
+	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name: "Valid", Host: "smtp.example.com", FromAddr: "from@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateSMTPProfile: %v", err)
+	}
+
+	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
+		Name: strPtr(""),
+	})
+	if err == nil {
+		t.Error("expected error for empty name on update")
+	}
+}
+
+func TestSMTPProfiles_UpdateRejectsEmptyHost(t *testing.T) {
+	h := test.NewHarness(t)
+
+	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name: "Valid", Host: "smtp.example.com", FromAddr: "from@example.com",
+	})
+	if err != nil {
+		t.Fatalf("CreateSMTPProfile: %v", err)
+	}
+
+	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
+		Host: strPtr(""),
+	})
+	if err == nil {
+		t.Error("expected error for empty host on update")
+	}
+}
+
 func TestSMTPProfiles_DeleteNotFound(t *testing.T) {
 	h := test.NewHarness(t)
 

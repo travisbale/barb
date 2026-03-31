@@ -161,3 +161,37 @@ func TestTemplates_UpdateNotFound(t *testing.T) {
 		t.Error("expected error for nonexistent template")
 	}
 }
+
+func TestTemplates_PartialUpdate(t *testing.T) {
+	h := test.NewHarness(t)
+
+	created, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
+		Name:     "Original",
+		Subject:  "Original Subject",
+		HTMLBody: "<p>Original body</p>",
+		TextBody: "Original text",
+	})
+	if err != nil {
+		t.Fatalf("CreateTemplate: %v", err)
+	}
+
+	// Update only the subject — other fields should be preserved.
+	updated, err := h.Client.UpdateTemplate(created.ID, sdk.UpdateTemplateRequest{
+		Subject: strPtr("New Subject"),
+	})
+	if err != nil {
+		t.Fatalf("UpdateTemplate: %v", err)
+	}
+	if updated.Subject != "New Subject" {
+		t.Errorf("Subject = %q, want %q", updated.Subject, "New Subject")
+	}
+	if updated.Name != "Original" {
+		t.Errorf("Name = %q, want %q (should be preserved)", updated.Name, "Original")
+	}
+	if updated.HTMLBody != "<p>Original body</p>" {
+		t.Errorf("HTMLBody = %q (should be preserved)", updated.HTMLBody)
+	}
+	if updated.TextBody != "Original text" {
+		t.Errorf("TextBody = %q (should be preserved)", updated.TextBody)
+	}
+}

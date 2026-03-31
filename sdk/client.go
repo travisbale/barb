@@ -248,6 +248,12 @@ func (c *Client) ListMiragedPhishlets(id string) ([]MiragedPhishletResponse, err
 	return *resp, nil
 }
 
+// --- Dashboard ---
+
+func (c *Client) Dashboard() (*DashboardResponse, error) {
+	return get[DashboardResponse](c, RouteDashboard)
+}
+
 // --- System ---
 
 func (c *Client) Status() (*StatusResponse, error) {
