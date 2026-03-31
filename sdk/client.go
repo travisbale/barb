@@ -150,6 +150,15 @@ func (c *Client) CancelCampaign(id string) error {
 	return discard(c, http.MethodPost, ResolveRoute(RouteCampaignCancel, "id", id))
 }
 
+func (c *Client) SendTestEmail(campaignID string, req SendTestEmailRequest) error {
+	resp, err := c.do(http.MethodPost, ResolveRoute(RouteCampaignTestEmail, "id", campaignID), req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return checkStatus(resp)
+}
+
 func (c *Client) DeleteCampaign(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteCampaign, "id", id))
 }
@@ -272,6 +281,25 @@ func (c *Client) ListMiragedPhishlets(id string) ([]MiragedPhishletResponse, err
 		return nil, err
 	}
 	return *resp, nil
+}
+
+func (c *Client) EnableMiragedPhishlet(connectionID, name string, req EnableMiragedPhishletRequest) (*MiragedPhishletResponse, error) {
+	route := ResolveRoute(RouteMiragedPhishletEnable, "id", connectionID, "name", name)
+	return send[MiragedPhishletResponse](c, http.MethodPost, route, req)
+}
+
+func (c *Client) DisableMiragedPhishlet(connectionID, name string) (*MiragedPhishletResponse, error) {
+	route := ResolveRoute(RouteMiragedPhishletDisable, "id", connectionID, "name", name)
+	return send[MiragedPhishletResponse](c, http.MethodPost, route, nil)
+}
+
+func (c *Client) PushMiragedPhishlet(connectionID string, yaml string) error {
+	resp, err := c.do(http.MethodPost, ResolveRoute(RouteMiragedPhishletPush, "id", connectionID), PushMiragedPhishletRequest{YAML: yaml})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }
 
 // --- Dashboard ---

@@ -1,0 +1,9 @@
+domain: phish.local
+external_ipv4: 127.0.0.1
+https_port: 443
+dns_port: 53
+self_signed: true
+data_dir: /var/lib/mirage
+
+api:
+  secret_hostname: mgmt.phish.local

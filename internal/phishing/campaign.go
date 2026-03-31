@@ -290,9 +290,13 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 		s.Logger.Error("failed to connect to miraged", "error", err)
 		return err
 	}
+	redirectURL := campaign.LureURL
+	if redirectURL == "" {
+		redirectURL = "https://example.com"
+	}
 	lure, err := client.CreateLure(miragesdk.CreateLureRequest{
 		Phishlet:    campaign.Phishlet,
-		RedirectURL: campaign.LureURL,
+		RedirectURL: redirectURL,
 	})
 	if err != nil {
 		s.Logger.Error("failed to create lure", "error", err)
@@ -450,7 +454,10 @@ func (s *CampaignService) SendTestEmail(campaignID, email string) error {
 		if err != nil {
 			return fmt.Errorf("connecting to miraged: %w", err)
 		}
-		lure, err := client.CreateLure(miragesdk.CreateLureRequest{Phishlet: campaign.Phishlet})
+		lure, err := client.CreateLure(miragesdk.CreateLureRequest{
+			Phishlet:    campaign.Phishlet,
+			RedirectURL: "https://example.com",
+		})
 		if err != nil {
 			return fmt.Errorf("creating test lure: %w", err)
 		}

@@ -62,9 +62,18 @@ type Harness struct {
 	Addr   string
 }
 
-// NewHarness starts a server in-process with an in-memory database and returns
-// an SDK client. All resources are cleaned up via t.Cleanup.
+// NewHarness starts a server in-process with an in-memory database and a mock
+// mailer. All resources are cleaned up via t.Cleanup.
 func NewHarness(t *testing.T) *Harness {
+	return newHarness(t, &MockMailer{})
+}
+
+// NewHarnessWithMailer starts a server with a real mailer for integration tests.
+func NewHarnessWithMailer(t *testing.T, mailer phishing.Mailer) *Harness {
+	return newHarness(t, mailer)
+}
+
+func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 	t.Helper()
 
 	db, err := sqlite.Open(":memory:")
@@ -73,7 +82,10 @@ func NewHarness(t *testing.T) *Harness {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	mockMailer := &MockMailer{}
+	var mockMailer *MockMailer
+	if m, ok := mailer.(*MockMailer); ok {
+		mockMailer = m
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	// Use a fixed test key for deterministic encryption.
@@ -98,7 +110,7 @@ func NewHarness(t *testing.T) *Harness {
 		DB:       db,
 		Cipher:   aes.NewCipher(testKey),
 		Frontend: emptyFS{},
-		Mailer:   mockMailer,
+		Mailer:   mailer,
 		Version:  "test",
 		Logger:   logger,
 	})
