@@ -4,15 +4,31 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: 'var(--color-bg)',
-        surface: { DEFAULT: 'var(--color-surface)', hover: 'var(--color-surface-hover)' },
-        edge: { DEFAULT: 'var(--color-border)', subtle: 'var(--color-border-subtle)' },
-        primary: 'var(--color-text)',
-        muted: 'var(--color-text-muted)',
-        dim: 'var(--color-text-dim)',
-        amber: { DEFAULT: 'var(--color-amber)', dim: 'var(--color-amber-dim)', glow: 'var(--color-amber-glow)' },
-        danger: { DEFAULT: 'var(--color-red)', dim: 'var(--color-red-dim)' },
-        teal: { DEFAULT: 'var(--color-teal)', dim: 'var(--color-teal-dim)' },
+        bg: 'rgb(var(--color-bg) / <alpha-value>)',
+        surface: {
+          DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
+          hover: 'rgb(var(--color-surface-hover) / <alpha-value>)',
+        },
+        edge: {
+          DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
+          subtle: 'rgb(var(--color-border-subtle) / <alpha-value>)',
+        },
+        primary: 'rgb(var(--color-text) / <alpha-value>)',
+        muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+        dim: 'rgb(var(--color-text-dim) / <alpha-value>)',
+        amber: {
+          DEFAULT: 'rgb(var(--color-amber) / <alpha-value>)',
+          dim: 'rgb(var(--color-amber-dim) / <alpha-value>)',
+          glow: 'rgb(var(--color-amber-glow) / 0.08)',
+        },
+        danger: {
+          DEFAULT: 'rgb(var(--color-red) / <alpha-value>)',
+          dim: 'rgb(var(--color-red-dim) / 0.06)',
+        },
+        teal: {
+          DEFAULT: 'rgb(var(--color-teal) / <alpha-value>)',
+          dim: 'rgb(var(--color-teal-dim) / 0.06)',
+        },
       },
       fontFamily: {
         sans: ['DM Sans', 'sans-serif'],

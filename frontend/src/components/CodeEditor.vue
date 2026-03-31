@@ -21,36 +21,36 @@ const view = shallowRef<EditorView>()
 
 // Custom highlight style matching the app's color palette.
 const barbHighlight = HighlightStyle.define([
-  { tag: tags.keyword, color: 'var(--color-amber)' },
-  { tag: tags.atom, color: 'var(--color-teal)' },
-  { tag: tags.bool, color: 'var(--color-teal)' },
-  { tag: tags.number, color: 'var(--color-teal)' },
+  { tag: tags.keyword, color: 'rgb(var(--color-amber))' },
+  { tag: tags.atom, color: 'rgb(var(--color-teal))' },
+  { tag: tags.bool, color: 'rgb(var(--color-teal))' },
+  { tag: tags.number, color: 'rgb(var(--color-teal))' },
   { tag: tags.string, color: '#8fac7e' },
-  { tag: tags.comment, color: 'var(--color-text-dim)', fontStyle: 'italic' },
-  { tag: tags.propertyName, color: 'var(--color-amber)' },
-  { tag: tags.punctuation, color: 'var(--color-text-dim)' },
-  { tag: tags.operator, color: 'var(--color-text-muted)' },
-  { tag: tags.meta, color: 'var(--color-text-dim)' },
+  { tag: tags.comment, color: 'rgb(var(--color-text-dim))', fontStyle: 'italic' },
+  { tag: tags.propertyName, color: 'rgb(var(--color-amber))' },
+  { tag: tags.punctuation, color: 'rgb(var(--color-text-dim))' },
+  { tag: tags.operator, color: 'rgb(var(--color-text-muted))' },
+  { tag: tags.meta, color: 'rgb(var(--color-text-dim))' },
 ])
 
 const theme = EditorView.theme({
   '&': {
     fontSize: '13px',
     fontFamily: "'JetBrains Mono', monospace",
-    backgroundColor: 'var(--color-bg)',
-    color: 'var(--color-text)',
-    border: '1px solid var(--color-border)',
+    backgroundColor: 'rgb(var(--color-bg))',
+    color: 'rgb(var(--color-text))',
+    border: '1px solid rgb(var(--color-border))',
   },
   '&.cm-focused': {
     outline: 'none',
-    borderColor: 'rgba(var(--color-amber), 0.4)',
+    borderColor: 'rgb(var(--color-amber) / 0.4)',
   },
   '.cm-content': {
-    caretColor: 'var(--color-amber)',
+    caretColor: 'rgb(var(--color-amber))',
     padding: '8px 0',
   },
   '.cm-cursor': {
-    borderLeftColor: 'var(--color-amber)',
+    borderLeftColor: 'rgb(var(--color-amber))',
   },
   '.cm-activeLine': {
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -59,10 +59,10 @@ const theme = EditorView.theme({
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   '.cm-gutters': {
-    backgroundColor: 'var(--color-surface)',
-    color: 'var(--color-text-dim)',
+    backgroundColor: 'rgb(var(--color-surface))',
+    color: 'rgb(var(--color-text-dim))',
     border: 'none',
-    borderRight: '1px solid var(--color-border)',
+    borderRight: '1px solid rgb(var(--color-border))',
   },
   '.cm-lineNumbers .cm-gutterElement': {
     padding: '0 8px 0 12px',
@@ -75,7 +75,7 @@ const theme = EditorView.theme({
     backgroundColor: 'rgba(176, 136, 37, 0.3) !important',
   },
   '.cm-placeholder': {
-    color: 'var(--color-text-dim)',
+    color: 'rgb(var(--color-text-dim))',
     fontStyle: 'italic',
   },
 }, { dark: true })

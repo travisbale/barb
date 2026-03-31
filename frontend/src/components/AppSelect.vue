@@ -28,7 +28,7 @@ const isActive = () => focused.value || hasSelection()
       v-if="label"
       class="absolute left-3 font-mono transition-all duration-150 pointer-events-none z-10"
       :class="isActive()
-        ? 'text-xs -top-2.5 px-1 bg-surface text-amber/70'
+        ? ['text-xs -top-2.5 px-1 bg-surface', focused ? 'text-amber/70' : 'text-dim']
         : 'text-sm top-2.5 text-dim'"
     >{{ label }}</label>
     <select
