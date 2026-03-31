@@ -42,7 +42,7 @@ lint:
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
 
 dev-backend:
-	@go run ./cmd/barb --debug
+	@go run ./cmd/barb --addr :8443 --debug
 
 dev-frontend:
 	@cd frontend && npm install --silent && npm run dev

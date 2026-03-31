@@ -23,6 +23,7 @@ go.work.sum
 .env
 *.env
 *.key
+*.crt
 
 # Editor and OS artifacts
 .DS_Store

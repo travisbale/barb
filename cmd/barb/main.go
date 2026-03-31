@@ -30,9 +30,11 @@ var Version = "dev"
 
 func main() {
 	var (
-		addr   string
-		dbPath string
-		debug  bool
+		addr    string
+		dbPath  string
+		tlsCert string
+		tlsKey  string
+		debug   bool
 	)
 
 	root := &cobra.Command{
@@ -42,15 +44,17 @@ func main() {
 		SilenceUsage: true,
 	}
 
-	root.PersistentFlags().StringVar(&addr, "addr", ":8080", "listen address")
+	root.PersistentFlags().StringVar(&addr, "addr", ":443", "listen address")
 	root.PersistentFlags().StringVar(&dbPath, "db", "barb.db", "SQLite database path")
+	root.PersistentFlags().StringVar(&tlsCert, "tls-cert", "", "TLS certificate path (auto-generated if empty)")
+	root.PersistentFlags().StringVar(&tlsKey, "tls-key", "", "TLS key path (auto-generated if empty)")
 	root.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug logging")
 
 	serveCmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the console server (default)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runServe(cmd.Context(), addr, dbPath, debug)
+			return runServe(cmd.Context(), addr, dbPath, tlsCert, tlsKey, debug)
 		},
 	}
 	root.RunE = serveCmd.RunE
@@ -74,7 +78,7 @@ func run(root *cobra.Command) error {
 	return root.ExecuteContext(ctx)
 }
 
-func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
+func runServe(ctx context.Context, addr, dbPath, tlsCert, tlsKey string, debug bool) error {
 	level := slog.LevelInfo
 	if debug {
 		level = slog.LevelDebug
@@ -108,14 +112,26 @@ func runServe(ctx context.Context, addr, dbPath string, debug bool) error {
 		Logger:   logger,
 	})
 
+	// Set up TLS certificate.
+	dataDir := filepath.Dir(dbPath)
+	if tlsCert == "" {
+		tlsCert = filepath.Join(dataDir, "tls.crt")
+	}
+	if tlsKey == "" {
+		tlsKey = filepath.Join(dataDir, "tls.key")
+	}
+	if err := crypto.LoadOrGenerateTLS(tlsCert, tlsKey); err != nil {
+		return fmt.Errorf("setting up TLS: %w", err)
+	}
+
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: application.Handler(),
 	}
 
 	go func() {
-		logger.Info("barb starting", "addr", addr, "version", Version)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Info("barb starting", "addr", addr, "version", Version, "tls_cert", tlsCert)
+		if err := srv.ListenAndServeTLS(tlsCert, tlsKey); err != nil && err != http.ErrServerClosed {
 			logger.Error("server error", "error", err)
 			os.Exit(1)
 		}

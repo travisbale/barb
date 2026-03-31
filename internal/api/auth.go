@@ -28,6 +28,7 @@ func (r *Router) loginHandler(w http.ResponseWriter, req *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int((7 * 24 * time.Hour).Seconds()),
 	})
@@ -48,6 +49,7 @@ func (r *Router) logoutHandler(w http.ResponseWriter, req *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
