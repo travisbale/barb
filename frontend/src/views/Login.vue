@@ -33,13 +33,13 @@ async function submit() {
         <div class="font-mono text-xs text-dim mt-1 tracking-wider">Operations Console</div>
       </div>
 
-      <form @submit.prevent="submit" class="flex flex-col gap-5">
+      <form @submit.prevent="submit" class="flex flex-col gap-7">
         <AppInput v-model="username" placeholder="Username" required autofocus />
         <AppInput v-model="password" placeholder="Password" type="password" required />
 
         <div v-if="error" class="text-xs text-danger font-mono">{{ error }}</div>
 
-        <AppButton type="submit" :disabled="loading" class="w-full justify-center">
+        <AppButton type="submit" :disabled="loading" class="w-full py-3 justify-center">
           {{ loading ? 'Signing in...' : 'Sign In' }}
         </AppButton>
       </form>
