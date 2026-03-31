@@ -73,6 +73,7 @@ type Router struct {
 	Templates templateManager
 	Phishlets phishletManager
 	SMTP      smtpManager
+	Dashboard dashboardProvider
 	Version   string
 	Logger    *slog.Logger
 
@@ -95,6 +96,7 @@ func (r *Router) registerRoutes() {
 	}
 
 	// System
+	h("GET", sdk.RouteDashboard, r.getDashboard)
 	h("GET", sdk.RouteStatus, r.getStatus)
 
 	// Target lists

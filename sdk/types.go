@@ -198,6 +198,40 @@ type MiragedPhishletResponse struct {
 	Enabled  bool   `json:"enabled"`
 }
 
+// --- Dashboard ---
+
+type DashboardResponse struct {
+	Campaigns       CampaignCounts       `json:"campaigns"`
+	TotalCaptures   int                  `json:"total_captures"`
+	MiragedCount    int                  `json:"miraged_count"`
+	ActiveCampaigns []ActiveCampaignInfo `json:"active_campaigns"`
+	RecentCaptures  []RecentCapture      `json:"recent_captures"`
+}
+
+type CampaignCounts struct {
+	Draft     int `json:"draft"`
+	Active    int `json:"active"`
+	Completed int `json:"completed"`
+	Cancelled int `json:"cancelled"`
+	Total     int `json:"total"`
+}
+
+type RecentCapture struct {
+	Email        string `json:"email"`
+	CampaignName string `json:"campaign_name"`
+	CapturedAt   string `json:"captured_at"`
+	SessionID    string `json:"session_id"`
+}
+
+type ActiveCampaignInfo struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Sent     int    `json:"sent"`
+	Failed   int    `json:"failed"`
+	Captured int    `json:"captured"`
+	Total    int    `json:"total"`
+}
+
 // --- System ---
 
 type StatusResponse struct {

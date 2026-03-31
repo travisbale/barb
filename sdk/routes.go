@@ -36,6 +36,9 @@ const (
 	RouteMiragedStatus    = "/api/miraged/{id}/status"
 	RouteMiragedPhishlets = "/api/miraged/{id}/phishlets"
 
+	// Dashboard
+	RouteDashboard = "/api/dashboard"
+
 	// System
 	RouteStatus = "/api/status"
 )

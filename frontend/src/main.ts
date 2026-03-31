@@ -11,7 +11,8 @@ document.documentElement.classList.toggle('dark', theme === 'dark')
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/campaigns' },
+    { path: '/', redirect: '/dashboard' },
+    { path: '/dashboard', component: () => import('./views/Dashboard.vue') },
     { path: '/campaigns', component: () => import('./views/Campaigns.vue') },
     { path: '/campaigns/:id', component: () => import('./views/CampaignDetail.vue') },
     { path: '/targets', component: () => import('./views/Targets.vue') },

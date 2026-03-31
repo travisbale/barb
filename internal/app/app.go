@@ -67,6 +67,7 @@ func New(cfg Config) *App {
 		Templates: templateSvc,
 		Phishlets: phishletSvc,
 		SMTP:      smtpSvc,
+		Dashboard: &phishing.DashboardService{Campaigns: campaignStore, Miraged: miragedStore},
 		Version:   cfg.Version,
 		Logger:    cfg.Logger,
 	}

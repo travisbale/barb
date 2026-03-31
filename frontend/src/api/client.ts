@@ -304,6 +304,20 @@ export function listMiragedPhishlets(id: string): Promise<MiragedPhishlet[]> {
   return request('GET', `/miraged/${id}/phishlets`)
 }
 
+// --- Dashboard ---
+
+export interface DashboardStats {
+  campaigns: { draft: number; active: number; completed: number; cancelled: number; total: number }
+  total_captures: number
+  miraged_count: number
+  active_campaigns: { id: string; name: string; sent: number; failed: number; captured: number; total: number }[]
+  recent_captures: { email: string; campaign_name: string; captured_at: string; session_id: string }[]
+}
+
+export function getDashboard(): Promise<DashboardStats> {
+  return request('GET', '/dashboard')
+}
+
 // --- System ---
 
 export interface Status {

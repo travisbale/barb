@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { useTheme } from './composables/useTheme'
+import IconDashboard from './components/IconDashboard.vue'
 import IconCampaign from './components/IconCampaign.vue'
 import IconTarget from './components/IconTarget.vue'
 import IconTemplate from './components/IconTemplate.vue'
@@ -12,6 +13,7 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 const { isDark, toggle } = useTheme()
 
 const nav = [
+  { to: '/dashboard', label: 'Dashboard', icon: IconDashboard },
   { to: '/campaigns', label: 'Campaigns', icon: IconCampaign },
   { to: '/targets', label: 'Targets', icon: IconTarget },
   { to: '/templates', label: 'Templates', icon: IconTemplate },
