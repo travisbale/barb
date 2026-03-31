@@ -10,29 +10,40 @@
   <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/license-GPLv3-green.svg" alt="License: GPL v3" /></a>
 </p>
 
-Campaign management console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, phishlet management, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
+Phishing operations console for [Mirage](https://github.com/travisbale/mirage). Barb handles the operational side of phishing engagements — target lists, email templates, phishlet management, SMTP delivery, and campaign tracking — while Mirage handles the reverse proxy and session capture.
 
 ## Architecture
 
-```
-Operator's browser → Barb (campaign management, email delivery)
-                        ↓ Mirage API (mTLS)
-                     miraged (reverse proxy, session capture)
-```
-
 Barb is a single Go binary with an embedded Vue frontend. It communicates with `miraged` over its mTLS API to push phishlets, create lures, and monitor captured sessions in real time.
+
+```txt
+┌──────────┐         ┌──────────────────────────┐         ┌──────────────┐
+│ Operator │────────▶│          Barb            │────────▶│  SMTP Relay  │
+│ Browser  │◀────────│  campaign mgmt, delivery │         └──────┬───────┘
+└──────────┘  HTTP   └───────────┬──────────────┘                │
+                           mTLS  │                               │ emails
+                                 ▼                               ▼
+                          ┌─────────────┐                  ┌────────────┐
+                          │   miraged   │◀─────────────────│   Target   │
+                          │ reverse     │  clicks lure URL │            │
+                          │ proxy       │─────────────────▶│            │
+                          └─────────────┘  proxied site    └────────────┘
+```
 
 ## Features
 
-- **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment)
-- **Phishlet management** — store phishlet YAML configs with a syntax-highlighted editor; automatically pushed to miraged on campaign start
+- **Dashboard** — operations overview with campaign stats, active campaign progress, and recent captures
+- **Campaigns** — tie targets, templates, SMTP profiles, and phishlets together; configurable send rate; start, cancel, and monitor from the UI
+- **Campaign wizard** — guided setup for new campaigns
 - **Target lists** — manage recipients manually or import from CSV
 - **Email templates** — compose phishing emails with Go template variables, preview rendered output before sending
+- **Phishlet management** — store phishlet YAML configs with a syntax-highlighted editor; automatically pushed to miraged on campaign start
 - **SMTP profiles** — configure mail relay servers with encrypted credential storage (AES-256-GCM)
-- **Campaigns** — tie targets, templates, SMTP profiles, and phishlets together; configurable send rate; start, cancel, and monitor from the UI
+- **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment)
 - **Session monitoring** — real-time correlation of miraged session captures to campaign targets via SSE
 - **Result export** — download campaign results as CSV for reporting
-- **Dark/light theme** — tactical operations console aesthetic with theme toggle
+- **Authentication** — session-based login with mandatory password change on first use
+- **Dark/light theme** — terminal-inspired operations console aesthetic with theme toggle
 
 ## Requirements
 
@@ -87,28 +98,6 @@ make unit    # unit tests only
 ```
 
 Integration tests start the full server in-process with an in-memory SQLite database and a mock mailer.
-
-## Project Structure
-
-```
-cmd/barb/               # entry point, embeds frontend
-internal/
-  api/                  # HTTP handlers
-  app/                  # service wiring, SPA routing
-  crypto/               # encryption key management
-    aes/                # AES-256-GCM cipher
-  delivery/             # SMTP email sending (go-mail)
-  phishing/             # domain types, services, validation
-  store/sqlite/         # SQLite persistence
-frontend/
-  src/
-    api/                # TypeScript API client
-    components/         # reusable Vue components (FormCard, CodeEditor, etc.)
-    composables/        # Vue composables (theme, confirm dialog)
-    views/              # page-level views
-sdk/                    # Go SDK (types, routes, HTTP client)
-test/                   # integration tests + test harness
-```
 
 ## License
 
