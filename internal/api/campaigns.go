@@ -163,6 +163,31 @@ func resultToResponse(r *phishing.CampaignResult) sdk.CampaignResultResponse {
 	}
 }
 
+func (r *Router) sendTestEmail(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	var body sdk.SendTestEmailRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+
+	err := r.Campaigns.SendTestEmail(id, body.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		case errors.Is(err, phishing.ErrEmailRequired):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to send test email", err)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
 func isReferenceError(err error) bool {
 	return errors.Is(err, phishing.ErrTemplateNotFound) ||
 		errors.Is(err, phishing.ErrSMTPProfileNotFound) ||

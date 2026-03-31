@@ -107,6 +107,10 @@ type PreviewTemplateResponse struct {
 	TextBody string `json:"text_body"`
 }
 
+type SendTestEmailRequest struct {
+	Email string `json:"email"`
+}
+
 // --- Phishlets ---
 
 type CreatePhishletRequest struct {
@@ -225,6 +229,23 @@ type MeResponse struct {
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
+}
+
+// --- Sessions ---
+
+type MiragedSessionResponse struct {
+	ID           string                       `json:"id"`
+	Phishlet     string                       `json:"phishlet"`
+	RemoteAddr   string                       `json:"remote_addr"`
+	UserAgent    string                       `json:"user_agent"`
+	Username     string                       `json:"username"`
+	Password     string                       `json:"password"`
+	Custom       map[string]string            `json:"custom,omitempty"`
+	CookieTokens map[string]map[string]string `json:"cookie_tokens,omitempty"`
+	BodyTokens   map[string]string            `json:"body_tokens,omitempty"`
+	HTTPTokens   map[string]string            `json:"http_tokens,omitempty"`
+	StartedAt    string                       `json:"started_at"`
+	CompletedAt  string                       `json:"completed_at,omitempty"`
 }
 
 // --- Dashboard ---

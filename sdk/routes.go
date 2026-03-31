@@ -11,11 +11,12 @@ const (
 	RouteTarget        = "/api/targets/{id}"
 
 	// Campaigns
-	RouteCampaigns       = "/api/campaigns"
-	RouteCampaign        = "/api/campaigns/{id}"
-	RouteCampaignStart   = "/api/campaigns/{id}/start"
-	RouteCampaignCancel  = "/api/campaigns/{id}/cancel"
-	RouteCampaignResults = "/api/campaigns/{id}/results"
+	RouteCampaigns         = "/api/campaigns"
+	RouteCampaign          = "/api/campaigns/{id}"
+	RouteCampaignStart     = "/api/campaigns/{id}/start"
+	RouteCampaignCancel    = "/api/campaigns/{id}/cancel"
+	RouteCampaignResults   = "/api/campaigns/{id}/results"
+	RouteCampaignTestEmail = "/api/campaigns/{id}/test-email"
 
 	// Email Templates
 	RouteTemplates       = "/api/templates"
@@ -38,6 +39,8 @@ const (
 	RouteMiragedPhishletPush    = "/api/miraged/{id}/phishlets/push"
 	RouteMiragedPhishletEnable  = "/api/miraged/{id}/phishlets/{name}/enable"
 	RouteMiragedPhishletDisable = "/api/miraged/{id}/phishlets/{name}/disable"
+	RouteMiragedSession         = "/api/miraged/{id}/sessions/{sessionId}"
+	RouteMiragedSessionExport   = "/api/miraged/{id}/sessions/{sessionId}/export"
 
 	// Auth
 	RouteLogin          = "/api/auth/login"

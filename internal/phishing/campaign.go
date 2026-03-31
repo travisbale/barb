@@ -2,6 +2,7 @@ package phishing
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -411,4 +412,62 @@ func (s *CampaignService) List() ([]*Campaign, error) {
 
 func (s *CampaignService) Results(campaignID string) ([]*CampaignResult, error) {
 	return s.Store.ListResults(campaignID)
+}
+
+// SendTestEmail sends a single test email using a campaign's configuration.
+// It creates a temporary lure on miraged (if configured), sends one email
+// to the specified address, then cleans up the lure.
+func (s *CampaignService) SendTestEmail(campaignID, email string) error {
+	if email == "" {
+		return ErrEmailRequired
+	}
+
+	campaign, err := s.Store.GetCampaign(campaignID)
+	if err != nil {
+		return err
+	}
+
+	profile, err := s.SMTP.GetProfile(campaign.SMTPProfileID)
+	if err != nil {
+		return fmt.Errorf("loading SMTP profile: %w", err)
+	}
+	tmpl, err := s.Templates.GetTemplate(campaign.TemplateID)
+	if err != nil {
+		return fmt.Errorf("loading template: %w", err)
+	}
+
+	// Create a temporary lure if miraged is configured.
+	lureURL := "https://example.com/test-lure"
+	if campaign.MiragedID != "" && campaign.Phishlet != "" && s.Miraged != nil {
+		if s.Phishlets != nil {
+			if phishlet, err := s.Phishlets.GetPhishletByName(campaign.Phishlet); err == nil {
+				_ = s.Miraged.PushPhishlet(campaign.MiragedID, phishlet.YAML)
+			}
+		}
+
+		client, err := s.Miraged.client(campaign.MiragedID)
+		if err != nil {
+			return fmt.Errorf("connecting to miraged: %w", err)
+		}
+		lure, err := client.CreateLure(miragesdk.CreateLureRequest{Phishlet: campaign.Phishlet})
+		if err != nil {
+			return fmt.Errorf("creating test lure: %w", err)
+		}
+		lureURL = lure.URL
+
+		defer func() {
+			if err := client.DeleteLure(lure.ID); err != nil {
+				s.Logger.Error("failed to delete test lure", "lure_id", lure.ID, "error", err)
+			}
+		}()
+	}
+
+	conn, err := s.Mailer.Dial(context.Background(), profile)
+	if err != nil {
+		return fmt.Errorf("connecting to SMTP: %w", err)
+	}
+	defer conn.Close()
+
+	target := &Target{Email: email, FirstName: "Test", LastName: "User"}
+	return conn.Send(profile, tmpl, target, lureURL)
 }

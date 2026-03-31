@@ -95,6 +95,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("DELETE", sdk.RouteCampaign, r.deleteCampaign)
 	auth("POST", sdk.RouteCampaignStart, r.startCampaign)
 	auth("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
+	auth("POST", sdk.RouteCampaignTestEmail, r.sendTestEmail)
 	auth("GET", sdk.RouteCampaignResults, r.listCampaignResults)
 
 	// Miraged connections
@@ -106,4 +107,6 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("POST", sdk.RouteMiragedPhishletPush, r.pushMiragedPhishlet)
 	auth("POST", sdk.RouteMiragedPhishletEnable, r.enableMiragedPhishlet)
 	auth("POST", sdk.RouteMiragedPhishletDisable, r.disableMiragedPhishlet)
+	auth("GET", sdk.RouteMiragedSession, r.getMiragedSession)
+	auth("GET", sdk.RouteMiragedSessionExport, r.exportMiragedSessionCookies)
 }

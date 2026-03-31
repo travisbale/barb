@@ -279,6 +279,10 @@ export function cancelCampaign(id: string): Promise<void> {
   return request('POST', `/campaigns/${id}/cancel`)
 }
 
+export function sendTestEmail(campaignId: string, email: string): Promise<void> {
+  return request('POST', `/campaigns/${campaignId}/test-email`, { email })
+}
+
 export function deleteCampaign(id: string): Promise<void> {
   return request('DELETE', `/campaigns/${id}`)
 }
@@ -347,6 +351,31 @@ export function enableMiragedPhishlet(id: string, name: string, hostname: string
 
 export function disableMiragedPhishlet(id: string, name: string): Promise<MiragedPhishlet> {
   return request('POST', `/miraged/${id}/phishlets/${name}/disable`)
+}
+
+// --- Sessions ---
+
+export interface MiragedSession {
+  id: string
+  phishlet: string
+  remote_addr: string
+  user_agent: string
+  username: string
+  password: string
+  custom?: Record<string, string>
+  cookie_tokens?: Record<string, Record<string, string>>
+  body_tokens?: Record<string, string>
+  http_tokens?: Record<string, string>
+  started_at: string
+  completed_at?: string
+}
+
+export function getMiragedSession(connectionId: string, sessionId: string): Promise<MiragedSession> {
+  return request('GET', `/miraged/${connectionId}/sessions/${sessionId}`)
+}
+
+export function exportMiragedSessionCookies(connectionId: string, sessionId: string): string {
+  return `/api/miraged/${encodeURIComponent(connectionId)}/sessions/${encodeURIComponent(sessionId)}/export`
 }
 
 // --- Dashboard ---
