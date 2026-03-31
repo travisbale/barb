@@ -99,7 +99,7 @@ onMounted(load)
     <!-- Add target form -->
     <FormCard v-if="showAdd" @submit="add">
       <div class="grid grid-cols-2 gap-7">
-        <AppInput v-model="form.email" type="email" placeholder="Email (required)" required class="col-span-2" />
+        <AppInput v-model="form.email" type="email" placeholder="Email" required class="col-span-2" />
         <AppInput v-model="form.first_name" placeholder="First name" />
         <AppInput v-model="form.last_name" placeholder="Last name" />
         <AppInput v-model="form.department" placeholder="Department" />

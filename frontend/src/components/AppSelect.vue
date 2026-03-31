@@ -30,7 +30,7 @@ const isActive = () => focused.value || hasSelection()
       :class="isActive()
         ? ['text-xs -top-2.5 px-1 bg-surface', focused ? 'text-amber/70' : 'text-dim']
         : 'text-sm top-2.5 text-dim'"
-    >{{ label }}</label>
+    >{{ label }}<span v-if="required" class="text-amber/70 ml-0.5">*</span></label>
     <select
       ref="selectEl"
       :value="modelValue"

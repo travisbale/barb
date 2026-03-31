@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
 import IconTrash from '../components/IconTrash.vue'
 import AppInput from '../components/AppInput.vue'
+import TemplateForm from '../components/TemplateForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
@@ -117,13 +118,7 @@ onMounted(load)
     <ErrorBanner :message="error" />
 
     <FormCard v-if="showForm" @submit="submit">
-      <div class="grid grid-cols-2 gap-5">
-        <AppInput v-model="form.name" placeholder="Template name (required)" required />
-        <AppInput v-model="form.subject" placeholder="Email subject (required)" required />
-      </div>
-      <AppInput v-model="form.html_body" multiline :rows="8" placeholder="HTML body" />
-      <AppInput v-model="form.text_body" multiline :rows="4" placeholder="Plain text body (optional)" />
-      <AppInput v-model="form.envelope_sender" placeholder="Envelope sender / Return-Path (optional)" />
+      <TemplateForm v-model="form" />
       <template #actions>
         <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
         <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>

@@ -124,12 +124,12 @@ onMounted(load)
 
     <FormCard v-if="showForm" @submit="submit">
       <div class="grid grid-cols-2 gap-7">
-        <AppInput v-model="form.name" placeholder="Profile name (required)" required class="col-span-2" />
-        <AppInput v-model="form.host" placeholder="SMTP host (required)" required />
+        <AppInput v-model="form.name" placeholder="Profile name" required class="col-span-2" />
+        <AppInput v-model="form.host" placeholder="SMTP host" required />
         <AppInput v-model="form.port" placeholder="Port" type="number" />
         <AppInput v-model="form.username" placeholder="Username" />
         <AppInput v-model="form.password" :placeholder="editingId ? 'Password (leave blank to keep)' : 'Password'" type="password" />
-        <AppInput v-model="form.from_addr" placeholder="From address (required)" required />
+        <AppInput v-model="form.from_addr" placeholder="From address" required />
         <AppInput v-model="form.from_name" placeholder="From name" />
       </div>
 

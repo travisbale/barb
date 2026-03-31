@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import {
   getCampaign, startCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
   getMiragedSession, exportMiragedSessionCookies,
+  getTemplate, getSMTPProfile, getTargetList, listTargets,
   type Campaign, type CampaignResult, type MiragedSession,
 } from '../api/client'
 import AppButton from '../components/AppButton.vue'
@@ -12,6 +13,7 @@ import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
 import PageHeader from '../components/PageHeader.vue'
+import TabBar from '../components/TabBar.vue'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -31,6 +33,14 @@ const selectedSession = ref<MiragedSession | null>(null)
 const sessionLoading = ref(false)
 const sessionError = ref('')
 
+const activeTab = ref('Results')
+
+// Settings tab data.
+const templateName = ref('')
+const smtpName = ref('')
+const targetListName = ref('')
+const targetListCount = ref(0)
+
 const isDraft = computed(() => campaign.value?.status === 'draft')
 const isActive = computed(() => campaign.value?.status === 'active')
 
@@ -41,6 +51,22 @@ async function load() {
   } catch (e: any) {
     error.value = e.message
   }
+}
+
+async function loadSettings() {
+  if (!campaign.value) return
+  try {
+    const [tmpl, smtp, list, targets] = await Promise.all([
+      getTemplate(campaign.value.template_id),
+      getSMTPProfile(campaign.value.smtp_profile_id),
+      getTargetList(campaign.value.target_list_id),
+      listTargets(campaign.value.target_list_id),
+    ])
+    templateName.value = tmpl.name
+    smtpName.value = smtp.name
+    targetListName.value = list.name
+    targetListCount.value = targets?.length ?? 0
+  } catch { /* ignore — settings are supplementary */ }
 }
 
 async function start() {
@@ -219,17 +245,61 @@ onUnmounted(stopPolling)
 
     <!-- Test email -->
     <Card v-if="showTestEmail" class="p-5 mb-4">
-      <form @submit.prevent="sendTest" class="flex items-end gap-3">
-        <AppInput v-model="testEmailAddress" type="email" placeholder="Recipient email" required class="flex-1" />
-        <AppButton variant="ghost" @click="showTestEmail = false">Cancel</AppButton>
-        <AppButton type="submit" :disabled="testEmailSending || !testEmailAddress">
-          {{ testEmailSending ? 'Sending...' : 'Send' }}
-        </AppButton>
+      <form @submit.prevent="sendTest" class="flex flex-col gap-5">
+        <div class="text-xs font-mono text-dim uppercase tracking-wider">Send Test Email</div>
+        <AppInput v-model="testEmailAddress" type="email" placeholder="Recipient email" required />
+        <div class="flex gap-2 justify-end">
+          <AppButton variant="ghost" @click="showTestEmail = false">Cancel</AppButton>
+          <AppButton type="submit" :disabled="testEmailSending || !testEmailAddress">
+            {{ testEmailSending ? 'Sending...' : 'Send' }}
+          </AppButton>
+        </div>
       </form>
       <div v-if="testEmailStatus" class="text-xs font-mono mt-2" :class="testEmailStatus.startsWith('Test email') ? 'text-teal' : 'text-danger'">
         {{ testEmailStatus }}
       </div>
     </Card>
+
+    <TabBar :tabs="['Results', 'Settings']" :modelValue="activeTab" @update:modelValue="(t: string) => { activeTab = t as any; if (t === 'Settings') loadSettings() }" />
+
+    <!-- Settings tab -->
+    <Card v-if="activeTab === 'Settings'" class="p-7">
+      <table class="w-full text-sm font-mono">
+        <tbody>
+          <tr class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs w-36">Template</td>
+            <td class="py-3 text-primary">{{ templateName || campaign?.template_id }}</td>
+          </tr>
+          <tr class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">SMTP Profile</td>
+            <td class="py-3 text-primary">{{ smtpName || campaign?.smtp_profile_id }}</td>
+          </tr>
+          <tr class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">Target List</td>
+            <td class="py-3 text-primary">{{ targetListName || campaign?.target_list_id }} <span v-if="targetListCount" class="text-dim">({{ targetListCount }} targets)</span></td>
+          </tr>
+          <tr class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">Send Rate</td>
+            <td class="py-3 text-primary">{{ campaign?.send_rate }} per minute</td>
+          </tr>
+          <tr v-if="campaign?.miraged_id" class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">Miraged</td>
+            <td class="py-3 text-primary">{{ campaign.miraged_id }}</td>
+          </tr>
+          <tr v-if="campaign?.phishlet" class="border-b border-edge/50">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">Phishlet</td>
+            <td class="py-3 text-primary">{{ campaign.phishlet }}</td>
+          </tr>
+          <tr v-if="campaign?.lure_url">
+            <td class="py-3 text-dim uppercase tracking-wider text-xs">Lure URL</td>
+            <td class="py-3 text-primary font-mono select-all">{{ campaign.lure_url }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </Card>
+
+    <!-- Results tab -->
+    <template v-if="activeTab === 'Results'">
 
     <!-- Session detail panel -->
     <Card v-if="selectedSession || sessionLoading || sessionError" class="p-7 mb-4">
@@ -333,5 +403,7 @@ onUnmounted(stopPolling)
         </tbody>
       </table>
     </Card>
+
+    </template>
   </div>
 </template>

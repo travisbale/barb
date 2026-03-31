@@ -78,17 +78,15 @@ On first run, Barb generates an encryption key at `encryption.key` (next to the 
 
 ## Development
 
-Run the Go backend and Vue dev server separately for hot reload:
+Start the full development environment (Mailpit, miraged, Go backend, Vite dev server):
 
 ```bash
-# Terminal 1
-make dev-backend
-
-# Terminal 2
-make dev-frontend
+make dev
 ```
 
-Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on `:8080`.
+Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on `:8443`. Mailpit UI is at `http://localhost:8025`.
+
+Requires Docker for Mailpit and miraged containers. Stop everything with Ctrl+C, or run `make dev-down` to clean up containers.
 
 ## Testing
 

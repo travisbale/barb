@@ -77,7 +77,7 @@ onMounted(load)
 
     <FormCard v-if="showAdd" @submit="add">
       <div class="grid grid-cols-2 gap-5">
-        <AppInput v-model="form.name" placeholder="Name (required)" required />
+        <AppInput v-model="form.name" placeholder="Name" required />
         <AppInput v-model="form.address" placeholder="Address (host:port)" required />
       </div>
       <div class="grid grid-cols-2 gap-5">

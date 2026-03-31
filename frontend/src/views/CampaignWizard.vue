@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   listMiraged, enrollMiraged, pushMiragedPhishlet, enableMiragedPhishlet,
   listPhishlets, createPhishlet,
-  listTargetLists, createTargetList, importTargetsCSV, listTargets,
+  listTargetLists, createTargetList, addTarget, importTargetsCSV, listTargets,
   listTemplates, createTemplate, previewTemplate,
   listSMTPProfiles, createSMTPProfile,
-  createCampaign, startCampaign,
+  createCampaign,
   type MiragedConnection, type Phishlet,
-  type TargetList, type EmailTemplate, type SMTPProfile,
+  type TargetList, type Target, type EmailTemplate, type SMTPProfile,
   type PreviewResult,
 } from '../api/client'
 import WizardShell from '../components/WizardShell.vue'
@@ -17,6 +17,7 @@ import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
 import CodeEditor from '../components/CodeEditor.vue'
+import TemplateForm from '../components/TemplateForm.vue'
 import Card from '../components/Card.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 
@@ -55,6 +56,7 @@ const showNewSmtp = ref(false)
 const newConnection = ref({ name: '', address: '', secret_hostname: '', token: '' })
 const newPhishletYaml = ref('')
 const newTargetListName = ref('')
+const newTarget = ref({ email: '', first_name: '', last_name: '', department: '', position: '' })
 const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 const newSmtp = ref({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
 
@@ -80,6 +82,9 @@ const selectedSmtp = computed(() => smtpProfiles.value.find(p => p.id === select
 const selectedConnection = computed(() => connections.value.find(c => c.id === selectedConnectionId.value))
 
 const targetCount = ref(0)
+const targetPreview = ref<Target[]>([])
+const showTargetPreview = ref(false)
+const showAddTargets = ref(false)
 const previewResult = ref<PreviewResult | null>(null)
 
 // --- Load data ---
@@ -104,6 +109,20 @@ async function loadAll() {
 
 onMounted(loadAll)
 
+// Load targets when a list is selected.
+watch(selectedTargetListId, async (id) => {
+  targetPreview.value = []
+  targetCount.value = 0
+  showTargetPreview.value = false
+  showAddTargets.value = false
+  if (!id) return
+  try {
+    const targets = await listTargets(id)
+    targetPreview.value = targets ?? []
+    targetCount.value = targetPreview.value.length
+  } catch { /* ignore */ }
+})
+
 // --- Navigation ---
 function canAdvance(): boolean {
   switch (effectiveStep.value) {
@@ -117,16 +136,8 @@ function canAdvance(): boolean {
   }
 }
 
-async function next() {
+function next() {
   error.value = ''
-
-  if (effectiveStep.value === 2 && selectedTargetListId.value) {
-    try {
-      const targets = await listTargets(selectedTargetListId.value)
-      targetCount.value = targets?.length ?? 0
-    } catch { /* ignore */ }
-  }
-
   step.value++
 }
 
@@ -197,6 +208,7 @@ async function createNewTargetList() {
     targetLists.value.unshift(list)
     selectedTargetListId.value = list.id
     showNewTargetList.value = false
+    showAddTargets.value = true
     newTargetListName.value = ''
   } catch (e: any) {
     error.value = e.message
@@ -213,13 +225,32 @@ async function handleCsvImport(event: Event) {
   loading.value = true
   error.value = ''
   try {
-    const result = await importTargetsCSV(selectedTargetListId.value, file)
-    targetCount.value += result.imported
+    await importTargetsCSV(selectedTargetListId.value, file)
+    const targets = await listTargets(selectedTargetListId.value)
+    targetPreview.value = targets ?? []
+    targetCount.value = targetPreview.value.length
   } catch (e: any) {
     error.value = e.message
   } finally {
     loading.value = false
     input.value = ''
+  }
+}
+
+async function addNewTarget() {
+  if (!selectedTargetListId.value || !newTarget.value.email) return
+  loading.value = true
+  error.value = ''
+  try {
+    await addTarget(selectedTargetListId.value, newTarget.value)
+    const targets = await listTargets(selectedTargetListId.value)
+    targetPreview.value = targets ?? []
+    targetCount.value = targetPreview.value.length
+    newTarget.value = { email: '', first_name: '', last_name: '', department: '', position: '' }
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    loading.value = false
   }
 }
 
@@ -270,7 +301,7 @@ async function createNewSmtp() {
 }
 
 // --- Final submission ---
-async function submit(autoStart: boolean) {
+async function submit() {
   loading.value = true
   error.value = ''
   try {
@@ -283,9 +314,6 @@ async function submit(autoStart: boolean) {
       phishlet: selectedPhishletName.value,
       send_rate: parseInt(sendRate.value) || 10,
     })
-    if (autoStart) {
-      await startCampaign(campaign.id)
-    }
     router.push(`/campaigns/${campaign.id}`)
   } catch (e: any) {
     error.value = e.message
@@ -314,7 +342,7 @@ async function submit(autoStart: boolean) {
             <option v-for="conn in connections" :key="conn.id" :value="conn.id">{{ conn.name }} ({{ conn.address }})</option>
           </AppSelect>
 
-          <div class="mt-4">
+          <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewConnection = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Enroll new server</button>
           </div>
         </template>
@@ -345,7 +373,7 @@ async function submit(autoStart: boolean) {
             <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
           </AppSelect>
 
-          <div class="mt-4">
+          <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
           </div>
         </template>
@@ -362,8 +390,8 @@ async function submit(autoStart: boolean) {
         <div v-if="selectedPhishletName && !phishletEnabled" class="mt-6 border-t border-edge pt-5">
           <div class="text-xs font-mono text-dim uppercase tracking-wider mb-4">Enable on {{ selectedConnection?.name }}</div>
           <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="phishletHostname" placeholder="Hostname (required)" />
-            <AppInput v-model="phishletDnsProvider" placeholder="DNS provider (optional)" />
+            <AppInput v-model="phishletHostname" placeholder="Hostname" required />
+            <AppInput v-model="phishletDnsProvider" placeholder="DNS provider" />
           </div>
           <div class="flex gap-2 justify-end mt-4">
             <AppButton :disabled="loading || !phishletHostname" @click="enableSelectedPhishlet">
@@ -387,18 +415,57 @@ async function submit(autoStart: boolean) {
             <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
           </AppSelect>
 
-          <div v-if="selectedTargetListId && targetCount > 0" class="mt-2 text-xs font-mono text-dim">
-            {{ targetCount }} targets
-          </div>
-
+          <!-- Selected list: preview + actions -->
           <div v-if="selectedTargetListId" class="mt-4">
-            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
-              Import CSV
-              <input type="file" accept=".csv" class="hidden" @change="handleCsvImport" />
-            </label>
+            <div class="flex items-center gap-3 text-xs font-mono text-dim">
+              <span>{{ targetCount }} {{ targetCount === 1 ? 'target' : 'targets' }}</span>
+              <button v-if="targetCount > 0" @click="showTargetPreview = !showTargetPreview" class="text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">
+                {{ showTargetPreview ? 'Hide' : 'Preview' }}
+              </button>
+            </div>
+
+            <!-- Target preview (first 10) -->
+            <div v-if="showTargetPreview && targetPreview.length > 0" class="mt-3 border border-edge overflow-hidden">
+              <table class="w-full text-xs font-mono">
+                <tbody>
+                  <tr
+                    v-for="target in targetPreview.slice(0, 10)"
+                    :key="target.id"
+                    class="border-b border-edge/50 last:border-0"
+                  >
+                    <td class="px-3 py-1.5 text-primary">{{ target.email }}</td>
+                    <td class="px-3 py-1.5 text-muted">{{ [target.first_name, target.last_name].filter(Boolean).join(' ') || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-if="targetPreview.length > 10" class="px-3 py-1.5 text-xs font-mono text-dim border-t border-edge/50">
+                and {{ targetPreview.length - 10 }} more...
+              </div>
+            </div>
+
+            <!-- Add more targets -->
+            <div class="mt-4">
+              <button @click="showAddTargets = !showAddTargets" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">
+                {{ showAddTargets ? 'Hide' : '+ Add targets' }}
+              </button>
+            </div>
+
+            <div v-if="showAddTargets" class="mt-4 border-t border-edge pt-4 flex flex-col gap-4">
+              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150 self-start">
+                Import CSV
+                <input type="file" accept=".csv" class="hidden" @change="handleCsvImport" />
+              </label>
+
+              <form @submit.prevent="addNewTarget" class="flex gap-3 items-center">
+                <AppInput v-model="newTarget.email" type="email" placeholder="Email (required)" required class="flex-1" />
+                <AppInput v-model="newTarget.first_name" placeholder="First name" class="flex-1" />
+                <AppInput v-model="newTarget.last_name" placeholder="Last name" class="flex-1" />
+                <AppButton type="submit" :disabled="loading || !newTarget.email">Add</AppButton>
+              </form>
+            </div>
           </div>
 
-          <div class="mt-4">
+          <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewTargetList = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
           </div>
         </template>
@@ -433,18 +500,13 @@ async function submit(autoStart: boolean) {
             </div>
           </div>
 
-          <div class="mt-4">
+          <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewTemplate = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new template</button>
           </div>
         </template>
 
         <div v-else class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newTemplate.name" placeholder="Template name" />
-            <AppInput v-model="newTemplate.subject" placeholder="Email subject" />
-          </div>
-          <AppInput v-model="newTemplate.html_body" multiline :rows="6" placeholder="HTML body" />
-          <AppInput v-model="newTemplate.text_body" multiline :rows="3" placeholder="Plain text body (optional)" />
+          <TemplateForm v-model="newTemplate" min-editor-height="150px" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewTemplate = false">Cancel</AppButton>
             <AppButton :disabled="loading" @click="createNewTemplate">Create</AppButton>
@@ -462,7 +524,7 @@ async function submit(autoStart: boolean) {
             <option v-for="profile in smtpProfiles" :key="profile.id" :value="profile.id">{{ profile.name }} ({{ profile.host }})</option>
           </AppSelect>
 
-          <div class="mt-4">
+          <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewSmtp = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new profile</button>
           </div>
         </template>
@@ -480,7 +542,7 @@ async function submit(autoStart: boolean) {
             <AppInput v-model="newSmtp.username" placeholder="Username" />
             <AppInput v-model="newSmtp.password" placeholder="Password" type="password" />
           </div>
-          <AppInput v-model="newSmtp.from_name" placeholder="From name (optional)" />
+          <AppInput v-model="newSmtp.from_name" placeholder="From name" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewSmtp = false">Cancel</AppButton>
             <AppButton :disabled="loading" @click="createNewSmtp">Create</AppButton>
@@ -493,7 +555,7 @@ async function submit(autoStart: boolean) {
         <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Review & Launch</div>
 
         <div class="flex flex-col gap-5">
-          <AppInput v-model="campaignName" placeholder="Campaign name (required)" required />
+          <AppInput v-model="campaignName" placeholder="Campaign name" required />
           <AppInput v-model="sendRate" type="number" placeholder="Send rate (emails per minute)" />
 
           <div class="border-t border-edge pt-4">
@@ -530,9 +592,8 @@ async function submit(autoStart: boolean) {
 Next
         </AppButton>
         <template v-else>
-          <AppButton variant="secondary" :disabled="loading || !campaignName" @click="submit(false)">Create as Draft</AppButton>
-          <AppButton :disabled="loading || !campaignName" @click="submit(true)">
-            {{ loading ? 'Launching...' : 'Create & Start' }}
+          <AppButton :disabled="loading || !campaignName" @click="submit">
+            {{ loading ? 'Creating...' : 'Create Campaign' }}
           </AppButton>
         </template>
       </template>

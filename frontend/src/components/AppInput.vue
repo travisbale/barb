@@ -27,7 +27,7 @@ const isActive = () => focused.value || props.modelValue
       :class="isActive()
         ? ['text-xs -top-2.5 px-1 bg-surface', focused ? 'text-amber/70' : 'text-dim']
         : 'text-sm top-2.5 text-dim'"
-    >{{ placeholder }}</label>
+    >{{ placeholder }}<span v-if="required" class="text-amber/70 ml-0.5">*</span></label>
     <textarea
       v-if="multiline"
       :value="modelValue"

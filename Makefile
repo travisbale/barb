@@ -1,7 +1,7 @@
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -ldflags "-X main.Version=$(VERSION)"
 
-.PHONY: build release frontend clean test unit fmt lint dev
+.PHONY: build release frontend clean test unit fmt lint dev dev-down
 
 frontend:
 	@echo "Building frontend..."
@@ -41,8 +41,11 @@ lint:
 	@echo "Linting code..."
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
 
-dev-backend:
-	@go run ./cmd/barb --addr :8443 --debug
+dev:
+	@docker compose up -d
+	@trap 'docker compose down; kill 0' EXIT; \
+		(cd frontend && npm install --silent && npm run dev) & \
+		go run ./cmd/barb --addr :8443 --debug
 
-dev-frontend:
-	@cd frontend && npm install --silent && npm run dev
+dev-down:
+	@docker compose down

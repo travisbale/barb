@@ -3,13 +3,16 @@ import { ref, onMounted, watch, shallowRef } from 'vue'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { yaml } from '@codemirror/lang-yaml'
+import { html } from '@codemirror/lang-html'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { syntaxHighlighting, defaultHighlightStyle, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 
 const props = defineProps<{
   modelValue: string
+  language?: 'yaml' | 'html'
   placeholder?: string
+  minHeight?: string
 }>()
 
 const emit = defineEmits<{
@@ -88,7 +91,7 @@ function createState(doc: string): EditorState {
       highlightActiveLine(),
       highlightActiveLineGutter(),
       history(),
-      yaml(),
+      props.language === 'html' ? html() : yaml(),
       syntaxHighlighting(barbHighlight),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -124,15 +127,12 @@ watch(() => props.modelValue, (newVal) => {
 </script>
 
 <template>
-  <div ref="container" class="code-editor"></div>
+  <div ref="container" class="code-editor" :style="{ minHeight: props.minHeight ?? '300px' }"></div>
 </template>
 
 <style scoped>
-.code-editor {
-  min-height: 300px;
-}
 .code-editor :deep(.cm-editor) {
-  min-height: 300px;
+  min-height: inherit;
   max-height: 600px;
   overflow: auto;
 }

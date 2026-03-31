@@ -1,0 +1,12 @@
+build/
+dev/
+test/
+frontend/node_modules/
+frontend/dist/
+cmd/barb/dist/
+*.db
+*.key
+*.crt
+.git
+.github
+CLAUDE.md
