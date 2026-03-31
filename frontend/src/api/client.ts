@@ -197,6 +197,7 @@ export interface SMTPProfile {
   username: string
   from_addr: string
   from_name: string
+  custom_headers?: Record<string, string>
   created_at: string
 }
 

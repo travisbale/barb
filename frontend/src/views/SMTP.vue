@@ -20,6 +20,7 @@ const error = ref('')
 
 const emptyForm = { name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' }
 const form = ref({ ...emptyForm })
+const headers = ref<{ key: string; value: string }[]>([])
 
 async function load() {
   try {
@@ -32,6 +33,7 @@ async function load() {
 function openCreate() {
   editingId.value = null
   form.value = { ...emptyForm }
+  headers.value = []
   showForm.value = true
 }
 
@@ -46,7 +48,24 @@ function openEdit(profile: SMTPProfile) {
     from_addr: profile.from_addr,
     from_name: profile.from_name,
   }
+  headers.value = Object.entries(profile.custom_headers ?? {}).map(([key, value]) => ({ key, value }))
   showForm.value = true
+}
+
+function addHeader() {
+  headers.value.push({ key: '', value: '' })
+}
+
+function removeHeader(index: number) {
+  headers.value.splice(index, 1)
+}
+
+function headersToMap(): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const h of headers.value) {
+    if (h.key.trim()) map[h.key.trim()] = h.value
+  }
+  return map
 }
 
 function closeForm() {
@@ -65,6 +84,7 @@ async function submit() {
       password: form.value.password,
       from_addr: form.value.from_addr,
       from_name: form.value.from_name,
+      custom_headers: headersToMap(),
     }
 
     if (editingId.value) {
@@ -112,6 +132,22 @@ onMounted(load)
         <AppInput v-model="form.from_addr" placeholder="From address (required)" required />
         <AppInput v-model="form.from_name" placeholder="From name" />
       </div>
+
+      <!-- Custom headers -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs font-mono text-dim uppercase tracking-wider">Custom Headers</div>
+          <button type="button" @click="addHeader" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Add Header</button>
+        </div>
+        <div v-for="(header, i) in headers" :key="i" class="flex gap-2 mb-2 items-center">
+          <AppInput v-model="header.key" placeholder="Header name" class="flex-1" />
+          <AppInput v-model="header.value" placeholder="Value" class="flex-1" />
+          <button type="button" @click="removeHeader(i)" class="text-dim hover:text-danger transition-colors">
+            <IconTrash />
+          </button>
+        </div>
+      </div>
+
       <template #actions>
         <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
         <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>

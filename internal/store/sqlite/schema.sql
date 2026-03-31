@@ -6,8 +6,9 @@ CREATE TABLE IF NOT EXISTS smtp_profiles (
     username    TEXT    NOT NULL DEFAULT '',
     password    TEXT    NOT NULL DEFAULT '',
     from_addr   TEXT    NOT NULL,
-    from_name   TEXT    NOT NULL DEFAULT '',
-    created_at  INTEGER NOT NULL
+    from_name       TEXT    NOT NULL DEFAULT '',
+    custom_headers  TEXT    NOT NULL DEFAULT '{}',
+    created_at      INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS email_templates (

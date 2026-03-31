@@ -96,6 +96,11 @@ func (c *conn) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate,
 		msg.SetBodyString(mail.TypeTextPlain, textBody)
 	}
 
+	// Apply custom headers from the SMTP profile.
+	for key, value := range profile.CustomHeaders {
+		msg.SetGenHeader(mail.Header(key), value)
+	}
+
 	return c.client.Send(msg)
 }
 

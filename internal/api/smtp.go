@@ -32,13 +32,14 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	profile := &phishing.SMTPProfile{
-		Name:     body.Name,
-		Host:     body.Host,
-		Port:     body.Port,
-		Username: body.Username,
-		Password: body.Password,
-		FromAddr: body.FromAddr,
-		FromName: body.FromName,
+		Name:          body.Name,
+		Host:          body.Host,
+		Port:          body.Port,
+		Username:      body.Username,
+		Password:      body.Password,
+		FromAddr:      body.FromAddr,
+		FromName:      body.FromName,
+		CustomHeaders: body.CustomHeaders,
 	}
 
 	created, err := r.SMTP.CreateProfile(profile)
@@ -79,13 +80,14 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	updated, err := r.SMTP.UpdateProfile(id, &phishing.SMTPProfileUpdate{
-		Name:     body.Name,
-		Host:     body.Host,
-		Port:     body.Port,
-		Username: body.Username,
-		Password: body.Password,
-		FromAddr: body.FromAddr,
-		FromName: body.FromName,
+		Name:          body.Name,
+		Host:          body.Host,
+		Port:          body.Port,
+		Username:      body.Username,
+		Password:      body.Password,
+		FromAddr:      body.FromAddr,
+		FromName:      body.FromName,
+		CustomHeaders: body.CustomHeaders,
 	})
 	if err != nil {
 		switch {
@@ -117,13 +119,14 @@ func (r *Router) deleteSMTPProfile(w http.ResponseWriter, req *http.Request) {
 
 func smtpProfileToResponse(p *phishing.SMTPProfile) sdk.SMTPProfileResponse {
 	return sdk.SMTPProfileResponse{
-		ID:        p.ID,
-		Name:      p.Name,
-		Host:      p.Host,
-		Port:      p.Port,
-		Username:  p.Username,
-		FromAddr:  p.FromAddr,
-		FromName:  p.FromName,
-		CreatedAt: p.CreatedAt,
+		ID:            p.ID,
+		Name:          p.Name,
+		Host:          p.Host,
+		Port:          p.Port,
+		Username:      p.Username,
+		FromAddr:      p.FromAddr,
+		FromName:      p.FromName,
+		CustomHeaders: p.CustomHeaders,
+		CreatedAt:     p.CreatedAt,
 	}
 }

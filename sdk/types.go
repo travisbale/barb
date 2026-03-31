@@ -35,36 +35,39 @@ type TargetResponse struct {
 // --- SMTP Profiles ---
 
 type CreateSMTPProfileRequest struct {
-	Name     string `json:"name"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	FromAddr string `json:"from_addr"`
-	FromName string `json:"from_name"`
+	Name          string            `json:"name"`
+	Host          string            `json:"host"`
+	Port          int               `json:"port"`
+	Username      string            `json:"username"`
+	Password      string            `json:"password"`
+	FromAddr      string            `json:"from_addr"`
+	FromName      string            `json:"from_name"`
+	CustomHeaders map[string]string `json:"custom_headers,omitempty"`
 }
 
 // UpdateSMTPProfileRequest supports partial updates. Only non-nil fields
 // are applied; nil fields leave the existing value unchanged.
 type UpdateSMTPProfileRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Host     *string `json:"host,omitempty"`
-	Port     *int    `json:"port,omitempty"`
-	Username *string `json:"username,omitempty"`
-	Password *string `json:"password,omitempty"`
-	FromAddr *string `json:"from_addr,omitempty"`
-	FromName *string `json:"from_name,omitempty"`
+	Name          *string            `json:"name,omitempty"`
+	Host          *string            `json:"host,omitempty"`
+	Port          *int               `json:"port,omitempty"`
+	Username      *string            `json:"username,omitempty"`
+	Password      *string            `json:"password,omitempty"`
+	FromAddr      *string            `json:"from_addr,omitempty"`
+	FromName      *string            `json:"from_name,omitempty"`
+	CustomHeaders *map[string]string `json:"custom_headers,omitempty"`
 }
 
 type SMTPProfileResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Host      string    `json:"host"`
-	Port      int       `json:"port"`
-	Username  string    `json:"username"`
-	FromAddr  string    `json:"from_addr"`
-	FromName  string    `json:"from_name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Host          string            `json:"host"`
+	Port          int               `json:"port"`
+	Username      string            `json:"username"`
+	FromAddr      string            `json:"from_addr"`
+	FromName      string            `json:"from_name"`
+	CustomHeaders map[string]string `json:"custom_headers,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
 }
 
 // --- Email Templates ---

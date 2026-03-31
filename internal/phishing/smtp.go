@@ -1,22 +1,33 @@
 package phishing
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+var reservedHeaders = map[string]bool{
+	"from": true, "to": true, "cc": true, "bcc": true,
+	"subject": true, "date": true, "message-id": true,
+	"content-type": true, "content-transfer-encoding": true,
+	"mime-version": true, "reply-to": true, "sender": true,
+	"return-path": true,
+}
+
 // SMTPProfile is a configured mail relay for sending phishing emails.
 type SMTPProfile struct {
-	ID        string
-	Name      string
-	Host      string
-	Port      int
-	Username  string
-	Password  string
-	FromAddr  string
-	FromName  string
-	CreatedAt time.Time
+	ID            string
+	Name          string
+	Host          string
+	Port          int
+	Username      string
+	Password      string
+	FromAddr      string
+	FromName      string
+	CustomHeaders map[string]string
+	CreatedAt     time.Time
 }
 
 type smtpStore interface {
@@ -36,6 +47,11 @@ func (p *SMTPProfile) Validate() error {
 	}
 	if p.FromAddr == "" {
 		return ErrFromAddrRequired
+	}
+	for key := range p.CustomHeaders {
+		if reservedHeaders[strings.ToLower(key)] {
+			return fmt.Errorf("custom header %q conflicts with a standard email header", key)
+		}
 	}
 	return nil
 }
@@ -65,13 +81,14 @@ func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) 
 // SMTPProfileUpdate holds optional fields for a partial SMTP profile update.
 // Nil fields are left unchanged.
 type SMTPProfileUpdate struct {
-	Name     *string
-	Host     *string
-	Port     *int
-	Username *string
-	Password *string
-	FromAddr *string
-	FromName *string
+	Name          *string
+	Host          *string
+	Port          *int
+	Username      *string
+	Password      *string
+	FromAddr      *string
+	FromName      *string
+	CustomHeaders *map[string]string
 }
 
 func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTPProfile, error) {
@@ -100,6 +117,9 @@ func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTP
 	}
 	if update.FromName != nil {
 		existing.FromName = *update.FromName
+	}
+	if update.CustomHeaders != nil {
+		existing.CustomHeaders = *update.CustomHeaders
 	}
 
 	if existing.Port == 0 {
