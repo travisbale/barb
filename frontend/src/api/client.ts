@@ -4,12 +4,18 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const opts: RequestInit = {
     method,
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
   }
   if (body) {
     opts.body = JSON.stringify(body)
   }
 
   const resp = await fetch(BASE + path, opts)
+
+  if (resp.status === 401 && !path.startsWith('/auth/')) {
+    window.location.href = '/login'
+    throw new Error('session expired')
+  }
 
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }))
@@ -18,6 +24,29 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (resp.status === 204) return undefined as T
   return resp.json()
+}
+
+// --- Auth ---
+
+export interface AuthUser {
+  username: string
+  password_change_required: boolean
+}
+
+export function login(username: string, password: string): Promise<void> {
+  return request('POST', '/auth/login', { username, password })
+}
+
+export function logout(): Promise<void> {
+  return request('POST', '/auth/logout')
+}
+
+export function me(): Promise<AuthUser> {
+  return request('GET', '/auth/me')
+}
+
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return request('POST', '/auth/password', { current_password: currentPassword, new_password: newPassword })
 }
 
 // --- Target Lists ---
@@ -77,6 +106,7 @@ export async function importTargetsCSV(listId: string, file: File): Promise<Impo
   const resp = await fetch(`${BASE}/target-lists/${listId}/import`, {
     method: 'POST',
     body: form,
+    credentials: 'include',
   })
 
   if (!resp.ok) {

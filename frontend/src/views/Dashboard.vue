@@ -36,9 +36,12 @@ onMounted(load)
           <div class="text-xs font-mono text-dim uppercase tracking-wider">Campaigns</div>
           <div class="text-2xl font-mono font-bold text-primary mt-1">{{ stats.campaigns.total }}</div>
           <div class="text-xs font-mono text-dim mt-2 flex gap-3">
-            <span v-if="stats.campaigns.active" class="text-teal">{{ stats.campaigns.active }} active</span>
-            <span v-if="stats.campaigns.draft">{{ stats.campaigns.draft }} draft</span>
-            <span v-if="stats.campaigns.completed">{{ stats.campaigns.completed }} done</span>
+            <template v-if="stats.campaigns.active || stats.campaigns.draft || stats.campaigns.completed">
+              <span v-if="stats.campaigns.active" class="text-teal">{{ stats.campaigns.active }} active</span>
+              <span v-if="stats.campaigns.draft">{{ stats.campaigns.draft }} draft</span>
+              <span v-if="stats.campaigns.completed">{{ stats.campaigns.completed }} done</span>
+            </template>
+            <span v-else>total campaigns</span>
           </div>
         </Card>
 

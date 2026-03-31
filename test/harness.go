@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/travisbale/barb/internal/app"
 	"github.com/travisbale/barb/internal/crypto/aes"
 	"github.com/travisbale/barb/internal/phishing"
@@ -80,6 +82,18 @@ func NewHarness(t *testing.T) *Harness {
 		testKey[i] = byte(i)
 	}
 
+	// Create a test admin with a known password before app.New
+	// so EnsureAdmin inside New() is a no-op.
+	const testPassword = "test-password-12345"
+	testHash, _ := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.MinCost)
+	authStore := sqlite.NewAuthStore(db)
+	_ = authStore.CreateUser(&phishing.User{
+		ID:           "test-admin",
+		Username:     "admin",
+		PasswordHash: string(testHash),
+		CreatedAt:    time.Now(),
+	})
+
 	application := app.New(app.Config{
 		DB:       db,
 		Cipher:   aes.NewCipher(testKey),
@@ -117,6 +131,11 @@ func NewHarness(t *testing.T) *Harness {
 	}
 
 	client := sdk.NewClient(fmt.Sprintf("http://%s", addr))
+
+	// Authenticate with the test admin account.
+	if err := client.Login(sdk.LoginRequest{Username: "admin", Password: testPassword}); err != nil {
+		t.Fatalf("test login: %v", err)
+	}
 
 	return &Harness{
 		Client: client,

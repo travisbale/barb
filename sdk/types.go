@@ -198,6 +198,23 @@ type MiragedPhishletResponse struct {
 	Enabled  bool   `json:"enabled"`
 }
 
+// --- Auth ---
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type MeResponse struct {
+	Username               string `json:"username"`
+	PasswordChangeRequired bool   `json:"password_change_required"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
 // --- Dashboard ---
 
 type DashboardResponse struct {

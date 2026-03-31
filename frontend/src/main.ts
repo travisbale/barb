@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import { me } from './api/client'
 import App from './App.vue'
 import './style.css'
 
@@ -11,6 +12,8 @@ document.documentElement.classList.toggle('dark', theme === 'dark')
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/login', component: () => import('./views/Login.vue'), meta: { public: true } },
+    { path: '/change-password', component: () => import('./views/ChangePassword.vue'), meta: { public: true } },
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: () => import('./views/Dashboard.vue') },
     { path: '/campaigns', component: () => import('./views/Campaigns.vue') },
@@ -22,6 +25,20 @@ const router = createRouter({
     { path: '/smtp', component: () => import('./views/SMTP.vue') },
     { path: '/settings', component: () => import('./views/Settings.vue') },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (to.meta.public) return true
+
+  try {
+    const user = await me()
+    if (user.password_change_required && to.path !== '/change-password') {
+      return '/change-password'
+    }
+    return true
+  } catch {
+    return '/login'
+  }
 })
 
 createApp(App).use(router).mount('#app')

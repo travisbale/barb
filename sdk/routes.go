@@ -36,6 +36,12 @@ const (
 	RouteMiragedStatus    = "/api/miraged/{id}/status"
 	RouteMiragedPhishlets = "/api/miraged/{id}/phishlets"
 
+	// Auth
+	RouteLogin          = "/api/auth/login"
+	RouteLogout         = "/api/auth/logout"
+	RouteMe             = "/api/auth/me"
+	RouteChangePassword = "/api/auth/password"
+
 	// Dashboard
 	RouteDashboard = "/api/dashboard"
 

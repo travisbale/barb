@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -10,140 +9,98 @@ import (
 	"github.com/travisbale/barb/sdk"
 )
 
-type miragedManager interface {
-	Enroll(name, address, secretHostname, token string) (*phishing.MiragedConnection, error)
-	Get(id string) (*phishing.MiragedConnection, error)
-	Delete(id string) error
-	List() ([]*phishing.MiragedConnection, error)
-	TestConnection(id string) (*phishing.MiragedStatus, error)
-	ListPhishlets(id string) ([]phishing.MiragedPhishlet, error)
-}
-
-type campaignManager interface {
-	Create(campaign *phishing.Campaign) (*phishing.Campaign, error)
-	Get(id string) (*phishing.Campaign, error)
-	Delete(id string) error
-	List() ([]*phishing.Campaign, error)
-	Start(id string) error
-	Cancel(id string) error
-	Results(campaignID string) ([]*phishing.CampaignResult, error)
-}
-
-type templateManager interface {
-	Create(template *phishing.EmailTemplate) (*phishing.EmailTemplate, error)
-	Get(id string) (*phishing.EmailTemplate, error)
-	Update(id string, update *phishing.TemplateUpdate) (*phishing.EmailTemplate, error)
-	Delete(id string) error
-	List() ([]*phishing.EmailTemplate, error)
-	Preview(id string, data phishing.PreviewData) (*phishing.RenderedTemplate, error)
-}
-
-type phishletManager interface {
-	Create(yaml string) (*phishing.Phishlet, error)
-	Get(id string) (*phishing.Phishlet, error)
-	Update(id string, yaml string) (*phishing.Phishlet, error)
-	Delete(id string) error
-	List() ([]*phishing.Phishlet, error)
-}
-
-type smtpManager interface {
-	CreateProfile(profile *phishing.SMTPProfile) (*phishing.SMTPProfile, error)
-	GetProfile(id string) (*phishing.SMTPProfile, error)
-	UpdateProfile(id string, update *phishing.SMTPProfileUpdate) (*phishing.SMTPProfile, error)
-	DeleteProfile(id string) error
-	ListProfiles() ([]*phishing.SMTPProfile, error)
-}
-
-type targetManager interface {
-	CreateList(name string) (*phishing.TargetList, error)
-	GetList(id string) (*phishing.TargetList, error)
-	DeleteList(id string) error
-	ListLists() ([]*phishing.TargetList, error)
-	AddTarget(listID string, target *phishing.Target) error
-	ListTargets(listID string) ([]*phishing.Target, error)
-	ImportCSV(listID string, r io.Reader) (int, error)
-	DeleteTarget(id string) error
-}
-
 // Router is the HTTP handler for the Barb API.
 type Router struct {
-	Miraged   miragedManager
-	Campaigns campaignManager
-	Targets   targetManager
-	Templates templateManager
-	Phishlets phishletManager
-	SMTP      smtpManager
-	Dashboard dashboardProvider
+	Miraged   *phishing.MiragedService
+	Campaigns *phishing.CampaignService
+	Targets   *phishing.TargetService
+	Templates *phishing.TemplateService
+	Phishlets *phishing.PhishletService
+	SMTP      *phishing.SMTPService
+	Dashboard *phishing.DashboardService
+	Auth      *phishing.AuthService
 	Version   string
 	Logger    *slog.Logger
 
-	once sync.Once
-	mux  *http.ServeMux
+	once    sync.Once
+	handler http.Handler
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.once.Do(func() {
-		r.mux = http.NewServeMux()
-		r.registerRoutes()
+		mux := http.NewServeMux()
+		r.registerRoutes(mux)
+		r.handler = mux
 	})
 
-	r.mux.ServeHTTP(w, req)
+	r.handler.ServeHTTP(w, req)
 }
 
-func (r *Router) registerRoutes() {
-	h := func(method, route string, handler http.HandlerFunc) {
-		r.mux.HandleFunc(method+" "+route, handler)
+func (r *Router) registerRoutes(mux *http.ServeMux) {
+	public := func(method, route string, handler http.HandlerFunc) {
+		mux.HandleFunc(method+" "+route, handler)
+	}
+	auth := func(method, route string, handler http.HandlerFunc) {
+		mux.HandleFunc(method+" "+route, r.requireAuth(handler))
 	}
 
-	// System
-	h("GET", sdk.RouteDashboard, r.getDashboard)
-	h("GET", sdk.RouteStatus, r.getStatus)
+	// Public
+	public("POST", sdk.RouteLogin, r.loginHandler)
+	public("GET", sdk.RouteStatus, r.getStatus)
+
+	// Auth (protected)
+	auth("POST", sdk.RouteLogout, r.logoutHandler)
+	auth("GET", sdk.RouteMe, r.meHandler)
+	auth("POST", sdk.RouteChangePassword, r.changePasswordHandler)
+
+	// Dashboard
+	auth("GET", sdk.RouteDashboard, r.getDashboard)
 
 	// Target lists
-	h("GET", sdk.RouteTargetLists, r.listTargetLists)
-	h("POST", sdk.RouteTargetLists, r.createTargetList)
-	h("GET", sdk.RouteTargetList, r.getTargetList)
-	h("DELETE", sdk.RouteTargetList, r.deleteTargetList)
-	h("GET", sdk.RouteTargets, r.listTargets)
-	h("POST", sdk.RouteTargets, r.addTarget)
-	h("POST", sdk.RouteTargetsImport, r.importTargets)
-	h("DELETE", sdk.RouteTarget, r.deleteTarget)
+	auth("GET", sdk.RouteTargetLists, r.listTargetLists)
+	auth("POST", sdk.RouteTargetLists, r.createTargetList)
+	auth("GET", sdk.RouteTargetList, r.getTargetList)
+	auth("DELETE", sdk.RouteTargetList, r.deleteTargetList)
+	auth("GET", sdk.RouteTargets, r.listTargets)
+	auth("POST", sdk.RouteTargets, r.addTarget)
+	auth("POST", sdk.RouteTargetsImport, r.importTargets)
+	auth("DELETE", sdk.RouteTarget, r.deleteTarget)
 
 	// Email Templates
-	h("GET", sdk.RouteTemplates, r.listTemplates)
-	h("POST", sdk.RouteTemplates, r.createTemplate)
-	h("POST", sdk.RouteTemplatePreview, r.previewTemplate)
-	h("GET", sdk.RouteTemplate, r.getTemplate)
-	h("PATCH", sdk.RouteTemplate, r.updateTemplate)
-	h("DELETE", sdk.RouteTemplate, r.deleteTemplate)
+	auth("GET", sdk.RouteTemplates, r.listTemplates)
+	auth("POST", sdk.RouteTemplates, r.createTemplate)
+	auth("POST", sdk.RouteTemplatePreview, r.previewTemplate)
+	auth("GET", sdk.RouteTemplate, r.getTemplate)
+	auth("PATCH", sdk.RouteTemplate, r.updateTemplate)
+	auth("DELETE", sdk.RouteTemplate, r.deleteTemplate)
 
 	// Phishlets
-	h("GET", sdk.RoutePhishlets, r.listPhishlets)
-	h("POST", sdk.RoutePhishlets, r.createPhishlet)
-	h("GET", sdk.RoutePhishlet, r.getPhishlet)
-	h("PATCH", sdk.RoutePhishlet, r.updatePhishlet)
-	h("DELETE", sdk.RoutePhishlet, r.deletePhishlet)
+	auth("GET", sdk.RoutePhishlets, r.listPhishlets)
+	auth("POST", sdk.RoutePhishlets, r.createPhishlet)
+	auth("GET", sdk.RoutePhishlet, r.getPhishlet)
+	auth("PATCH", sdk.RoutePhishlet, r.updatePhishlet)
+	auth("DELETE", sdk.RoutePhishlet, r.deletePhishlet)
 
 	// SMTP Profiles
-	h("GET", sdk.RouteSMTPProfiles, r.listSMTPProfiles)
-	h("POST", sdk.RouteSMTPProfiles, r.createSMTPProfile)
-	h("GET", sdk.RouteSMTPProfile, r.getSMTPProfile)
-	h("PATCH", sdk.RouteSMTPProfile, r.updateSMTPProfile)
-	h("DELETE", sdk.RouteSMTPProfile, r.deleteSMTPProfile)
+	auth("GET", sdk.RouteSMTPProfiles, r.listSMTPProfiles)
+	auth("POST", sdk.RouteSMTPProfiles, r.createSMTPProfile)
+	auth("GET", sdk.RouteSMTPProfile, r.getSMTPProfile)
+	auth("PATCH", sdk.RouteSMTPProfile, r.updateSMTPProfile)
+	auth("DELETE", sdk.RouteSMTPProfile, r.deleteSMTPProfile)
 
 	// Campaigns
-	h("GET", sdk.RouteCampaigns, r.listCampaigns)
-	h("POST", sdk.RouteCampaigns, r.createCampaign)
-	h("GET", sdk.RouteCampaign, r.getCampaign)
-	h("DELETE", sdk.RouteCampaign, r.deleteCampaign)
-	h("POST", sdk.RouteCampaignStart, r.startCampaign)
-	h("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
-	h("GET", sdk.RouteCampaignResults, r.listCampaignResults)
+	auth("GET", sdk.RouteCampaigns, r.listCampaigns)
+	auth("POST", sdk.RouteCampaigns, r.createCampaign)
+	auth("GET", sdk.RouteCampaign, r.getCampaign)
+	auth("DELETE", sdk.RouteCampaign, r.deleteCampaign)
+	auth("POST", sdk.RouteCampaignStart, r.startCampaign)
+	auth("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
+	auth("GET", sdk.RouteCampaignResults, r.listCampaignResults)
 
 	// Miraged connections
-	h("GET", sdk.RouteMiraged, r.listMiraged)
-	h("POST", sdk.RouteMiraged, r.enrollMiraged)
-	h("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
-	h("GET", sdk.RouteMiragedStatus, r.testMiraged)
-	h("GET", sdk.RouteMiragedPhishlets, r.listMiragedPhishlets)
+	auth("GET", sdk.RouteMiraged, r.listMiraged)
+	auth("POST", sdk.RouteMiraged, r.enrollMiraged)
+	auth("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
+	auth("GET", sdk.RouteMiragedStatus, r.testMiraged)
+	auth("GET", sdk.RouteMiragedPhishlets, r.listMiragedPhishlets)
 }

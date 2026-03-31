@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/cookiejar"
 )
 
 // Client communicates with the Barb API.
@@ -17,10 +18,35 @@ type Client struct {
 
 // NewClient creates a Client that talks to the Barb API at baseURL.
 func NewClient(baseURL string) *Client {
+	jar, _ := cookiejar.New(nil)
 	return &Client{
 		baseURL:    baseURL,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Jar: jar},
 	}
+}
+
+// --- Auth ---
+
+func (c *Client) Login(req LoginRequest) error {
+	resp, err := c.do(http.MethodPost, RouteLogin, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return checkStatus(resp)
+}
+
+func (c *Client) Me() (*MeResponse, error) {
+	return get[MeResponse](c, RouteMe)
+}
+
+func (c *Client) ChangePassword(req ChangePasswordRequest) error {
+	resp, err := c.do(http.MethodPost, RouteChangePassword, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }
 
 // --- Target Lists ---

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useTheme } from './composables/useTheme'
-import IconDashboard from './components/IconDashboard.vue'
+import { logout } from './api/client'
 import IconCampaign from './components/IconCampaign.vue'
 import IconTarget from './components/IconTarget.vue'
 import IconTemplate from './components/IconTemplate.vue'
@@ -10,10 +11,13 @@ import IconSMTP from './components/IconSMTP.vue'
 import IconSettings from './components/IconSettings.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 
+const route = useRoute()
+const router = useRouter()
 const { isDark, toggle } = useTheme()
 
+const showShell = computed(() => !route.meta.public)
+
 const nav = [
-  { to: '/dashboard', label: 'Dashboard', icon: IconDashboard },
   { to: '/campaigns', label: 'Campaigns', icon: IconCampaign },
   { to: '/targets', label: 'Targets', icon: IconTarget },
   { to: '/templates', label: 'Templates', icon: IconTemplate },
@@ -21,16 +25,25 @@ const nav = [
   { to: '/smtp', label: 'SMTP', icon: IconSMTP },
   { to: '/settings', label: 'Miraged', icon: IconSettings },
 ]
+
+async function handleLogout() {
+  try {
+    await logout()
+  } catch {
+    // Ignore errors — clear session locally regardless.
+  }
+  router.push('/login')
+}
 </script>
 
 <template>
   <div class="flex min-h-screen">
-    <!-- Sidebar -->
-    <nav class="w-52 bg-surface border-r border-edge flex flex-col">
-      <div class="px-5 py-5 border-b border-edge">
+    <!-- Sidebar (hidden on login/change-password) -->
+    <nav v-if="showShell" class="w-52 bg-surface border-r border-edge flex flex-col">
+      <RouterLink to="/dashboard" class="block px-5 py-5 border-b border-edge hover:bg-surface-hover transition-colors">
         <div class="font-mono text-base font-bold tracking-widest text-amber uppercase">Barb</div>
         <div class="font-mono text-xs text-dim mt-0.5 tracking-wider">Operations Console</div>
-      </div>
+      </RouterLink>
 
       <div class="flex-1 py-3 px-2 flex flex-col gap-0.5">
         <RouterLink
@@ -45,7 +58,7 @@ const nav = [
         </RouterLink>
       </div>
 
-      <div class="px-3 py-3 border-t border-edge">
+      <div class="px-3 py-3 border-t border-edge flex flex-col gap-1">
         <button
           @click="toggle"
           class="flex items-center gap-2 px-3 py-2 text-xs font-mono text-dim hover:text-primary transition-colors uppercase tracking-wide w-full"
@@ -54,14 +67,21 @@ const nav = [
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           {{ isDark ? 'Light mode' : 'Dark mode' }}
         </button>
+        <button
+          @click="handleLogout"
+          class="flex items-center gap-2 px-3 py-2 text-xs font-mono text-dim hover:text-danger transition-colors uppercase tracking-wide w-full"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </button>
       </div>
     </nav>
 
     <ConfirmDialog />
 
     <!-- Main content -->
-    <main class="flex-1 p-8 overflow-auto">
-      <div class="max-w-5xl mx-auto">
+    <main class="flex-1 p-8 overflow-auto" :class="{ 'p-0': !showShell }">
+      <div :class="showShell ? 'max-w-5xl mx-auto' : ''">
         <RouterView />
       </div>
     </main>

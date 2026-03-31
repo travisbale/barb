@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/travisbale/barb/internal/phishing"
 	"github.com/travisbale/barb/sdk"
 )
 
@@ -49,8 +48,4 @@ func (r *Router) getDashboard(w http.ResponseWriter, req *http.Request) {
 		ActiveCampaigns: active,
 		RecentCaptures:  captures,
 	})
-}
-
-type dashboardProvider interface {
-	Stats() (*phishing.DashboardStats, error)
 }

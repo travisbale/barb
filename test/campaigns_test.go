@@ -334,6 +334,7 @@ func TestCampaigns_Cancel(t *testing.T) {
 	}
 
 	// Give the goroutine a moment to start sending.
+	// Give the goroutine a moment to start sending.
 	time.Sleep(200 * time.Millisecond)
 
 	// Cancel it.

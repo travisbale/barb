@@ -86,3 +86,17 @@ CREATE TABLE IF NOT EXISTS miraged_connections (
     ca_cert_pem     BLOB    NOT NULL,
     created_at      INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id                       TEXT    PRIMARY KEY,
+    username                 TEXT    NOT NULL UNIQUE,
+    password_hash            TEXT    NOT NULL,
+    password_change_required INTEGER NOT NULL DEFAULT 0,
+    created_at               INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token      TEXT    PRIMARY KEY,
+    user_id    TEXT    NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+);

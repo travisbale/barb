@@ -259,7 +259,11 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 	}
 
 	s.sendEmails(ctx, campaign)
-	s.complete(campaign)
+
+	// Only mark complete if the campaign wasn't cancelled.
+	if ctx.Err() == nil {
+		s.complete(campaign)
+	}
 }
 
 func (s *CampaignService) createLure(campaign *Campaign) error {

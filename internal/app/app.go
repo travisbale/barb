@@ -29,6 +29,10 @@ type App struct {
 
 // New constructs all services and wires them into the API router.
 func New(cfg Config) *App {
+	authStore := sqlite.NewAuthStore(cfg.DB)
+	authSvc := &phishing.AuthService{Store: authStore, Logger: cfg.Logger}
+	authSvc.EnsureAdmin()
+
 	targetStore := sqlite.NewTargetStore(cfg.DB)
 	templateStore := sqlite.NewTemplateStore(cfg.DB)
 	smtpStore := sqlite.NewSMTPStore(cfg.DB, cfg.Cipher)
@@ -68,6 +72,7 @@ func New(cfg Config) *App {
 		Phishlets: phishletSvc,
 		SMTP:      smtpSvc,
 		Dashboard: &phishing.DashboardService{Campaigns: campaignStore, Miraged: miragedStore},
+		Auth:      authSvc,
 		Version:   cfg.Version,
 		Logger:    cfg.Logger,
 	}
