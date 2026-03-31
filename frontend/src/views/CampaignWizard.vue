@@ -55,7 +55,7 @@ const showNewSmtp = ref(false)
 const newConnection = ref({ name: '', address: '', secret_hostname: '', token: '' })
 const newPhishletYaml = ref('')
 const newTargetListName = ref('')
-const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '' })
+const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 const newSmtp = ref({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
 
 // --- Computed ---
@@ -231,7 +231,7 @@ async function createNewTemplate() {
     templates.value.unshift(tmpl)
     selectedTemplateId.value = tmpl.id
     showNewTemplate.value = false
-    newTemplate.value = { name: '', subject: '', html_body: '', text_body: '' }
+    newTemplate.value = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
   } catch (e: any) {
     error.value = e.message
   } finally {

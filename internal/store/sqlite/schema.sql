@@ -16,8 +16,9 @@ CREATE TABLE IF NOT EXISTS email_templates (
     name        TEXT    NOT NULL,
     subject     TEXT    NOT NULL,
     html_body   TEXT    NOT NULL DEFAULT '',
-    text_body   TEXT    NOT NULL DEFAULT '',
-    created_at  INTEGER NOT NULL
+    text_body        TEXT    NOT NULL DEFAULT '',
+    envelope_sender  TEXT    NOT NULL DEFAULT '',
+    created_at       INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS target_lists (

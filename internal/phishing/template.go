@@ -12,12 +12,13 @@ import (
 
 // EmailTemplate is a reusable phishing email template with subject and body.
 type EmailTemplate struct {
-	ID        string
-	Name      string
-	Subject   string
-	HTMLBody  string
-	TextBody  string
-	CreatedAt time.Time
+	ID             string
+	Name           string
+	Subject        string
+	HTMLBody       string
+	TextBody       string
+	EnvelopeSender string
+	CreatedAt      time.Time
 }
 
 func (t *EmailTemplate) Validate() error {
@@ -67,10 +68,11 @@ func (s *TemplateService) Get(id string) (*EmailTemplate, error) {
 // TemplateUpdate holds optional fields for a partial template update.
 // Nil fields are left unchanged.
 type TemplateUpdate struct {
-	Name     *string
-	Subject  *string
-	HTMLBody *string
-	TextBody *string
+	Name           *string
+	Subject        *string
+	HTMLBody       *string
+	TextBody       *string
+	EnvelopeSender *string
 }
 
 func (s *TemplateService) Update(id string, update *TemplateUpdate) (*EmailTemplate, error) {
@@ -90,6 +92,9 @@ func (s *TemplateService) Update(id string, update *TemplateUpdate) (*EmailTempl
 	}
 	if update.TextBody != nil {
 		existing.TextBody = *update.TextBody
+	}
+	if update.EnvelopeSender != nil {
+		existing.EnvelopeSender = *update.EnvelopeSender
 	}
 
 	if err := existing.Validate(); err != nil {

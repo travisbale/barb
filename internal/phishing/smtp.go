@@ -1,7 +1,6 @@
 package phishing
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ func (p *SMTPProfile) Validate() error {
 	}
 	for key := range p.CustomHeaders {
 		if reservedHeaders[strings.ToLower(key)] {
-			return fmt.Errorf("custom header %q conflicts with a standard email header", key)
+			return ErrReservedHeader
 		}
 	}
 	return nil

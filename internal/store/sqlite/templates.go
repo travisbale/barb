@@ -14,9 +14,9 @@ func NewTemplateStore(db *DB) *Templates { return &Templates{db: db} }
 
 func (s *Templates) CreateTemplate(t *phishing.EmailTemplate) error {
 	_, err := s.db.db.Exec(
-		`INSERT INTO email_templates (id, name, subject, html_body, text_body, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		t.ID, t.Name, t.Subject, t.HTMLBody, t.TextBody, t.CreatedAt.Unix(),
+		`INSERT INTO email_templates (id, name, subject, html_body, text_body, envelope_sender, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.Name, t.Subject, t.HTMLBody, t.TextBody, t.EnvelopeSender, t.CreatedAt.Unix(),
 	)
 	if isConflict(err) {
 		return phishing.ErrConflict
@@ -26,7 +26,7 @@ func (s *Templates) CreateTemplate(t *phishing.EmailTemplate) error {
 
 func (s *Templates) GetTemplate(id string) (*phishing.EmailTemplate, error) {
 	row := s.db.db.QueryRow(
-		`SELECT id, name, subject, html_body, text_body, created_at
+		`SELECT id, name, subject, html_body, text_body, envelope_sender, created_at
 		 FROM email_templates WHERE id = ?`, id,
 	)
 	return scanTemplate(row)
@@ -34,9 +34,9 @@ func (s *Templates) GetTemplate(id string) (*phishing.EmailTemplate, error) {
 
 func (s *Templates) UpdateTemplate(t *phishing.EmailTemplate) error {
 	res, err := s.db.db.Exec(
-		`UPDATE email_templates SET name = ?, subject = ?, html_body = ?, text_body = ?
+		`UPDATE email_templates SET name = ?, subject = ?, html_body = ?, text_body = ?, envelope_sender = ?
 		 WHERE id = ?`,
-		t.Name, t.Subject, t.HTMLBody, t.TextBody, t.ID,
+		t.Name, t.Subject, t.HTMLBody, t.TextBody, t.EnvelopeSender, t.ID,
 	)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (s *Templates) DeleteTemplate(id string) error {
 
 func (s *Templates) ListTemplates() ([]*phishing.EmailTemplate, error) {
 	rows, err := s.db.db.Query(
-		`SELECT id, name, subject, html_body, text_body, created_at
+		`SELECT id, name, subject, html_body, text_body, envelope_sender, created_at
 		 FROM email_templates ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -78,7 +78,7 @@ func scanTemplate(row scanner) (*phishing.EmailTemplate, error) {
 		t         phishing.EmailTemplate
 		createdAt int64
 	)
-	err := row.Scan(&t.ID, &t.Name, &t.Subject, &t.HTMLBody, &t.TextBody, &createdAt)
+	err := row.Scan(&t.ID, &t.Name, &t.Subject, &t.HTMLBody, &t.TextBody, &t.EnvelopeSender, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, phishing.ErrNotFound
 	}

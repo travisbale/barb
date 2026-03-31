@@ -125,6 +125,7 @@ export interface EmailTemplate {
   subject: string
   html_body: string
   text_body: string
+  envelope_sender: string
   created_at: string
 }
 

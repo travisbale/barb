@@ -30,10 +30,11 @@ func (r *Router) createTemplate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	template := &phishing.EmailTemplate{
-		Name:     body.Name,
-		Subject:  body.Subject,
-		HTMLBody: body.HTMLBody,
-		TextBody: body.TextBody,
+		Name:           body.Name,
+		Subject:        body.Subject,
+		HTMLBody:       body.HTMLBody,
+		TextBody:       body.TextBody,
+		EnvelopeSender: body.EnvelopeSender,
 	}
 
 	created, err := r.Templates.Create(template)
@@ -72,10 +73,11 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	updated, err := r.Templates.Update(id, &phishing.TemplateUpdate{
-		Name:     body.Name,
-		Subject:  body.Subject,
-		HTMLBody: body.HTMLBody,
-		TextBody: body.TextBody,
+		Name:           body.Name,
+		Subject:        body.Subject,
+		HTMLBody:       body.HTMLBody,
+		TextBody:       body.TextBody,
+		EnvelopeSender: body.EnvelopeSender,
 	})
 	if err != nil {
 		switch {
@@ -137,12 +139,13 @@ func (r *Router) deleteTemplate(w http.ResponseWriter, req *http.Request) {
 
 func templateToResponse(t *phishing.EmailTemplate) sdk.TemplateResponse {
 	return sdk.TemplateResponse{
-		ID:        t.ID,
-		Name:      t.Name,
-		Subject:   t.Subject,
-		HTMLBody:  t.HTMLBody,
-		TextBody:  t.TextBody,
-		CreatedAt: t.CreatedAt,
+		ID:             t.ID,
+		Name:           t.Name,
+		Subject:        t.Subject,
+		HTMLBody:       t.HTMLBody,
+		TextBody:       t.TextBody,
+		EnvelopeSender: t.EnvelopeSender,
+		CreatedAt:      t.CreatedAt,
 	}
 }
 
@@ -159,5 +162,6 @@ func isValidationError(err error) bool {
 		errors.Is(err, phishing.ErrSecretHostnameRequired) ||
 		errors.Is(err, phishing.ErrCertsRequired) ||
 		errors.Is(err, phishing.ErrYAMLRequired) ||
-		errors.Is(err, phishing.ErrTokenRequired)
+		errors.Is(err, phishing.ErrTokenRequired) ||
+		errors.Is(err, phishing.ErrReservedHeader)
 }

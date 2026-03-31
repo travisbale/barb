@@ -18,7 +18,7 @@ const showForm = ref(false)
 const editingId = ref<string | null>(null)
 const error = ref('')
 
-const emptyForm = { name: '', subject: '', html_body: '', text_body: '' }
+const emptyForm = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
 const form = ref({ ...emptyForm })
 
 // Preview state.
@@ -44,7 +44,7 @@ function openCreate() {
 
 function openEdit(tmpl: EmailTemplate) {
   editingId.value = tmpl.id
-  form.value = { name: tmpl.name, subject: tmpl.subject, html_body: tmpl.html_body, text_body: tmpl.text_body }
+  form.value = { name: tmpl.name, subject: tmpl.subject, html_body: tmpl.html_body, text_body: tmpl.text_body, envelope_sender: tmpl.envelope_sender ?? '' }
   showForm.value = true
   closePreview()
 }
@@ -123,6 +123,7 @@ onMounted(load)
       </div>
       <AppInput v-model="form.html_body" multiline :rows="8" placeholder="HTML body" />
       <AppInput v-model="form.text_body" multiline :rows="4" placeholder="Plain text body (optional)" />
+      <AppInput v-model="form.envelope_sender" placeholder="Envelope sender / Return-Path (optional)" />
       <template #actions>
         <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
         <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>

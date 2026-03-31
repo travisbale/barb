@@ -25,6 +25,7 @@ var (
 	ErrYAMLRequired           = errors.New("YAML content is required")
 	ErrTokenRequired          = errors.New("invite token is required")
 	ErrPhishletNotFound       = errors.New("phishlet not found")
+	ErrReservedHeader         = errors.New("custom header conflicts with a standard email header")
 	ErrInvalidCredentials     = errors.New("invalid username or password")
 	ErrPasswordRequired       = errors.New("password is required")
 	ErrPasswordTooShort       = errors.New("password must be at least 8 characters")

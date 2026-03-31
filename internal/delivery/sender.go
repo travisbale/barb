@@ -69,6 +69,11 @@ func (c *conn) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate,
 			return fmt.Errorf("setting from: %w", err)
 		}
 	}
+	if tmpl.EnvelopeSender != "" {
+		if err := msg.EnvelopeFrom(tmpl.EnvelopeSender); err != nil {
+			return fmt.Errorf("setting envelope sender: %w", err)
+		}
+	}
 	if err := msg.To(target.Email); err != nil {
 		return fmt.Errorf("setting to: %w", err)
 	}

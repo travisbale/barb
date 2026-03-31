@@ -73,28 +73,31 @@ type SMTPProfileResponse struct {
 // --- Email Templates ---
 
 type CreateTemplateRequest struct {
-	Name     string `json:"name"`
-	Subject  string `json:"subject"`
-	HTMLBody string `json:"html_body"`
-	TextBody string `json:"text_body"`
+	Name           string `json:"name"`
+	Subject        string `json:"subject"`
+	HTMLBody       string `json:"html_body"`
+	TextBody       string `json:"text_body"`
+	EnvelopeSender string `json:"envelope_sender,omitempty"`
 }
 
 // UpdateTemplateRequest supports partial updates. Only non-nil fields
 // are applied; nil fields leave the existing value unchanged.
 type UpdateTemplateRequest struct {
-	Name     *string `json:"name,omitempty"`
-	Subject  *string `json:"subject,omitempty"`
-	HTMLBody *string `json:"html_body,omitempty"`
-	TextBody *string `json:"text_body,omitempty"`
+	Name           *string `json:"name,omitempty"`
+	Subject        *string `json:"subject,omitempty"`
+	HTMLBody       *string `json:"html_body,omitempty"`
+	TextBody       *string `json:"text_body,omitempty"`
+	EnvelopeSender *string `json:"envelope_sender,omitempty"`
 }
 
 type TemplateResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Subject   string    `json:"subject"`
-	HTMLBody  string    `json:"html_body"`
-	TextBody  string    `json:"text_body"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Subject        string    `json:"subject"`
+	HTMLBody       string    `json:"html_body"`
+	TextBody       string    `json:"text_body"`
+	EnvelopeSender string    `json:"envelope_sender,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type PreviewTemplateRequest struct {
