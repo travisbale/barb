@@ -106,7 +106,7 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 		CreatedAt:    time.Now(),
 	})
 
-	application := app.New(app.Config{
+	application, err := app.New(app.Config{
 		DB:       db,
 		Cipher:   aes.NewCipher(testKey),
 		Frontend: emptyFS{},
@@ -114,6 +114,9 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 		Version:  "test",
 		Logger:   logger,
 	})
+	if err != nil {
+		t.Fatalf("app.New: %v", err)
+	}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -28,10 +29,12 @@ type App struct {
 }
 
 // New constructs all services and wires them into the API router.
-func New(cfg Config) *App {
+func New(cfg Config) (*App, error) {
 	authStore := sqlite.NewAuthStore(cfg.DB)
 	authSvc := &phishing.AuthService{Store: authStore, Logger: cfg.Logger}
-	authSvc.EnsureAdmin()
+	if err := authSvc.EnsureAdmin(); err != nil {
+		return nil, fmt.Errorf("ensuring admin user: %w", err)
+	}
 
 	targetStore := sqlite.NewTargetStore(cfg.DB)
 	templateStore := sqlite.NewTemplateStore(cfg.DB)
@@ -87,7 +90,7 @@ func New(cfg Config) *App {
 	return &App{
 		Campaigns: campaignSvc,
 		handler:   mux,
-	}
+	}, nil
 }
 
 // Handler returns the HTTP handler for the application.

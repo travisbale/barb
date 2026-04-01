@@ -106,8 +106,10 @@ func (s *Auth) DeleteExpiredSessions() error {
 	return err
 }
 
-func (s *Auth) CountUsers() (int, error) {
-	var count int
-	err := s.db.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&count)
-	return count, err
+func (s *Auth) DeleteUser(id string) error {
+	res, err := s.db.db.Exec(`DELETE FROM users WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	return requireOneRow(res)
 }

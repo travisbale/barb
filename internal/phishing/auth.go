@@ -3,6 +3,7 @@ package phishing
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -32,11 +33,11 @@ type authStore interface {
 	GetUserByID(id string) (*User, error)
 	GetUserByUsername(username string) (*User, error)
 	UpdateUser(user *User) error
+	DeleteUser(id string) error
 	CreateSession(session *Session) error
 	GetSession(token string) (*Session, error)
 	DeleteSession(token string) error
 	DeleteExpiredSessions() error
-	CountUsers() (int, error)
 }
 
 // AuthService manages authentication and sessions.
@@ -55,28 +56,35 @@ func (s *AuthService) sessionMaxAge() time.Duration {
 	return defaultSessionMaxAge
 }
 
-// EnsureAdmin creates an admin user if none exist and logs the temporary
-// credentials to the console.
-func (s *AuthService) EnsureAdmin() {
-	count, err := s.Store.CountUsers()
-	if err != nil {
-		s.Logger.Error("failed to check for existing users", "error", err)
-		return
+// EnsureAdmin guarantees an admin user exists with temporary credentials
+// logged to the console. If the admin hasn't completed their initial login
+// yet, the account is recreated with a fresh password on each startup.
+func (s *AuthService) EnsureAdmin() error {
+	admin, err := s.Store.GetUserByUsername("admin")
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return fmt.Errorf("looking up admin user: %w", err)
 	}
-	if count > 0 {
-		return
+
+	if admin != nil {
+		// Admin has completed their initial login.
+		if !admin.PasswordChangeRequired {
+			return nil
+		}
+
+		// Delete the stale admin so we can recreate with a fresh password.
+		if err := s.Store.DeleteUser(admin.ID); err != nil {
+			return fmt.Errorf("deleting stale admin user: %w", err)
+		}
 	}
 
 	password, err := generateRandomPassword(16)
 	if err != nil {
-		s.Logger.Error("failed to generate admin password", "error", err)
-		return
+		return fmt.Errorf("generating admin password: %w", err)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		s.Logger.Error("failed to hash admin password", "error", err)
-		return
+		return fmt.Errorf("hashing admin password: %w", err)
 	}
 
 	user := &User{
@@ -86,13 +94,12 @@ func (s *AuthService) EnsureAdmin() {
 		PasswordChangeRequired: true,
 		CreatedAt:              time.Now(),
 	}
-
 	if err := s.Store.CreateUser(user); err != nil {
-		s.Logger.Error("failed to create admin user", "error", err)
-		return
+		return fmt.Errorf("creating admin user: %w", err)
 	}
 
 	s.Logger.Info("admin account created", "username", "admin", "password", password)
+	return nil
 }
 
 // Login validates credentials and creates a session. Returns the session token.

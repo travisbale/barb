@@ -103,7 +103,7 @@ func runServe(ctx context.Context, addr, dbPath, tlsCert, tlsKey string, debug b
 		return fmt.Errorf("loading embedded frontend: %w", err)
 	}
 
-	application := app.New(app.Config{
+	application, err := app.New(app.Config{
 		DB:       db,
 		Cipher:   enc,
 		Frontend: frontendDist,
@@ -111,6 +111,9 @@ func runServe(ctx context.Context, addr, dbPath, tlsCert, tlsKey string, debug b
 		Version:  Version,
 		Logger:   logger,
 	})
+	if err != nil {
+		return err
+	}
 
 	// Set up TLS certificate.
 	dataDir := filepath.Dir(dbPath)
