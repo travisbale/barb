@@ -45,7 +45,7 @@ async function submit() {
 
         <div v-if="error" class="text-xs text-danger font-mono">{{ error }}</div>
 
-        <AppButton type="submit" :disabled="loading" class="w-full justify-center">
+        <AppButton type="submit" :disabled="loading" class="w-full py-3 justify-center">
           {{ loading ? 'Changing...' : 'Change Password' }}
         </AppButton>
       </form>
