@@ -45,6 +45,10 @@ Barb is a single Go binary with an embedded Vue frontend. It communicates with `
 - **Authentication** — session-based login with mandatory password change on first use
 - **Dark/light theme** — terminal-inspired operations console aesthetic with theme toggle
 
+## Quickstart
+
+See the [Quickstart Guide](docs/quickstart.md) to connect Barb to the [Mirage quickstart environment](https://github.com/travisbale/mirage/blob/master/docs/quickstart.md) and run a full campaign end-to-end with the bundled target site.
+
 ## Requirements
 
 - Go 1.26+
