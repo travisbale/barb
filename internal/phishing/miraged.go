@@ -64,19 +64,6 @@ type MiragedService struct {
 // Enroll connects to a miraged instance using an invite token, generates
 // a keypair, enrolls via the API, and stores the resulting credentials.
 func (s *MiragedService) Enroll(name, address, secretHostname, token string) (*MiragedConnection, error) {
-	if name == "" {
-		return nil, ErrNameRequired
-	}
-	if address == "" {
-		return nil, ErrAddressRequired
-	}
-	if secretHostname == "" {
-		return nil, ErrSecretHostnameRequired
-	}
-	if token == "" {
-		return nil, ErrTokenRequired
-	}
-
 	// Generate ECDSA P-256 keypair.
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -154,18 +141,20 @@ func enrollHTTP(address, secretHostname, token, csrPEM string) (*miragesdk.Enrol
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("enrollment request failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("enrollment failed: %s", body)
+		return nil, fmt.Errorf("%w: %s (HTTP %d)", ErrEnrollmentRejected, body, resp.StatusCode)
 	}
 
 	var enrollResp miragesdk.EnrollResponse
 	if err := json.NewDecoder(resp.Body).Decode(&enrollResp); err != nil {
-		return nil, fmt.Errorf("decoding enrollment response: %w", err)
+		// A non-JSON response typically means the secret hostname is wrong
+		// and miraged returned an error page instead of the enrollment response.
+		return nil, fmt.Errorf("%w: unexpected response format", ErrEnrollmentRejected)
 	}
 	return &enrollResp, nil
 }

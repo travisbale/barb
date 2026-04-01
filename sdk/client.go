@@ -260,6 +260,9 @@ func (c *Client) DeleteSMTPProfile(id string) error {
 // --- Miraged Connections ---
 
 func (c *Client) EnrollMiraged(req EnrollMiragedRequest) (*MiragedResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
 	return send[MiragedResponse](c, http.MethodPost, RouteMiraged, req)
 }
 

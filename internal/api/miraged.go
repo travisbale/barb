@@ -23,17 +23,19 @@ func (r *Router) listMiraged(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) enrollMiraged(w http.ResponseWriter, req *http.Request) {
-	var body sdk.EnrollMiragedRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.EnrollMiragedRequest](w, req)
+	if !ok {
 		return
 	}
 
 	conn, err := r.Miraged.Enroll(body.Name, body.Address, body.SecretHostname, body.Token)
 	if err != nil {
-		if isValidationError(err) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
+		switch {
+		case errors.Is(err, phishing.ErrConnectionFailed):
+			r.writeError(w, http.StatusBadGateway, "could not reach miraged server", err)
+		case errors.Is(err, phishing.ErrEnrollmentRejected):
+			r.writeError(w, http.StatusBadGateway, "enrollment rejected — check the secret hostname and invite token", err)
+		default:
 			r.writeError(w, http.StatusInternalServerError, "enrollment failed", err)
 		}
 		return

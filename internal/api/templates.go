@@ -159,6 +159,7 @@ func isValidationError(err error) bool {
 		errors.Is(err, phishing.ErrSubjectRequired) ||
 		errors.Is(err, phishing.ErrBodyRequired) ||
 		errors.Is(err, phishing.ErrAddressRequired) ||
+		errors.Is(err, phishing.ErrAddressInvalid) ||
 		errors.Is(err, phishing.ErrSecretHostnameRequired) ||
 		errors.Is(err, phishing.ErrCertsRequired) ||
 		errors.Is(err, phishing.ErrYAMLRequired) ||
