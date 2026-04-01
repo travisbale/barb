@@ -4,11 +4,12 @@ import { useConfirm } from '../composables/useConfirm'
 import { listPhishlets, createPhishlet, updatePhishlet, deletePhishlet, type Phishlet } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
-import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
@@ -92,7 +93,7 @@ onMounted(load)
     <ErrorBanner :message="error" />
 
     <FormCard v-if="showForm" @submit="submit">
-      <CodeEditor v-model="yaml" />
+      <CodeEditor v-model="yaml" label="YAML" />
       <template #actions>
         <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
           Upload
@@ -105,20 +106,20 @@ onMounted(load)
 
     <EmptyState v-if="phishlets.length === 0 && !showForm" message="No phishlets. Add one to define phishing site configurations." />
 
-    <Card v-else-if="phishlets.length > 0">
-      <div
+    <DataTable v-else-if="phishlets.length > 0" :columns="[{ label: 'Name' }, { label: 'Created' }, { label: '', width: 'w-16' }]">
+      <DataTableRow
         v-for="(phishlet, i) in phishlets"
         :key="phishlet.id"
-        :style="{ animationDelay: `${i * 30}ms` }"
-        class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+        :index="i"
+        clickable
         @click="openEdit(phishlet)"
       >
-        <div>
-          <div class="text-base font-mono font-medium text-primary">{{ phishlet.name }}</div>
-          <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(phishlet.created_at).toLocaleDateString() }}</div>
-        </div>
-        <button @click.stop="remove(phishlet.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
-      </div>
-    </Card>
+        <td class="px-4 py-2.5 text-primary">{{ phishlet.name }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ new Date(phishlet.created_at).toLocaleDateString() }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <DeleteButton @click.stop="remove(phishlet.id)" />
+        </td>
+      </DataTableRow>
+    </DataTable>
   </div>
 </template>

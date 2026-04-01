@@ -4,11 +4,12 @@ import { useConfirm } from '../composables/useConfirm'
 import { listSMTPProfiles, createSMTPProfile, updateSMTPProfile, deleteSMTPProfile, type SMTPProfile } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
-import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
@@ -142,9 +143,7 @@ onMounted(load)
         <div v-for="(header, i) in headers" :key="i" class="flex gap-2 mb-2 items-center">
           <AppInput v-model="header.key" placeholder="Header name" class="flex-1" />
           <AppInput v-model="header.value" placeholder="Value" class="flex-1" />
-          <button type="button" @click="removeHeader(i)" class="text-dim hover:text-danger transition-colors">
-            <IconTrash />
-          </button>
+          <DeleteButton @click="removeHeader(i)" />
         </div>
       </div>
 
@@ -156,35 +155,23 @@ onMounted(load)
 
     <EmptyState v-if="profiles.length === 0 && !showForm" message="No SMTP profiles. Add one to enable email delivery." />
 
-    <Card v-else-if="profiles.length > 0" class="overflow-hidden">
-      <table class="w-full text-sm font-mono">
-        <thead>
-          <tr class="border-b border-edge text-dim text-left uppercase tracking-wider">
-            <th class="px-4 py-2.5 font-medium">Name</th>
-            <th class="px-4 py-2.5 font-medium">Host</th>
-            <th class="px-4 py-2.5 font-medium">From</th>
-            <th class="px-4 py-2.5 font-medium w-16"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(profile, i) in profiles"
-            :key="profile.id"
-            :style="{ animationDelay: `${i * 20}ms` }"
-            class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
-            @click="openEdit(profile)"
-          >
-            <td class="px-4 py-2.5 text-primary">{{ profile.name }}</td>
-            <td class="px-4 py-2.5 text-muted">{{ profile.host }}:{{ profile.port }}</td>
-            <td class="px-4 py-2.5 text-muted">
-              {{ profile.from_name ? `${profile.from_name} <${profile.from_addr}>` : profile.from_addr }}
-            </td>
-            <td class="px-4 py-2.5 text-right">
-              <button @click.stop="remove(profile.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </Card>
+    <DataTable v-else-if="profiles.length > 0" :columns="[{ label: 'Name' }, { label: 'Host' }, { label: 'From' }, { label: '', width: 'w-16' }]">
+      <DataTableRow
+        v-for="(profile, i) in profiles"
+        :key="profile.id"
+        :index="i"
+        clickable
+        @click="openEdit(profile)"
+      >
+        <td class="px-4 py-2.5 text-primary">{{ profile.name }}</td>
+        <td class="px-4 py-2.5 text-muted">{{ profile.host }}:{{ profile.port }}</td>
+        <td class="px-4 py-2.5 text-muted">
+          {{ profile.from_name ? `${profile.from_name} <${profile.from_addr}>` : profile.from_addr }}
+        </td>
+        <td class="px-4 py-2.5 text-right">
+          <DeleteButton @click.stop="remove(profile.id)" />
+        </td>
+      </DataTableRow>
+    </DataTable>
   </div>
 </template>

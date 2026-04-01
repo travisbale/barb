@@ -3,17 +3,28 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   getCampaign, startCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
-  getMiragedSession, exportMiragedSessionCookies,
+  getMiragedSession, exportMiragedSessionCookies, updateCampaign,
   getTemplate, getSMTPProfile, getTargetList, listTargets,
+  listTemplates, listSMTPProfiles, listMiraged,
+  createTemplate, createSMTPProfile, listPhishlets, createPhishlet,
   type Campaign, type CampaignResult, type MiragedSession,
+  type EmailTemplate, type SMTPProfile, type TargetList, type MiragedConnection, type Phishlet,
 } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
+import AppSelect from '../components/AppSelect.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import PageHeader from '../components/PageHeader.vue'
 import TabBar from '../components/TabBar.vue'
+import TemplateForm from '../components/TemplateForm.vue'
+import SMTPForm from '../components/SMTPForm.vue'
+import TargetListPicker from '../components/TargetListPicker.vue'
+import SettingsSection from '../components/SettingsSection.vue'
+import CodeEditor from '../components/CodeEditor.vue'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -28,18 +39,45 @@ const testEmailAddress = ref('')
 const testEmailSending = ref(false)
 const testEmailStatus = ref('')
 
-// Session detail state.
 const selectedSession = ref<MiragedSession | null>(null)
 const sessionLoading = ref(false)
 const sessionError = ref('')
 
 const activeTab = ref('Results')
 
-// Settings tab data.
-const templateName = ref('')
-const smtpName = ref('')
-const targetListName = ref('')
-const targetListCount = ref(0)
+const settingsTemplate = ref<EmailTemplate | null>(null)
+const settingsSmtp = ref<SMTPProfile | null>(null)
+const settingsTargetList = ref<TargetList | null>(null)
+const settingsTargetCount = ref(0)
+const settingsMiraged = ref<MiragedConnection | null>(null)
+
+type SettingsSection = 'template' | 'smtp' | 'targets' | 'miraged' | 'phishlet' | 'general' | null
+const expandedSection = ref<SettingsSection>(null)
+const settingsSaving = ref(false)
+const settingsError = ref('')
+
+const allTemplates = ref<EmailTemplate[]>([])
+const allSmtpProfiles = ref<SMTPProfile[]>([])
+const allMiraged = ref<MiragedConnection[]>([])
+const allPhishlets = ref<Phishlet[]>([])
+
+const editTemplateId = ref('')
+const editSmtpId = ref('')
+const editTargetListId = ref('')
+const targetListPicker = ref<InstanceType<typeof TargetListPicker> | null>(null)
+const editMiragedId = ref('')
+const editPhishlet = ref('')
+const editName = ref('')
+const editRedirectUrl = ref('')
+const editSendRate = ref('')
+
+const showNewTemplate = ref(false)
+const showNewSmtp = ref(false)
+const showNewPhishlet = ref(false)
+const newPhishletYaml = ref('')
+const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
+const newSmtp = ref({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
+const createLoading = ref(false)
 
 const isDraft = computed(() => campaign.value?.status === 'draft')
 const isActive = computed(() => campaign.value?.status === 'active')
@@ -56,17 +94,148 @@ async function load() {
 async function loadSettings() {
   if (!campaign.value) return
   try {
-    const [tmpl, smtp, list, targets] = await Promise.all([
+    const [tmpl, smtp, list, targets, conns] = await Promise.all([
       getTemplate(campaign.value.template_id),
       getSMTPProfile(campaign.value.smtp_profile_id),
       getTargetList(campaign.value.target_list_id),
       listTargets(campaign.value.target_list_id),
+      campaign.value.miraged_id ? listMiraged() : Promise.resolve([]),
     ])
-    templateName.value = tmpl.name
-    smtpName.value = smtp.name
-    targetListName.value = list.name
-    targetListCount.value = targets?.length ?? 0
+    settingsTemplate.value = tmpl
+    settingsSmtp.value = smtp
+    settingsTargetList.value = list
+    settingsTargetCount.value = targets?.length ?? 0
+    if (conns.length > 0) allMiraged.value = conns
+    settingsMiraged.value = conns.find(c => c.id === campaign.value!.miraged_id) ?? null
   } catch { /* ignore — settings are supplementary */ }
+}
+
+function expandSection(section: SettingsSection) {
+  if (expandedSection.value === section) {
+    expandedSection.value = null
+    return
+  }
+  settingsError.value = ''
+  showNewTemplate.value = false
+  showNewSmtp.value = false
+  showNewPhishlet.value = false
+  expandedSection.value = section
+
+  if (!campaign.value) return
+
+  // Pre-select current values and load options for the section (cached after first load).
+  if (section === 'template') {
+    editTemplateId.value = campaign.value.template_id
+    if (allTemplates.value.length === 0) listTemplates().then(t => allTemplates.value = t)
+  } else if (section === 'smtp') {
+    editSmtpId.value = campaign.value.smtp_profile_id
+    if (allSmtpProfiles.value.length === 0) listSMTPProfiles().then(s => allSmtpProfiles.value = s)
+  } else if (section === 'targets') {
+    editTargetListId.value = campaign.value.target_list_id
+  } else if (section === 'miraged') {
+    editMiragedId.value = campaign.value.miraged_id
+    if (allMiraged.value.length === 0) listMiraged().then(m => allMiraged.value = m)
+  } else if (section === 'phishlet') {
+    editPhishlet.value = campaign.value.phishlet
+    if (allPhishlets.value.length === 0) listPhishlets().then(p => allPhishlets.value = p)
+  } else if (section === 'general') {
+    editName.value = campaign.value.name
+    editRedirectUrl.value = campaign.value.redirect_url
+    editSendRate.value = String(campaign.value.send_rate)
+  }
+}
+
+async function saveSection(section: SettingsSection) {
+  if (!campaign.value || !section) return
+  settingsSaving.value = true
+  settingsError.value = ''
+  try {
+    const updates: Record<string, unknown> = {}
+    if (section === 'template' && editTemplateId.value !== campaign.value.template_id) {
+      updates.template_id = editTemplateId.value
+    } else if (section === 'smtp' && editSmtpId.value !== campaign.value.smtp_profile_id) {
+      updates.smtp_profile_id = editSmtpId.value
+    } else if (section === 'targets' && editTargetListId.value !== campaign.value.target_list_id) {
+      updates.target_list_id = editTargetListId.value
+    } else if (section === 'miraged' && editMiragedId.value !== campaign.value.miraged_id) {
+      updates.miraged_id = editMiragedId.value
+    } else if (section === 'phishlet' && editPhishlet.value !== campaign.value.phishlet) {
+      updates.phishlet = editPhishlet.value
+    } else if (section === 'general') {
+      if (editName.value !== campaign.value.name) updates.name = editName.value
+      if (editRedirectUrl.value !== campaign.value.redirect_url) updates.redirect_url = editRedirectUrl.value
+      if (Number(editSendRate.value) !== campaign.value.send_rate) updates.send_rate = Number(editSendRate.value)
+    }
+    if (Object.keys(updates).length === 0) { expandedSection.value = null; return }
+    campaign.value = await updateCampaign(id, updates)
+    expandedSection.value = null
+
+    // Update summaries from cached dropdown data instead of re-fetching everything.
+    if (section === 'template') {
+      settingsTemplate.value = allTemplates.value.find(t => t.id === campaign.value!.template_id) ?? settingsTemplate.value
+    } else if (section === 'smtp') {
+      settingsSmtp.value = allSmtpProfiles.value.find(s => s.id === campaign.value!.smtp_profile_id) ?? settingsSmtp.value
+    } else if (section === 'targets') {
+      await loadSettings()
+    } else if (section === 'miraged') {
+      settingsMiraged.value = allMiraged.value.find(m => m.id === campaign.value!.miraged_id) ?? settingsMiraged.value
+    }
+  } catch (e: any) {
+    settingsError.value = e.message
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
+async function createNewPhishlet() {
+  createLoading.value = true
+  settingsError.value = ''
+  try {
+    const phishlet = await createPhishlet(newPhishletYaml.value)
+    allPhishlets.value.unshift(phishlet)
+    editPhishlet.value = phishlet.name
+    showNewPhishlet.value = false
+    newPhishletYaml.value = ''
+  } catch (e: any) {
+    settingsError.value = e.message
+  } finally {
+    createLoading.value = false
+  }
+}
+
+async function createNewTemplate() {
+  createLoading.value = true
+  settingsError.value = ''
+  try {
+    const tmpl = await createTemplate(newTemplate.value)
+    allTemplates.value.unshift(tmpl)
+    editTemplateId.value = tmpl.id
+    showNewTemplate.value = false
+    newTemplate.value = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
+  } catch (e: any) {
+    settingsError.value = e.message
+  } finally {
+    createLoading.value = false
+  }
+}
+
+async function createNewSmtp() {
+  createLoading.value = true
+  settingsError.value = ''
+  try {
+    const profile = await createSMTPProfile({
+      ...newSmtp.value,
+      port: parseInt(newSmtp.value.port) || 587,
+    })
+    allSmtpProfiles.value.unshift(profile)
+    editSmtpId.value = profile.id
+    showNewSmtp.value = false
+    newSmtp.value = { name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' }
+  } catch (e: any) {
+    settingsError.value = e.message
+  } finally {
+    createLoading.value = false
+  }
 }
 
 async function start() {
@@ -105,6 +274,7 @@ async function sendTest() {
     await sendTestEmail(id, testEmailAddress.value)
     testEmailStatus.value = 'Test email sent'
     showTestEmail.value = false
+    await load()
   } catch (e: any) {
     testEmailStatus.value = e.message
   } finally {
@@ -112,7 +282,6 @@ async function sendTest() {
   }
 }
 
-// Auto-refresh while the campaign is active.
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
 function startPolling() {
@@ -245,7 +414,7 @@ onUnmounted(stopPolling)
 
     <!-- Test email -->
     <Card v-if="showTestEmail" class="p-5 mb-4">
-      <form @submit.prevent="sendTest" class="flex flex-col gap-5">
+      <form @submit.prevent="sendTest" class="flex flex-col gap-7">
         <div class="text-xs font-mono text-dim uppercase tracking-wider">Send Test Email</div>
         <AppInput v-model="testEmailAddress" type="email" placeholder="Recipient email" required />
         <div class="flex gap-2 justify-end">
@@ -263,40 +432,136 @@ onUnmounted(stopPolling)
     <TabBar :tabs="['Results', 'Settings']" :modelValue="activeTab" @update:modelValue="(t: string) => { activeTab = t as any; if (t === 'Settings') loadSettings() }" />
 
     <!-- Settings tab -->
-    <Card v-if="activeTab === 'Settings'" class="p-7">
-      <table class="w-full text-sm font-mono">
-        <tbody>
-          <tr class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs w-36">Template</td>
-            <td class="py-3 text-primary">{{ templateName || campaign?.template_id }}</td>
-          </tr>
-          <tr class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">SMTP Profile</td>
-            <td class="py-3 text-primary">{{ smtpName || campaign?.smtp_profile_id }}</td>
-          </tr>
-          <tr class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">Target List</td>
-            <td class="py-3 text-primary">{{ targetListName || campaign?.target_list_id }} <span v-if="targetListCount" class="text-dim">({{ targetListCount }} targets)</span></td>
-          </tr>
-          <tr class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">Send Rate</td>
-            <td class="py-3 text-primary">{{ campaign?.send_rate }} per minute</td>
-          </tr>
-          <tr v-if="campaign?.miraged_id" class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">Miraged</td>
-            <td class="py-3 text-primary">{{ campaign.miraged_id }}</td>
-          </tr>
-          <tr v-if="campaign?.phishlet" class="border-b border-edge/50">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">Phishlet</td>
-            <td class="py-3 text-primary">{{ campaign.phishlet }}</td>
-          </tr>
-          <tr v-if="campaign?.lure_url">
-            <td class="py-3 text-dim uppercase tracking-wider text-xs">Lure URL</td>
-            <td class="py-3 text-primary font-mono select-all">{{ campaign.lure_url }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </Card>
+    <div v-if="activeTab === 'Settings'" class="flex flex-col gap-4">
+      <ErrorBanner :message="settingsError" />
+
+      <!-- General: Name, Send Rate -->
+      <SettingsSection label="General" :editable="isDraft" :expanded="expandedSection === 'general'" :saving="settingsSaving"
+        @change="expandSection('general')" @cancel="expandedSection = null" @save="saveSection('general')">
+        <template #editor>
+          <div class="flex flex-col gap-7">
+            <AppInput v-model="editName" placeholder="Name" required />
+            <AppInput v-model="editRedirectUrl" placeholder="Redirect URL (post-capture destination)" />
+            <AppInput v-model="editSendRate" placeholder="Send Rate (per minute)" type="number" min="1" required />
+          </div>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ campaign?.name }}</div>
+          <div class="text-xs text-dim">{{ campaign?.send_rate }} emails/min</div>
+          <div v-if="campaign?.redirect_url" class="text-xs text-dim">Redirect: {{ campaign.redirect_url }}</div>
+        </template>
+      </SettingsSection>
+
+      <!-- Template -->
+      <SettingsSection label="Email Template" :editable="isDraft" :expanded="expandedSection === 'template'" :saving="settingsSaving"
+        @change="expandSection('template')" @cancel="expandedSection = null" @save="saveSection('template')">
+        <template #editor>
+          <template v-if="!showNewTemplate">
+            <AppSelect v-model="editTemplateId" label="Select a template">
+              <option value="" disabled></option>
+              <option v-for="t in allTemplates" :key="t.id" :value="t.id">{{ t.name }} — {{ t.subject }}</option>
+            </AppSelect>
+          </template>
+          <div v-else class="flex flex-col gap-7">
+            <TemplateForm v-model="newTemplate" min-editor-height="150px" />
+            <div class="flex gap-2 justify-end">
+              <AppButton variant="ghost" @click="showNewTemplate = false">Cancel</AppButton>
+              <AppButton :disabled="createLoading" @click="createNewTemplate">{{ createLoading ? 'Creating...' : 'Create' }}</AppButton>
+            </div>
+          </div>
+        </template>
+        <template #create-new>
+          <button v-if="!showNewTemplate" @click="showNewTemplate = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new template</button>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ settingsTemplate?.name || campaign?.template_id }}</div>
+          <div v-if="settingsTemplate" class="text-xs text-dim mt-0.5">Subject: {{ settingsTemplate.subject }}</div>
+        </template>
+      </SettingsSection>
+
+      <!-- SMTP Profile -->
+      <SettingsSection label="SMTP Profile" :editable="isDraft" :expanded="expandedSection === 'smtp'" :saving="settingsSaving"
+        @change="expandSection('smtp')" @cancel="expandedSection = null" @save="saveSection('smtp')">
+        <template #editor>
+          <template v-if="!showNewSmtp">
+            <AppSelect v-model="editSmtpId" label="Select an SMTP profile">
+              <option value="" disabled></option>
+              <option v-for="s in allSmtpProfiles" :key="s.id" :value="s.id">{{ s.name }} ({{ s.host }}:{{ s.port }})</option>
+            </AppSelect>
+          </template>
+          <div v-else class="flex flex-col gap-7">
+            <SMTPForm v-model="newSmtp" />
+            <div class="flex gap-2 justify-end">
+              <AppButton variant="ghost" @click="showNewSmtp = false">Cancel</AppButton>
+              <AppButton :disabled="createLoading" @click="createNewSmtp">{{ createLoading ? 'Creating...' : 'Create' }}</AppButton>
+            </div>
+          </div>
+        </template>
+        <template #create-new>
+          <button v-if="!showNewSmtp" @click="showNewSmtp = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new profile</button>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ settingsSmtp?.name || campaign?.smtp_profile_id }}</div>
+          <div v-if="settingsSmtp" class="text-xs text-dim mt-0.5">{{ settingsSmtp.host }}:{{ settingsSmtp.port }} &middot; {{ settingsSmtp.from_addr }}</div>
+        </template>
+      </SettingsSection>
+
+      <!-- Target List -->
+      <SettingsSection label="Target List" :editable="isDraft" :expanded="expandedSection === 'targets'" :saving="settingsSaving"
+        @change="expandSection('targets')" @cancel="expandedSection = null" @save="saveSection('targets')">
+        <template #editor>
+          <TargetListPicker ref="targetListPicker" v-model="editTargetListId" />
+        </template>
+        <template #create-new>
+          <button @click="targetListPicker?.startCreateNew()" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ settingsTargetList?.name || campaign?.target_list_id }}</div>
+          <div v-if="settingsTargetCount" class="text-xs text-dim mt-0.5">{{ settingsTargetCount }} {{ settingsTargetCount === 1 ? 'target' : 'targets' }}</div>
+        </template>
+      </SettingsSection>
+
+      <!-- Phishlet -->
+      <SettingsSection v-if="campaign?.phishlet" label="Phishlet" :editable="isDraft" :expanded="expandedSection === 'phishlet'" :saving="settingsSaving"
+        @change="expandSection('phishlet')" @cancel="expandedSection = null" @save="saveSection('phishlet')">
+        <template #editor>
+          <template v-if="!showNewPhishlet">
+            <AppSelect v-model="editPhishlet" label="Select a phishlet">
+              <option value="" disabled></option>
+              <option v-for="p in allPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
+            </AppSelect>
+          </template>
+          <div v-else class="flex flex-col gap-7">
+            <CodeEditor v-model="newPhishletYaml" label="Phishlet YAML" />
+            <div class="flex gap-2 justify-end">
+              <AppButton variant="ghost" @click="showNewPhishlet = false">Cancel</AppButton>
+              <AppButton :disabled="createLoading" @click="createNewPhishlet">{{ createLoading ? 'Creating...' : 'Create' }}</AppButton>
+            </div>
+          </div>
+        </template>
+        <template #create-new>
+          <button v-if="!showNewPhishlet" @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ campaign.phishlet }}</div>
+        </template>
+      </SettingsSection>
+
+      <!-- Miraged Connection -->
+      <SettingsSection v-if="campaign?.miraged_id" label="Miraged Connection" :editable="isDraft" :expanded="expandedSection === 'miraged'" :saving="settingsSaving"
+        @change="expandSection('miraged')" @cancel="expandedSection = null" @save="saveSection('miraged')">
+        <template #editor>
+          <AppSelect v-model="editMiragedId" label="Select a connection">
+            <option value="" disabled></option>
+            <option v-for="m in allMiraged" :key="m.id" :value="m.id">{{ m.name }} ({{ m.address }})</option>
+          </AppSelect>
+        </template>
+        <template #summary>
+          <div class="text-primary">{{ settingsMiraged?.name || campaign?.miraged_id }}</div>
+          <div v-if="settingsMiraged" class="text-xs text-dim mt-0.5">{{ settingsMiraged.address }}</div>
+        </template>
+      </SettingsSection>
+    </div>
 
     <!-- Results tab -->
     <template v-if="activeTab === 'Results'">
@@ -370,39 +635,25 @@ onUnmounted(stopPolling)
 
     <EmptyState v-if="results.length === 0" message="No results yet." />
 
-    <Card v-else class="overflow-hidden">
-      <table class="w-full text-sm font-mono">
-        <thead>
-          <tr class="border-b border-edge text-dim text-left uppercase tracking-wider">
-            <th class="px-4 py-2.5 font-medium">Email</th>
-            <th class="px-4 py-2.5 font-medium">Status</th>
-            <th class="px-4 py-2.5 font-medium">Sent</th>
-            <th class="px-4 py-2.5 font-medium">Clicked</th>
-            <th class="px-4 py-2.5 font-medium">Captured</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(result, i) in results"
-            :key="result.id"
-            :style="{ animationDelay: `${i * 20}ms` }"
-            class="animate-in border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
-            :class="{ 'cursor-pointer': result.session_id }"
-            @click="result.session_id ? viewSession(result) : null"
-          >
-            <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
-            <td class="px-4 py-2.5">
-              <span :class="statusColor[result.status] ?? 'text-dim'" class="uppercase text-xs tracking-wider">
-                {{ result.status }}
-              </span>
-            </td>
-            <td class="px-4 py-2.5 text-dim">{{ result.sent_at ? new Date(result.sent_at).toLocaleString() : '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ result.clicked_at ? new Date(result.clicked_at).toLocaleString() : '—' }}</td>
-            <td class="px-4 py-2.5 text-dim">{{ result.captured_at ? new Date(result.captured_at).toLocaleString() : '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </Card>
+    <DataTable v-else :columns="[{ label: 'Email' }, { label: 'Status' }, { label: 'Sent' }, { label: 'Clicked' }, { label: 'Captured' }]">
+      <DataTableRow
+        v-for="(result, i) in results"
+        :key="result.id"
+        :index="i"
+        :clickable="!!result.session_id"
+        @click="result.session_id ? viewSession(result) : null"
+      >
+        <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
+        <td class="px-4 py-2.5">
+          <span :class="statusColor[result.status] ?? 'text-dim'" class="uppercase text-xs tracking-wider">
+            {{ result.status }}
+          </span>
+        </td>
+        <td class="px-4 py-2.5 text-dim">{{ result.sent_at ? new Date(result.sent_at).toLocaleString() : '—' }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ result.clicked_at ? new Date(result.clicked_at).toLocaleString() : '—' }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ result.captured_at ? new Date(result.captured_at).toLocaleString() : '—' }}</td>
+      </DataTableRow>
+    </DataTable>
 
     </template>
   </div>

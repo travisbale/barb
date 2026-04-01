@@ -185,6 +185,7 @@ func TestIntegration_Miraged(t *testing.T) {
 			TargetListID:  list.ID,
 			MiragedID:     conn.ID,
 			Phishlet:      "example",
+			RedirectURL:   "https://example.com",
 			SendRate:      600,
 		})
 		if err != nil {
@@ -227,9 +228,10 @@ func TestIntegration_Miraged(t *testing.T) {
 			TargetListID:  list.ID,
 			MiragedID:     conn.ID,
 			Phishlet:      "example",
+			RedirectURL:   "https://example.com",
 		})
 
-		// Send a test email — this creates a temporary lure and includes its URL.
+		// Send a test email — this creates a persistent lure and includes its URL.
 		err := h.Client.SendTestEmail(campaign.ID, sdk.SendTestEmailRequest{Email: "operator@example.com"})
 		if err != nil {
 			t.Fatalf("SendTestEmail: %v", err)

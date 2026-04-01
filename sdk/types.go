@@ -147,8 +147,20 @@ type CreateCampaignRequest struct {
 	TargetListID  string `json:"target_list_id"`
 	MiragedID     string `json:"miraged_id"`
 	Phishlet      string `json:"phishlet"`
+	RedirectURL   string `json:"redirect_url"`
 	LureURL       string `json:"lure_url"`
 	SendRate      int    `json:"send_rate"`
+}
+
+type UpdateCampaignRequest struct {
+	Name          *string `json:"name,omitempty"`
+	TemplateID    *string `json:"template_id,omitempty"`
+	SMTPProfileID *string `json:"smtp_profile_id,omitempty"`
+	TargetListID  *string `json:"target_list_id,omitempty"`
+	MiragedID     *string `json:"miraged_id,omitempty"`
+	Phishlet      *string `json:"phishlet,omitempty"`
+	RedirectURL   *string `json:"redirect_url,omitempty"`
+	SendRate      *int    `json:"send_rate,omitempty"`
 }
 
 type CampaignResponse struct {
@@ -160,6 +172,7 @@ type CampaignResponse struct {
 	TargetListID  string     `json:"target_list_id"`
 	MiragedID     string     `json:"miraged_id"`
 	Phishlet      string     `json:"phishlet"`
+	RedirectURL   string     `json:"redirect_url"`
 	LureURL       string     `json:"lure_url"`
 	SendRate      int        `json:"send_rate"`
 	CreatedAt     time.Time  `json:"created_at"`

@@ -233,6 +233,7 @@ export interface Campaign {
   target_list_id: string
   miraged_id: string
   phishlet: string
+  redirect_url: string
   lure_url: string
   send_rate: number
   created_at: string
@@ -263,7 +264,7 @@ export function createCampaign(campaign: {
   target_list_id: string
   miraged_id?: string
   phishlet?: string
-  lure_url?: string
+  redirect_url?: string
   send_rate?: number
 }): Promise<Campaign> {
   return request('POST', '/campaigns', campaign)
@@ -283,6 +284,19 @@ export function cancelCampaign(id: string): Promise<void> {
 
 export function sendTestEmail(campaignId: string, email: string): Promise<void> {
   return request('POST', `/campaigns/${campaignId}/test-email`, { email })
+}
+
+export function updateCampaign(id: string, updates: {
+  name?: string
+  template_id?: string
+  smtp_profile_id?: string
+  target_list_id?: string
+  miraged_id?: string
+  phishlet?: string
+  redirect_url?: string
+  send_rate?: number
+}): Promise<Campaign> {
+  return request('PATCH', `/campaigns/${id}`, updates)
 }
 
 export function deleteCampaign(id: string): Promise<void> {

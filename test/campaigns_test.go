@@ -397,6 +397,212 @@ func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
 	}
 }
 
+func TestCampaigns_Update(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Original Name",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		SendRate:      5,
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Update name and send rate.
+	updated, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		Name:     strPtr("Updated Name"),
+		SendRate: intPtr(20),
+	})
+	if err != nil {
+		t.Fatalf("UpdateCampaign: %v", err)
+	}
+	if updated.Name != "Updated Name" {
+		t.Errorf("Name = %q, want %q", updated.Name, "Updated Name")
+	}
+	if updated.SendRate != 20 {
+		t.Errorf("SendRate = %d, want 20", updated.SendRate)
+	}
+
+	// Unchanged fields should be preserved.
+	if updated.TemplateID != tmplID {
+		t.Errorf("TemplateID changed unexpectedly")
+	}
+	if updated.SMTPProfileID != smtpID {
+		t.Errorf("SMTPProfileID changed unexpectedly")
+	}
+
+	// Verify via Get.
+	got, err := h.Client.GetCampaign(created.ID)
+	if err != nil {
+		t.Fatalf("GetCampaign: %v", err)
+	}
+	if got.Name != "Updated Name" || got.SendRate != 20 {
+		t.Errorf("Get returned stale data: name=%q sendRate=%d", got.Name, got.SendRate)
+	}
+}
+
+func TestCampaigns_UpdateReferences(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Ref Update",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Create a second template and switch to it.
+	newTmpl, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
+		Name:     "New Template",
+		Subject:  "Updated Subject",
+		HTMLBody: "<p>New {{.URL}}</p>",
+	})
+	if err != nil {
+		t.Fatalf("CreateTemplate: %v", err)
+	}
+
+	updated, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		TemplateID: strPtr(newTmpl.ID),
+	})
+	if err != nil {
+		t.Fatalf("UpdateCampaign: %v", err)
+	}
+	if updated.TemplateID != newTmpl.ID {
+		t.Errorf("TemplateID = %q, want %q", updated.TemplateID, newTmpl.ID)
+	}
+
+	// Verify persisted via Get.
+	got, _ := h.Client.GetCampaign(created.ID)
+	if got.TemplateID != newTmpl.ID {
+		t.Errorf("Get returned stale TemplateID: %q", got.TemplateID)
+	}
+}
+
+func TestCampaigns_UpdateRejectsInvalidReferences(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Bad Ref Update",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+	})
+
+	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		TemplateID: strPtr("nonexistent"),
+	})
+	if err == nil {
+		t.Error("expected error for invalid template reference")
+	}
+
+	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		SMTPProfileID: strPtr("nonexistent"),
+	})
+	if err == nil {
+		t.Error("expected error for invalid SMTP profile reference")
+	}
+
+	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		TargetListID: strPtr("nonexistent"),
+	})
+	if err == nil {
+		t.Error("expected error for invalid target list reference")
+	}
+}
+
+func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Started Campaign",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		SendRate:      600,
+	})
+
+	h.Client.StartCampaign(created.ID)
+	time.Sleep(1 * time.Second)
+
+	// Campaign is now completed — update should fail.
+	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		Name: strPtr("Should Fail"),
+	})
+	if err == nil {
+		t.Error("expected error updating a non-draft campaign")
+	}
+}
+
+func TestCampaigns_UpdateNotFound(t *testing.T) {
+	h := test.NewHarness(t)
+
+	_, err := h.Client.UpdateCampaign("nonexistent", sdk.UpdateCampaignRequest{
+		Name: strPtr("Nope"),
+	})
+	if err == nil {
+		t.Error("expected error for nonexistent campaign")
+	}
+}
+
+func TestCampaigns_SendTestEmail(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "Test Email Campaign",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Send a test email.
+	if err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: "tester@example.com"}); err != nil {
+		t.Fatalf("SendTestEmail: %v", err)
+	}
+
+	if h.Mailer.Count() != 1 {
+		t.Errorf("expected 1 email sent, got %d", h.Mailer.Count())
+	}
+
+	// Sending a second test should also work (no lure conflicts).
+	if err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: "tester2@example.com"}); err != nil {
+		t.Fatalf("second SendTestEmail: %v", err)
+	}
+	if h.Mailer.Count() != 2 {
+		t.Errorf("expected 2 emails sent, got %d", h.Mailer.Count())
+	}
+}
+
+func TestCampaigns_SendTestEmailRequiresAddress(t *testing.T) {
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
+		Name:          "No Email",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+	})
+
+	err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: ""})
+	if err == nil {
+		t.Error("expected error for empty email address")
+	}
+}
+
 func TestCampaigns_DeleteNotFound(t *testing.T) {
 	h := test.NewHarness(t)
 

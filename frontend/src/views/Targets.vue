@@ -5,11 +5,12 @@ import { useConfirm } from '../composables/useConfirm'
 import { listTargetLists, createTargetList, deleteTargetList, type TargetList } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
-import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
@@ -63,7 +64,7 @@ onMounted(load)
 
     <Card v-if="showCreate" class="p-7 mb-4">
       <form @submit.prevent="create" class="flex gap-3 items-center">
-        <AppInput v-model="newName" placeholder="List name..." autofocus class="flex-1" />
+        <AppInput v-model="newName" placeholder="List name" autofocus class="flex-1" />
         <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
         <AppButton type="submit">Create</AppButton>
       </form>
@@ -71,23 +72,20 @@ onMounted(load)
 
     <EmptyState v-if="lists.length === 0 && !showCreate" message="No target lists. Create one to begin." />
 
-    <Card v-else-if="lists.length > 0">
-      <div
+    <DataTable v-else-if="lists.length > 0" :columns="[{ label: 'Name' }, { label: 'Created' }, { label: '', width: 'w-16' }]">
+      <DataTableRow
         v-for="(list, i) in lists"
         :key="list.id"
-        :style="{ animationDelay: `${i * 30}ms` }"
-        class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+        :index="i"
+        clickable
         @click="router.push(`/targets/${list.id}`)"
       >
-        <div class="flex items-center gap-3">
-          <span class="text-amber text-xs font-mono">&#x25C9;</span>
-          <div>
-            <div class="text-sm font-medium text-primary">{{ list.name }}</div>
-            <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(list.created_at).toLocaleDateString() }}</div>
-          </div>
-        </div>
-        <button @click.stop="remove(list.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
-      </div>
-    </Card>
+        <td class="px-4 py-2.5 text-primary">{{ list.name }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ new Date(list.created_at).toLocaleDateString() }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <DeleteButton @click.stop="remove(list.id)" />
+        </td>
+      </DataTableRow>
+    </DataTable>
   </div>
 </template>

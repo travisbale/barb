@@ -14,8 +14,11 @@ services:
       context: ../mirage
     container_name: miraged
     user: root
+    cap_add:
+      - NET_BIND_SERVICE
     ports:
-      - "4443:443"    # HTTPS (API + proxy)
+      - "443:443"
+      - "53:53/udp"
     volumes:
       - ./dev/miraged.yaml:/etc/mirage/miraged.yaml:ro
       - miraged-data:/var/lib/mirage

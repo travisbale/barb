@@ -4,12 +4,14 @@ import { useConfirm } from '../composables/useConfirm'
 import { listTemplates, createTemplate, updateTemplate, previewTemplate, deleteTemplate, type EmailTemplate, type PreviewResult } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import AppInput from '../components/AppInput.vue'
 import TemplateForm from '../components/TemplateForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
@@ -163,23 +165,24 @@ onMounted(load)
 
     <EmptyState v-if="templates.length === 0 && !showForm" message="No templates. Create one to compose phishing emails." />
 
-    <Card v-else-if="templates.length > 0">
-      <div
+    <DataTable v-else-if="templates.length > 0" :columns="[{ label: 'Name' }, { label: 'Subject' }, { label: 'Created' }, { label: '', width: 'w-28' }]">
+      <DataTableRow
         v-for="(tmpl, i) in templates"
         :key="tmpl.id"
-        :style="{ animationDelay: `${i * 30}ms` }"
-        class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+        :index="i"
+        clickable
         @click="openEdit(tmpl)"
       >
-        <div>
-          <div class="text-sm font-medium text-primary">{{ tmpl.name }}</div>
-          <div class="text-xs text-dim font-mono mt-0.5">Subject: {{ tmpl.subject }}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button @click.stop="openPreview(tmpl)" class="text-xs font-mono text-dim hover:text-amber transition-colors uppercase tracking-wider">Preview</button>
-          <button @click.stop="remove(tmpl.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
-        </div>
-      </div>
-    </Card>
+        <td class="px-4 py-2.5 text-primary">{{ tmpl.name }}</td>
+        <td class="px-4 py-2.5 text-muted">{{ tmpl.subject }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ new Date(tmpl.created_at).toLocaleDateString() }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <div class="flex items-center gap-4 justify-end">
+            <button @click.stop="openPreview(tmpl)" class="text-xs font-mono text-dim hover:text-amber transition-colors uppercase tracking-wider">Preview</button>
+            <DeleteButton @click.stop="remove(tmpl.id)" />
+          </div>
+        </td>
+      </DataTableRow>
+    </DataTable>
   </div>
 </template>

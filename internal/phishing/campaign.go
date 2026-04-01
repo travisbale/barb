@@ -45,6 +45,7 @@ type Campaign struct {
 	TargetListID  string
 	MiragedID     string
 	Phishlet      string
+	RedirectURL   string
 	LureURL       string
 	SendRate      int
 	CreatedAt     time.Time
@@ -273,7 +274,19 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 		return nil
 	}
 
-	// Push the phishlet YAML to miraged if we have it stored locally.
+	// If a lure was already created (e.g. by a test email), reuse it.
+	if campaign.LureURL != "" {
+		s.Logger.Info("reusing existing lure", "campaign_id", campaign.ID, "lure_url", campaign.LureURL)
+		return nil
+	}
+
+	return s.ensureLure(campaign)
+}
+
+// ensureLure pushes the phishlet and creates a lure on miraged, storing the
+// resulting URL on the campaign. The caller is responsible for persisting
+// the campaign afterwards.
+func (s *CampaignService) ensureLure(campaign *Campaign) error {
 	if s.Phishlets != nil {
 		phishlet, err := s.Phishlets.GetPhishletByName(campaign.Phishlet)
 		if err == nil {
@@ -290,13 +303,9 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 		s.Logger.Error("failed to connect to miraged", "error", err)
 		return err
 	}
-	redirectURL := campaign.LureURL
-	if redirectURL == "" {
-		redirectURL = "https://example.com"
-	}
 	lure, err := client.CreateLure(miragesdk.CreateLureRequest{
 		Phishlet:    campaign.Phishlet,
-		RedirectURL: redirectURL,
+		RedirectURL: campaign.RedirectURL,
 	})
 	if err != nil {
 		s.Logger.Error("failed to create lure", "error", err)
@@ -407,6 +416,71 @@ func (s *CampaignService) Get(id string) (*Campaign, error) {
 	return s.Store.GetCampaign(id)
 }
 
+// CampaignUpdate holds optional fields for updating a draft campaign.
+type CampaignUpdate struct {
+	Name          *string
+	TemplateID    *string
+	SMTPProfileID *string
+	TargetListID  *string
+	MiragedID     *string
+	Phishlet      *string
+	RedirectURL   *string
+	SendRate      *int
+}
+
+func (s *CampaignService) Update(id string, update *CampaignUpdate) (*Campaign, error) {
+	campaign, err := s.Store.GetCampaign(id)
+	if err != nil {
+		return nil, err
+	}
+	if campaign.Status != CampaignDraft {
+		return nil, ErrCampaignNotDraft
+	}
+
+	if update.Name != nil {
+		campaign.Name = *update.Name
+	}
+	if update.TemplateID != nil {
+		if _, err := s.Templates.GetTemplate(*update.TemplateID); err != nil {
+			return nil, ErrTemplateNotFound
+		}
+		campaign.TemplateID = *update.TemplateID
+	}
+	if update.SMTPProfileID != nil {
+		if _, err := s.SMTP.GetProfile(*update.SMTPProfileID); err != nil {
+			return nil, ErrSMTPProfileNotFound
+		}
+		campaign.SMTPProfileID = *update.SMTPProfileID
+	}
+	if update.TargetListID != nil {
+		if _, err := s.Targets.GetList(*update.TargetListID); err != nil {
+			return nil, ErrTargetListNotFound
+		}
+		campaign.TargetListID = *update.TargetListID
+	}
+	if update.MiragedID != nil {
+		campaign.MiragedID = *update.MiragedID
+	}
+	if update.Phishlet != nil {
+		campaign.Phishlet = *update.Phishlet
+	}
+	if update.RedirectURL != nil {
+		campaign.RedirectURL = *update.RedirectURL
+	}
+	if update.SendRate != nil {
+		campaign.SendRate = *update.SendRate
+	}
+
+	if err := campaign.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.Store.UpdateCampaign(campaign); err != nil {
+		return nil, err
+	}
+	return campaign, nil
+}
+
 func (s *CampaignService) Delete(id string) error {
 	return s.Store.DeleteCampaign(id)
 }
@@ -420,8 +494,9 @@ func (s *CampaignService) Results(campaignID string) ([]*CampaignResult, error) 
 }
 
 // SendTestEmail sends a single test email using a campaign's configuration.
-// It creates a temporary lure on miraged (if configured), sends one email
-// to the specified address, then cleans up the lure.
+// If miraged is configured and no lure exists yet, one is created and
+// persisted on the campaign so it can be reused by subsequent tests and
+// the actual campaign run.
 func (s *CampaignService) SendTestEmail(campaignID, email string) error {
 	if email == "" {
 		return ErrEmailRequired
@@ -441,33 +516,19 @@ func (s *CampaignService) SendTestEmail(campaignID, email string) error {
 		return fmt.Errorf("loading template: %w", err)
 	}
 
-	// Create a temporary lure if miraged is configured.
-	lureURL := "https://example.com/test-lure"
-	if campaign.MiragedID != "" && campaign.Phishlet != "" && s.Miraged != nil {
-		if s.Phishlets != nil {
-			if phishlet, err := s.Phishlets.GetPhishletByName(campaign.Phishlet); err == nil {
-				_ = s.Miraged.PushPhishlet(campaign.MiragedID, phishlet.YAML)
-			}
+	// Create a persistent lure if miraged is configured and one doesn't exist yet.
+	lureURL := campaign.LureURL
+	if lureURL == "" && campaign.MiragedID != "" && campaign.Phishlet != "" && s.Miraged != nil {
+		if err := s.ensureLure(campaign); err != nil {
+			return fmt.Errorf("creating lure: %w", err)
 		}
-
-		client, err := s.Miraged.client(campaign.MiragedID)
-		if err != nil {
-			return fmt.Errorf("connecting to miraged: %w", err)
+		lureURL = campaign.LureURL
+		if err := s.Store.UpdateCampaign(campaign); err != nil {
+			return fmt.Errorf("saving lure URL: %w", err)
 		}
-		lure, err := client.CreateLure(miragesdk.CreateLureRequest{
-			Phishlet:    campaign.Phishlet,
-			RedirectURL: "https://example.com",
-		})
-		if err != nil {
-			return fmt.Errorf("creating test lure: %w", err)
-		}
-		lureURL = lure.URL
-
-		defer func() {
-			if err := client.DeleteLure(lure.ID); err != nil {
-				s.Logger.Error("failed to delete test lure", "lure_id", lure.ID, "error", err)
-			}
-		}()
+	}
+	if lureURL == "" {
+		lureURL = "https://example.com/test-lure"
 	}
 
 	conn, err := s.Mailer.Dial(context.Background(), profile)

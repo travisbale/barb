@@ -36,6 +36,7 @@ func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
 		TargetListID:  body.TargetListID,
 		MiragedID:     body.MiragedID,
 		Phishlet:      body.Phishlet,
+		RedirectURL:   body.RedirectURL,
 		LureURL:       body.LureURL,
 		SendRate:      body.SendRate,
 	}
@@ -64,6 +65,39 @@ func (r *Router) getCampaign(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, campaignToResponse(campaign))
+}
+
+func (r *Router) updateCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	var body sdk.UpdateCampaignRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		return
+	}
+	updated, err := r.Campaigns.Update(id, &phishing.CampaignUpdate{
+		Name:          body.Name,
+		TemplateID:    body.TemplateID,
+		SMTPProfileID: body.SMTPProfileID,
+		TargetListID:  body.TargetListID,
+		MiragedID:     body.MiragedID,
+		Phishlet:      body.Phishlet,
+		RedirectURL:   body.RedirectURL,
+		SendRate:      body.SendRate,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		case errors.Is(err, phishing.ErrCampaignNotDraft):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		case isValidationError(err) || isReferenceError(err):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to update campaign", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, campaignToResponse(updated))
 }
 
 func (r *Router) deleteCampaign(w http.ResponseWriter, req *http.Request) {
@@ -141,6 +175,7 @@ func campaignToResponse(c *phishing.Campaign) sdk.CampaignResponse {
 		TargetListID:  c.TargetListID,
 		MiragedID:     c.MiragedID,
 		Phishlet:      c.Phishlet,
+		RedirectURL:   c.RedirectURL,
 		LureURL:       c.LureURL,
 		SendRate:      c.SendRate,
 		CreatedAt:     c.CreatedAt,

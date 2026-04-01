@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   listMiraged, enrollMiraged, pushMiragedPhishlet, enableMiragedPhishlet,
   listPhishlets, createPhishlet,
-  listTargetLists, createTargetList, addTarget, importTargetsCSV, listTargets,
+  listTargetLists,
   listTemplates, createTemplate, previewTemplate,
   listSMTPProfiles, createSMTPProfile,
   createCampaign,
   type MiragedConnection, type Phishlet,
-  type TargetList, type Target, type EmailTemplate, type SMTPProfile,
+  type TargetList, type EmailTemplate, type SMTPProfile,
   type PreviewResult,
 } from '../api/client'
 import WizardShell from '../components/WizardShell.vue'
@@ -18,6 +18,8 @@ import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import TemplateForm from '../components/TemplateForm.vue'
+import SMTPForm from '../components/SMTPForm.vue'
+import TargetListPicker from '../components/TargetListPicker.vue'
 import Card from '../components/Card.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 
@@ -43,20 +45,18 @@ const selectedTargetListId = ref('')
 const selectedTemplateId = ref('')
 const selectedSmtpId = ref('')
 const campaignName = ref('')
+const redirectUrl = ref('')
 const sendRate = ref('10')
 
 // --- Create-new toggles ---
 const showNewConnection = ref(false)
 const showNewPhishlet = ref(false)
-const showNewTargetList = ref(false)
 const showNewTemplate = ref(false)
 const showNewSmtp = ref(false)
 
 // --- Create-new forms ---
 const newConnection = ref({ name: '', address: '', secret_hostname: '', token: '' })
 const newPhishletYaml = ref('')
-const newTargetListName = ref('')
-const newTarget = ref({ email: '', first_name: '', last_name: '', department: '', position: '' })
 const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 const newSmtp = ref({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
 
@@ -81,10 +81,8 @@ const selectedTemplate = computed(() => templates.value.find(t => t.id === selec
 const selectedSmtp = computed(() => smtpProfiles.value.find(p => p.id === selectedSmtpId.value))
 const selectedConnection = computed(() => connections.value.find(c => c.id === selectedConnectionId.value))
 
-const targetCount = ref(0)
-const targetPreview = ref<Target[]>([])
-const showTargetPreview = ref(false)
-const showAddTargets = ref(false)
+const targetListPicker = ref<InstanceType<typeof TargetListPicker> | null>(null)
+const targetCount = computed(() => targetListPicker.value?.targetCount ?? 0)
 const previewResult = ref<PreviewResult | null>(null)
 
 // --- Load data ---
@@ -109,26 +107,12 @@ async function loadAll() {
 
 onMounted(loadAll)
 
-// Load targets when a list is selected.
-watch(selectedTargetListId, async (id) => {
-  targetPreview.value = []
-  targetCount.value = 0
-  showTargetPreview.value = false
-  showAddTargets.value = false
-  if (!id) return
-  try {
-    const targets = await listTargets(id)
-    targetPreview.value = targets ?? []
-    targetCount.value = targetPreview.value.length
-  } catch { /* ignore */ }
-})
-
 // --- Navigation ---
 function canAdvance(): boolean {
   switch (effectiveStep.value) {
     case 0: return !showNewConnection.value
     case 1: return !!selectedPhishletName.value && phishletEnabled.value && !showNewPhishlet.value
-    case 2: return !!selectedTargetListId.value && !showNewTargetList.value
+    case 2: return !!selectedTargetListId.value
     case 3: return !!selectedTemplateId.value && !showNewTemplate.value
     case 4: return !!selectedSmtpId.value && !showNewSmtp.value
     case 5: return !!campaignName.value
@@ -200,60 +184,6 @@ async function enableSelectedPhishlet() {
   }
 }
 
-async function createNewTargetList() {
-  loading.value = true
-  error.value = ''
-  try {
-    const list = await createTargetList(newTargetListName.value)
-    targetLists.value.unshift(list)
-    selectedTargetListId.value = list.id
-    showNewTargetList.value = false
-    showAddTargets.value = true
-    newTargetListName.value = ''
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleCsvImport(event: Event) {
-  if (!selectedTargetListId.value) return
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  loading.value = true
-  error.value = ''
-  try {
-    await importTargetsCSV(selectedTargetListId.value, file)
-    const targets = await listTargets(selectedTargetListId.value)
-    targetPreview.value = targets ?? []
-    targetCount.value = targetPreview.value.length
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-    input.value = ''
-  }
-}
-
-async function addNewTarget() {
-  if (!selectedTargetListId.value || !newTarget.value.email) return
-  loading.value = true
-  error.value = ''
-  try {
-    await addTarget(selectedTargetListId.value, newTarget.value)
-    const targets = await listTargets(selectedTargetListId.value)
-    targetPreview.value = targets ?? []
-    targetCount.value = targetPreview.value.length
-    newTarget.value = { email: '', first_name: '', last_name: '', department: '', position: '' }
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function createNewTemplate() {
   loading.value = true
   error.value = ''
@@ -312,6 +242,7 @@ async function submit() {
       target_list_id: selectedTargetListId.value,
       miraged_id: selectedConnectionId.value,
       phishlet: selectedPhishletName.value,
+      redirect_url: redirectUrl.value,
       send_rate: parseInt(sendRate.value) || 10,
     })
     router.push(`/campaigns/${campaign.id}`)
@@ -379,7 +310,7 @@ async function submit() {
         </template>
 
         <div v-else class="flex flex-col gap-4">
-          <CodeEditor v-model="newPhishletYaml" />
+          <CodeEditor v-model="newPhishletYaml" label="Phishlet YAML" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewPhishlet = false">Cancel</AppButton>
             <AppButton :disabled="loading" @click="createNewPhishlet">Create</AppButton>
@@ -408,73 +339,11 @@ async function submit() {
       <!-- Step 2: Targets -->
       <Card v-else-if="effectiveStep === 2" class="p-7">
         <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Target List</div>
-
-        <template v-if="!showNewTargetList">
-          <AppSelect v-model="selectedTargetListId" label="Select a target list">
-            <option value="" disabled></option>
-            <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
-          </AppSelect>
-
-          <!-- Selected list: preview + actions -->
-          <div v-if="selectedTargetListId" class="mt-4">
-            <div class="flex items-center gap-3 text-xs font-mono text-dim">
-              <span>{{ targetCount }} {{ targetCount === 1 ? 'target' : 'targets' }}</span>
-              <button v-if="targetCount > 0" @click="showTargetPreview = !showTargetPreview" class="text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">
-                {{ showTargetPreview ? 'Hide' : 'Preview' }}
-              </button>
-            </div>
-
-            <!-- Target preview (first 10) -->
-            <div v-if="showTargetPreview && targetPreview.length > 0" class="mt-3 border border-edge overflow-hidden">
-              <table class="w-full text-xs font-mono">
-                <tbody>
-                  <tr
-                    v-for="target in targetPreview.slice(0, 10)"
-                    :key="target.id"
-                    class="border-b border-edge/50 last:border-0"
-                  >
-                    <td class="px-3 py-1.5 text-primary">{{ target.email }}</td>
-                    <td class="px-3 py-1.5 text-muted">{{ [target.first_name, target.last_name].filter(Boolean).join(' ') || '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-if="targetPreview.length > 10" class="px-3 py-1.5 text-xs font-mono text-dim border-t border-edge/50">
-                and {{ targetPreview.length - 10 }} more...
-              </div>
-            </div>
-
-            <!-- Add more targets -->
-            <div class="mt-4">
-              <button @click="showAddTargets = !showAddTargets" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">
-                {{ showAddTargets ? 'Hide' : '+ Add targets' }}
-              </button>
-            </div>
-
-            <div v-if="showAddTargets" class="mt-4 border-t border-edge pt-4 flex flex-col gap-4">
-              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150 self-start">
-                Import CSV
-                <input type="file" accept=".csv" class="hidden" @change="handleCsvImport" />
-              </label>
-
-              <form @submit.prevent="addNewTarget" class="flex gap-3 items-center">
-                <AppInput v-model="newTarget.email" type="email" placeholder="Email (required)" required class="flex-1" />
-                <AppInput v-model="newTarget.first_name" placeholder="First name" class="flex-1" />
-                <AppInput v-model="newTarget.last_name" placeholder="Last name" class="flex-1" />
-                <AppButton type="submit" :disabled="loading || !newTarget.email">Add</AppButton>
-              </form>
-            </div>
-          </div>
-
+        <TargetListPicker ref="targetListPicker" v-model="selectedTargetListId">
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="showNewTargetList = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
+            <button @click="targetListPicker?.startCreateNew()" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
           </div>
-        </template>
-
-        <div v-else class="flex gap-3 items-end">
-          <AppInput v-model="newTargetListName" placeholder="List name" class="flex-1" />
-          <AppButton variant="ghost" @click="showNewTargetList = false">Cancel</AppButton>
-          <AppButton :disabled="loading" @click="createNewTargetList">Create</AppButton>
-        </div>
+        </TargetListPicker>
       </Card>
 
       <!-- Step 3: Template -->
@@ -530,19 +399,7 @@ async function submit() {
         </template>
 
         <div v-else class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newSmtp.name" placeholder="Profile name" />
-            <AppInput v-model="newSmtp.host" placeholder="SMTP host" />
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newSmtp.port" placeholder="Port" type="number" />
-            <AppInput v-model="newSmtp.from_addr" placeholder="From address" />
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newSmtp.username" placeholder="Username" />
-            <AppInput v-model="newSmtp.password" placeholder="Password" type="password" />
-          </div>
-          <AppInput v-model="newSmtp.from_name" placeholder="From name" />
+          <SMTPForm v-model="newSmtp" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewSmtp = false">Cancel</AppButton>
             <AppButton :disabled="loading" @click="createNewSmtp">Create</AppButton>
@@ -556,6 +413,7 @@ async function submit() {
 
         <div class="flex flex-col gap-5">
           <AppInput v-model="campaignName" placeholder="Campaign name" required />
+          <AppInput v-model="redirectUrl" placeholder="Redirect URL (post-capture destination)" />
           <AppInput v-model="sendRate" type="number" placeholder="Send rate (emails per minute)" />
 
           <div class="border-t border-edge pt-4">

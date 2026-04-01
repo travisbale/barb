@@ -4,10 +4,11 @@ import { useRouter } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
 import { listCampaigns, deleteCampaign, type Campaign } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
-import Card from '../components/Card.vue'
+import DataTable from '../components/DataTable.vue'
+import DataTableRow from '../components/DataTableRow.vue'
 import AddButton from '../components/AddButton.vue'
 
 const router = useRouter()
@@ -54,25 +55,23 @@ onMounted(load)
 
     <EmptyState v-if="campaigns.length === 0" message="No campaigns. Create one to begin an operation." />
 
-    <Card v-else>
-      <div
+    <DataTable v-else :columns="[{ label: 'Status' }, { label: 'Name' }, { label: 'Created' }, { label: '', width: 'w-16' }]">
+      <DataTableRow
         v-for="(campaign, i) in campaigns"
         :key="campaign.id"
-        :style="{ animationDelay: `${i * 30}ms` }"
-        class="animate-in flex items-center justify-between px-4 py-3 border-b border-edge last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+        :index="i"
+        clickable
         @click="router.push(`/campaigns/${campaign.id}`)"
       >
-        <div class="flex items-center gap-3">
-          <span class="text-xs font-mono uppercase tracking-wider" :class="statusColor[campaign.status] ?? 'text-dim'">
-            {{ campaign.status }}
-          </span>
-          <div>
-            <div class="text-sm font-medium text-primary">{{ campaign.name }}</div>
-            <div class="text-xs text-dim font-mono mt-0.5">{{ new Date(campaign.created_at).toLocaleDateString() }}</div>
-          </div>
-        </div>
-        <button @click.stop="remove(campaign.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
-      </div>
-    </Card>
+        <td class="px-4 py-2.5">
+          <span class="text-xs uppercase tracking-wider" :class="statusColor[campaign.status] ?? 'text-dim'">{{ campaign.status }}</span>
+        </td>
+        <td class="px-4 py-2.5 text-primary">{{ campaign.name }}</td>
+        <td class="px-4 py-2.5 text-dim">{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
+        <td class="px-4 py-2.5 text-right">
+          <DeleteButton @click.stop="remove(campaign.id)" />
+        </td>
+      </DataTableRow>
+    </DataTable>
   </div>
 </template>

@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
 import { getTargetList, listTargets, addTarget, deleteTarget, importTargetsCSV, type TargetList, type Target } from '../api/client'
 import AppButton from '../components/AppButton.vue'
-import IconTrash from '../components/IconTrash.vue'
+import DeleteButton from '../components/DeleteButton.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -137,7 +137,7 @@ onMounted(load)
             <td class="px-4 py-2.5 text-dim">{{ target.department || '—' }}</td>
             <td class="px-4 py-2.5 text-dim">{{ target.position || '—' }}</td>
             <td class="px-4 py-2.5 text-right">
-              <button @click="remove(target.id)" class="text-dim hover:text-danger transition-colors"><IconTrash /></button>
+              <DeleteButton @click="remove(target.id)" />
             </td>
           </tr>
         </tbody>

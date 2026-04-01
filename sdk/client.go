@@ -142,6 +142,10 @@ func (c *Client) GetCampaign(id string) (*CampaignResponse, error) {
 	return get[CampaignResponse](c, ResolveRoute(RouteCampaign, "id", id))
 }
 
+func (c *Client) UpdateCampaign(id string, req UpdateCampaignRequest) (*CampaignResponse, error) {
+	return send[CampaignResponse](c, http.MethodPatch, ResolveRoute(RouteCampaign, "id", id), req)
+}
+
 func (c *Client) StartCampaign(id string) error {
 	return discard(c, http.MethodPost, ResolveRoute(RouteCampaignStart, "id", id))
 }
