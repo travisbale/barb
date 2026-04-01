@@ -16,6 +16,7 @@ import WizardShell from '../components/WizardShell.vue'
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
+import MiragedForm from '../components/MiragedForm.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import TemplateForm from '../components/TemplateForm.vue'
 import SMTPForm from '../components/SMTPForm.vue'
@@ -279,14 +280,7 @@ async function submit() {
         </template>
 
         <div v-else class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newConnection.name" placeholder="Name" />
-            <AppInput v-model="newConnection.address" placeholder="Address (host:port)" />
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="newConnection.secret_hostname" placeholder="Secret hostname" />
-            <AppInput v-model="newConnection.token" placeholder="Invite token" />
-          </div>
+          <MiragedForm v-model="newConnection" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewConnection = false">Cancel</AppButton>
             <AppButton :disabled="loading" @click="createNewConnection">{{ loading ? 'Enrolling...' : 'Enroll' }}</AppButton>

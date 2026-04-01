@@ -4,7 +4,7 @@ import { useConfirm } from '../composables/useConfirm'
 import { listMiraged, enrollMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import AppInput from '../components/AppInput.vue'
+import MiragedForm from '../components/MiragedForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import DataTable from '../components/DataTable.vue'
@@ -77,14 +77,7 @@ onMounted(load)
     <ErrorBanner :message="error" />
 
     <FormCard v-if="showAdd" @submit="add">
-      <div class="grid grid-cols-2 gap-5">
-        <AppInput v-model="form.name" placeholder="Name" required />
-        <AppInput v-model="form.address" placeholder="Address (host:port)" required />
-      </div>
-      <div class="grid grid-cols-2 gap-5">
-        <AppInput v-model="form.secret_hostname" placeholder="Secret hostname" required />
-        <AppInput v-model="form.token" placeholder="Invite token" required />
-      </div>
+      <MiragedForm v-model="form" />
       <template #actions>
         <AppButton variant="ghost" @click="showAdd = false">Cancel</AppButton>
         <AppButton type="submit" :disabled="enrolling">{{ enrolling ? 'Enrolling...' : 'Enroll' }}</AppButton>

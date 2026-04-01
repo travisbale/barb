@@ -6,7 +6,7 @@ import {
   getCampaign, startCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
   getMiragedSession, exportMiragedSessionCookies, updateCampaign,
   getTemplate, getSMTPProfile, getTargetList, listTargets,
-  listTemplates, listSMTPProfiles, listMiraged,
+  listTemplates, listSMTPProfiles, listMiraged, enrollMiraged,
   createTemplate, createSMTPProfile, listPhishlets, createPhishlet,
   type Campaign, type CampaignResult, type MiragedSession,
   type EmailTemplate, type SMTPProfile, type TargetList, type MiragedConnection, type Phishlet,
@@ -14,6 +14,7 @@ import {
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
+import MiragedForm from '../components/MiragedForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
@@ -76,9 +77,11 @@ const editSendRate = ref('')
 const showNewTemplate = ref(false)
 const showNewSmtp = ref(false)
 const showNewPhishlet = ref(false)
+const showNewMiraged = ref(false)
 const newPhishletYaml = ref('')
 const newTemplate = ref({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 const newSmtp = ref({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
+const newMiraged = ref({ name: '', address: '', secret_hostname: '', token: '' })
 const createLoading = ref(false)
 
 const isDraft = computed(() => campaign.value?.status === 'draft')
@@ -121,6 +124,7 @@ function expandSection(section: SettingsSection) {
   showNewTemplate.value = false
   showNewSmtp.value = false
   showNewPhishlet.value = false
+  showNewMiraged.value = false
   expandedSection.value = section
 
   if (!campaign.value) return
@@ -214,6 +218,22 @@ async function createNewTemplate() {
     editTemplateId.value = tmpl.id
     showNewTemplate.value = false
     newTemplate.value = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
+  } catch (e: any) {
+    settingsError.value = e.message
+  } finally {
+    createLoading.value = false
+  }
+}
+
+async function createNewMiraged() {
+  createLoading.value = true
+  settingsError.value = ''
+  try {
+    const conn = await enrollMiraged(newMiraged.value)
+    allMiraged.value.unshift(conn)
+    editMiragedId.value = conn.id
+    showNewMiraged.value = false
+    newMiraged.value = { name: '', address: '', secret_hostname: '', token: '' }
   } catch (e: any) {
     settingsError.value = e.message
   } finally {
@@ -554,10 +574,22 @@ onUnmounted(stopPolling)
       <SettingsSection v-if="campaign?.miraged_id" label="Miraged Connection" :editable="isDraft" :expanded="expandedSection === 'miraged'" :saving="settingsSaving"
         @change="expandSection('miraged')" @cancel="expandedSection = null" @save="saveSection('miraged')">
         <template #editor>
-          <AppSelect v-model="editMiragedId" label="Select a connection">
-            <option value="" disabled></option>
-            <option v-for="m in allMiraged" :key="m.id" :value="m.id">{{ m.name }} ({{ m.address }})</option>
-          </AppSelect>
+          <template v-if="!showNewMiraged">
+            <AppSelect v-model="editMiragedId" label="Select a connection">
+              <option value="" disabled></option>
+              <option v-for="m in allMiraged" :key="m.id" :value="m.id">{{ m.name }} ({{ m.address }})</option>
+            </AppSelect>
+          </template>
+          <div v-else class="flex flex-col gap-7">
+            <MiragedForm v-model="newMiraged" />
+            <div class="flex gap-2 justify-end">
+              <AppButton variant="ghost" @click="showNewMiraged = false">Cancel</AppButton>
+              <AppButton :disabled="createLoading" @click="createNewMiraged">{{ createLoading ? 'Enrolling...' : 'Enroll' }}</AppButton>
+            </div>
+          </div>
+        </template>
+        <template #create-new>
+          <button v-if="!showNewMiraged" @click="showNewMiraged = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Enroll new server</button>
         </template>
         <template #summary>
           <div class="text-primary">{{ settingsMiraged?.name || campaign?.miraged_id }}</div>
