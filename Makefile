@@ -1,7 +1,8 @@
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -ldflags "-X main.Version=$(VERSION)"
+DEV_PORT := 4443
 
-.PHONY: build release frontend clean test unit fmt lint dev dev-down
+.PHONY: build release frontend clean test unit fmt lint dev
 
 frontend:
 	@echo "Building frontend..."
@@ -41,11 +42,10 @@ lint:
 	@echo "Linting code..."
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
 
-dev:
-	@docker compose up -d
-	@trap 'docker compose down; kill 0' EXIT; \
-		(cd frontend && npm install --silent && npm run dev) & \
-		go run ./cmd/barb --addr :8443 --debug
-
-dev-down:
-	@docker compose down
+dev: frontend
+	@docker run -d --name mailpit --rm -p 1025:1025 -p 8025:8025 \
+		-e MP_SMTP_AUTH_ACCEPT_ANY=1 -e MP_SMTP_AUTH_ALLOW_INSECURE=1 \
+		axllent/mailpit:latest
+	@bash -c 'trap "docker stop mailpit; kill 0" EXIT; \
+		(cd frontend && VITE_API_PORT=$(DEV_PORT) npm run dev) & \
+		go run ./cmd/barb --addr :$(DEV_PORT) --debug'
