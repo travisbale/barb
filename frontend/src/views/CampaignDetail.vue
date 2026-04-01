@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useConfirm } from '../composables/useConfirm'
 import {
   getCampaign, startCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
   getMiragedSession, exportMiragedSessionCookies, updateCampaign,
@@ -27,6 +28,7 @@ import SettingsSection from '../components/SettingsSection.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 
 const route = useRoute()
+const { confirm } = useConfirm()
 const id = route.params.id as string
 
 const campaign = ref<Campaign | null>(null)
@@ -239,6 +241,7 @@ async function createNewSmtp() {
 }
 
 async function start() {
+  if (!await confirm('Start this campaign? Emails will begin sending immediately.', { label: 'Start', variant: 'primary' })) return
   starting.value = true
   error.value = ''
   try {

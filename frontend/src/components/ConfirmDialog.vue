@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useConfirm } from '../composables/useConfirm'
 
-const { visible, message, respond } = useConfirm()
+const { visible, message, confirmLabel, confirmVariant, respond } = useConfirm()
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') respond(false)
@@ -33,8 +33,9 @@ function onKeydown(e: KeyboardEvent) {
               ref="confirmBtn"
               @click="respond(true)"
               autofocus
-              class="px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase bg-danger text-white hover:brightness-110 transition-all"
-            >Delete</button>
+              class="px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase hover:brightness-110 transition-all"
+              :class="confirmVariant === 'danger' ? 'bg-danger text-white' : 'bg-amber text-black'"
+            >{{ confirmLabel }}</button>
           </div>
         </div>
       </div>
