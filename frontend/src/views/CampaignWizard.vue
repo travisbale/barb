@@ -17,7 +17,7 @@ import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
 import MiragedForm from '../components/MiragedForm.vue'
-import CodeEditor from '../components/CodeEditor.vue'
+import PhishletForm from '../components/PhishletForm.vue'
 import TemplateForm from '../components/TemplateForm.vue'
 import SMTPForm from '../components/SMTPForm.vue'
 import TargetListPicker from '../components/TargetListPicker.vue'
@@ -303,13 +303,8 @@ async function submit() {
           </div>
         </template>
 
-        <div v-else class="flex flex-col gap-4">
-          <CodeEditor v-model="newPhishletYaml" label="Phishlet YAML" />
-          <div class="flex gap-2 justify-end">
-            <AppButton variant="ghost" @click="showNewPhishlet = false">Cancel</AppButton>
-            <AppButton :disabled="loading" @click="createNewPhishlet">Create</AppButton>
-          </div>
-        </div>
+        <PhishletForm v-else v-model="newPhishletYaml" :loading="loading"
+          @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
 
         <!-- Enable on miraged -->
         <div v-if="selectedPhishletName && !phishletEnabled" class="mt-6 border-t border-edge pt-5">

@@ -3,14 +3,13 @@ import { ref, onMounted } from 'vue'
 import { useConfirm } from '../composables/useConfirm'
 import { listPhishlets, createPhishlet, updatePhishlet, deletePhishlet, type Phishlet } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
-import AppButton from '../components/AppButton.vue'
 import DeleteButton from '../components/DeleteButton.vue'
-import CodeEditor from '../components/CodeEditor.vue'
+import PhishletForm from '../components/PhishletForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
+import Card from '../components/Card.vue'
 import DataTable from '../components/DataTable.vue'
 import DataTableRow from '../components/DataTableRow.vue'
-import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
 const { confirm } = useConfirm()
@@ -63,14 +62,6 @@ async function submit() {
   }
 }
 
-async function handleFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  yaml.value = await file.text()
-  input.value = ''
-}
-
 async function remove(id: string) {
   if (!await confirm('Delete this phishlet?')) return
   try {
@@ -92,17 +83,10 @@ onMounted(load)
 
     <ErrorBanner :message="error" />
 
-    <FormCard v-if="showForm" @submit="submit">
-      <CodeEditor v-model="yaml" label="YAML" />
-      <template #actions>
-        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
-          Upload
-          <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
-        </label>
-        <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
-        <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
-      </template>
-    </FormCard>
+    <Card v-if="showForm" class="p-7">
+      <PhishletForm v-model="yaml" :submit-label="editingId ? 'Save' : 'Create'"
+        @submit="submit" @cancel="closeForm" />
+    </Card>
 
     <EmptyState v-if="phishlets.length === 0 && !showForm" message="No phishlets. Add one to define phishing site configurations." />
 

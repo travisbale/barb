@@ -26,7 +26,7 @@ import TemplateForm from '../components/TemplateForm.vue'
 import SMTPForm from '../components/SMTPForm.vue'
 import TargetListPicker from '../components/TargetListPicker.vue'
 import SettingsSection from '../components/SettingsSection.vue'
-import CodeEditor from '../components/CodeEditor.vue'
+import PhishletForm from '../components/PhishletForm.vue'
 
 const route = useRoute()
 const { confirm } = useConfirm()
@@ -554,13 +554,8 @@ onUnmounted(stopPolling)
               <option v-for="p in allPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
             </AppSelect>
           </template>
-          <div v-else class="flex flex-col gap-7">
-            <CodeEditor v-model="newPhishletYaml" label="Phishlet YAML" />
-            <div class="flex gap-2 justify-end">
-              <AppButton variant="ghost" @click="showNewPhishlet = false">Cancel</AppButton>
-              <AppButton :disabled="createLoading" @click="createNewPhishlet">{{ createLoading ? 'Creating...' : 'Create' }}</AppButton>
-            </div>
-          </div>
+          <PhishletForm v-else v-model="newPhishletYaml" :loading="createLoading"
+            @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
         </template>
         <template #create-new>
           <button v-if="!showNewPhishlet" @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
