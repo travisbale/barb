@@ -168,6 +168,14 @@ func TestServerValidation_EnrollMiraged(t *testing.T) {
 	}
 }
 
+func TestServerValidation_UpdateMiraged(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	status, msg := rawRequest(t, h, "PATCH", "/api/miraged/some-id", `{"name":""}`)
+	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "name: cannot be empty")
+}
+
 func TestServerValidation_AddTarget(t *testing.T) {
 	t.Parallel()
 	h := test.NewHarness(t)

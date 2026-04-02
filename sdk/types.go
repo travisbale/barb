@@ -201,6 +201,10 @@ type EnrollMiragedRequest struct {
 	Token          string `json:"token"`
 }
 
+type UpdateMiragedRequest struct {
+	Name *string `json:"name,omitempty"`
+}
+
 type MiragedResponse struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`

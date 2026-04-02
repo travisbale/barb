@@ -151,6 +151,13 @@ func (r EnrollMiragedRequest) Validate() error {
 	return nil
 }
 
+func (r UpdateMiragedRequest) Validate() error {
+	if r.Name != nil && *r.Name == "" {
+		return fmt.Errorf("name: cannot be empty")
+	}
+	return nil
+}
+
 func (r PushMiragedPhishletRequest) Validate() error {
 	if r.YAML == "" {
 		return fmt.Errorf("yaml: required")

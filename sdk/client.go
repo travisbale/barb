@@ -282,6 +282,10 @@ func (c *Client) EnrollMiraged(req EnrollMiragedRequest) (*MiragedResponse, erro
 	return send[MiragedResponse](c, http.MethodPost, RouteMiraged, req)
 }
 
+func (c *Client) UpdateMiraged(id string, req UpdateMiragedRequest) (*MiragedResponse, error) {
+	return send[MiragedResponse](c, http.MethodPatch, ResolveRoute(RouteMiragedInstance, "id", id), req)
+}
+
 func (c *Client) ListMiraged() ([]MiragedResponse, error) {
 	resp, err := get[[]MiragedResponse](c, RouteMiraged)
 	if err != nil {

@@ -202,6 +202,27 @@ func TestEnrollMiragedRequest_Validate(t *testing.T) {
 	}
 }
 
+func TestUpdateMiragedRequest_Validate(t *testing.T) {
+	t.Parallel()
+	empty := ""
+	valid := "valid"
+	tests := []struct {
+		name    string
+		req     UpdateMiragedRequest
+		wantErr string
+	}{
+		{"valid", UpdateMiragedRequest{Name: &valid}, ""},
+		{"nil name", UpdateMiragedRequest{}, ""},
+		{"empty name", UpdateMiragedRequest{Name: &empty}, "name: cannot be empty"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			checkValidation(t, err, tt.wantErr)
+		})
+	}
+}
+
 // checkValidation asserts that an error matches expectations.
 // If wantErr is empty, the error should be nil.
 func checkValidation(t *testing.T, err error, wantErr string) {

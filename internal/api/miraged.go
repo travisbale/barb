@@ -45,6 +45,28 @@ func (r *Router) enrollMiraged(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusCreated, miragedToResponse(conn))
 }
 
+func (r *Router) updateMiraged(w http.ResponseWriter, req *http.Request) {
+	body, ok := decodeAndValidate[sdk.UpdateMiragedRequest](w, req)
+	if !ok {
+		return
+	}
+
+	id := req.PathValue("id")
+	updated, err := r.Miraged.Rename(id, *body.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "connection not found", err)
+		case errors.Is(err, phishing.ErrNameRequired):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to update connection", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, miragedToResponse(updated))
+}
+
 func (r *Router) deleteMiraged(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Miraged.Delete(id); err != nil {

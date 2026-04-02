@@ -349,6 +349,10 @@ export function enrollMiraged(conn: {
   return request('POST', '/miraged', conn)
 }
 
+export function updateMiraged(id: string, data: { name: string }): Promise<MiragedConnection> {
+  return request('PATCH', `/miraged/${id}`, data)
+}
+
 export function deleteMiraged(id: string): Promise<void> {
   return request('DELETE', `/miraged/${id}`)
 }

@@ -36,6 +36,7 @@ type MiragedConnection struct {
 type miragedStore interface {
 	CreateConnection(c *MiragedConnection) error
 	GetConnection(id string) (*MiragedConnection, error)
+	UpdateConnectionName(id, name string) (*MiragedConnection, error)
 	DeleteConnection(id string) error
 	ListConnections() ([]*MiragedConnection, error)
 }
@@ -145,6 +146,13 @@ func enrollHTTP(address, secretHostname, token, csrPEM string) (*miragesdk.Enrol
 
 func (s *MiragedService) Get(id string) (*MiragedConnection, error) {
 	return s.Store.GetConnection(id)
+}
+
+func (s *MiragedService) Rename(id, name string) (*MiragedConnection, error) {
+	if name == "" {
+		return nil, ErrNameRequired
+	}
+	return s.Store.UpdateConnectionName(id, name)
 }
 
 func (s *MiragedService) Delete(id string) error {

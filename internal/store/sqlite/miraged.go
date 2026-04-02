@@ -32,6 +32,17 @@ func (s *Miraged) GetConnection(id string) (*phishing.MiragedConnection, error) 
 	return scanMiragedConnection(row)
 }
 
+func (s *Miraged) UpdateConnectionName(id, name string) (*phishing.MiragedConnection, error) {
+	res, err := s.db.db.Exec(`UPDATE miraged_connections SET name = ? WHERE id = ?`, name, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireOneRow(res); err != nil {
+		return nil, err
+	}
+	return s.GetConnection(id)
+}
+
 func (s *Miraged) DeleteConnection(id string) error {
 	res, err := s.db.db.Exec(`DELETE FROM miraged_connections WHERE id = ?`, id)
 	if err != nil {

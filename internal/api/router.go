@@ -103,6 +103,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	// Miraged connections
 	auth("GET", sdk.RouteMiraged, r.listMiraged)
 	auth("POST", sdk.RouteMiraged, r.enrollMiraged)
+	auth("PATCH", sdk.RouteMiragedInstance, r.updateMiraged)
 	auth("DELETE", sdk.RouteMiragedInstance, r.deleteMiraged)
 	auth("GET", sdk.RouteMiragedStatus, r.testMiraged)
 	auth("GET", sdk.RouteMiragedDNSProviders, r.listMiragedDNSProviders)
