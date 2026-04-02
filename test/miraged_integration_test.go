@@ -118,22 +118,6 @@ func TestIntegration_Miraged(t *testing.T) {
 		if err := h.Client.PushMiragedPhishlet(conn.ID, validPhishletYAML); err != nil {
 			t.Fatalf("PushMiragedPhishlet: %v", err)
 		}
-
-		phishlets, err := h.Client.ListMiragedPhishlets(conn.ID)
-		if err != nil {
-			t.Fatalf("ListMiragedPhishlets: %v", err)
-		}
-
-		found := false
-		for _, p := range phishlets {
-			if p.Name == "example" {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("pushed phishlet 'example' not found in remote list: %v", phishlets)
-		}
 	})
 
 	t.Run("EnableAndDisablePhishlet", func(t *testing.T) {

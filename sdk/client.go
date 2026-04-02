@@ -282,8 +282,8 @@ func (c *Client) TestMiraged(id string) (*MiragedStatusResponse, error) {
 	return get[MiragedStatusResponse](c, ResolveRoute(RouteMiragedStatus, "id", id))
 }
 
-func (c *Client) ListMiragedPhishlets(id string) ([]MiragedPhishletResponse, error) {
-	resp, err := get[[]MiragedPhishletResponse](c, ResolveRoute(RouteMiragedPhishlets, "id", id))
+func (c *Client) ListMiragedDNSProviders(id string) ([]string, error) {
+	resp, err := get[[]string](c, ResolveRoute(RouteMiragedDNSProviders, "id", id))
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,7 @@ func (c *Client) DisableMiragedPhishlet(connectionID, name string) (*MiragedPhis
 }
 
 func (c *Client) PushMiragedPhishlet(connectionID string, yaml string) error {
-	resp, err := c.do(http.MethodPost, ResolveRoute(RouteMiragedPhishletPush, "id", connectionID), PushMiragedPhishletRequest{YAML: yaml})
+	resp, err := c.do(http.MethodPost, ResolveRoute(RouteMiragedPhishlets, "id", connectionID), PushMiragedPhishletRequest{YAML: yaml})
 	if err != nil {
 		return err
 	}

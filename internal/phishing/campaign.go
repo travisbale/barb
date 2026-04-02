@@ -287,21 +287,21 @@ func (s *CampaignService) createLure(campaign *Campaign) error {
 // resulting URL on the campaign. The caller is responsible for persisting
 // the campaign afterwards.
 func (s *CampaignService) ensureLure(campaign *Campaign) error {
+	client, err := s.Miraged.Client(campaign.MiragedID)
+	if err != nil {
+		s.Logger.Error("failed to connect to miraged", "error", err)
+		return err
+	}
+
 	if s.Phishlets != nil {
 		phishlet, err := s.Phishlets.GetPhishletByName(campaign.Phishlet)
 		if err == nil {
-			if err := s.Miraged.PushPhishlet(campaign.MiragedID, phishlet.YAML); err != nil {
+			if _, err := client.PushPhishlet(miragesdk.PushPhishletRequest{YAML: phishlet.YAML}); err != nil {
 				s.Logger.Error("failed to push phishlet to miraged", "phishlet", campaign.Phishlet, "error", err)
 				return err
 			}
 			s.Logger.Info("phishlet pushed to miraged", "phishlet", campaign.Phishlet)
 		}
-	}
-
-	client, err := s.Miraged.client(campaign.MiragedID)
-	if err != nil {
-		s.Logger.Error("failed to connect to miraged", "error", err)
-		return err
 	}
 	lure, err := client.CreateLure(miragesdk.CreateLureRequest{
 		Phishlet:    campaign.Phishlet,

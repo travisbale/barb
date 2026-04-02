@@ -353,12 +353,12 @@ export function testMiraged(id: string): Promise<MiragedStatus> {
   return request('GET', `/miraged/${id}/status`)
 }
 
-export function listMiragedPhishlets(id: string): Promise<MiragedPhishlet[]> {
-  return request('GET', `/miraged/${id}/phishlets`)
+export function listMiragedDNSProviders(id: string): Promise<string[]> {
+  return request('GET', `/miraged/${id}/dns/providers`)
 }
 
 export function pushMiragedPhishlet(id: string, yaml: string): Promise<void> {
-  return request('POST', `/miraged/${id}/phishlets/push`, { yaml })
+  return request('POST', `/miraged/${id}/phishlets`, { yaml })
 }
 
 export function enableMiragedPhishlet(id: string, name: string, hostname: string, dnsProvider: string): Promise<MiragedPhishlet> {

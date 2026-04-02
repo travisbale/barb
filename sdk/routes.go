@@ -36,9 +36,9 @@ const (
 	RouteMiragedInstance        = "/api/miraged/{id}"
 	RouteMiragedStatus          = "/api/miraged/{id}/status"
 	RouteMiragedPhishlets       = "/api/miraged/{id}/phishlets"
-	RouteMiragedPhishletPush    = "/api/miraged/{id}/phishlets/push"
 	RouteMiragedPhishletEnable  = "/api/miraged/{id}/phishlets/{name}/enable"
 	RouteMiragedPhishletDisable = "/api/miraged/{id}/phishlets/{name}/disable"
+	RouteMiragedDNSProviders    = "/api/miraged/{id}/dns/providers"
 	RouteMiragedSession         = "/api/miraged/{id}/sessions/{sessionId}"
 	RouteMiragedSessionExport   = "/api/miraged/{id}/sessions/{sessionId}/export"
 

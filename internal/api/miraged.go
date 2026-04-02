@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/travisbale/barb/internal/phishing"
 	"github.com/travisbale/barb/sdk"
+	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
 func (r *Router) listMiraged(w http.ResponseWriter, req *http.Request) {
@@ -57,44 +59,39 @@ func (r *Router) deleteMiraged(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) testMiraged(w http.ResponseWriter, req *http.Request) {
-	id := req.PathValue("id")
-	status, err := r.Miraged.TestConnection(id)
+	client, err := r.miragedClient(w, req)
 	if err != nil {
-		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "connection not found", err)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to test connection", err)
-		}
+		return
+	}
+	status, err := client.Status()
+	if err != nil {
+		writeJSON(w, http.StatusOK, sdk.MiragedStatusResponse{Error: err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, sdk.MiragedStatusResponse{
-		Connected: status.Connected,
+		Connected: true,
 		Version:   status.Version,
-		Error:     status.Error,
 	})
 }
 
-func (r *Router) listMiragedPhishlets(w http.ResponseWriter, req *http.Request) {
-	id := req.PathValue("id")
-	phishlets, err := r.Miraged.ListPhishlets(id)
+func (r *Router) listMiragedDNSProviders(w http.ResponseWriter, req *http.Request) {
+	client, err := r.miragedClient(w, req)
 	if err != nil {
-		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "connection not found", err)
-		} else {
-			r.writeError(w, http.StatusBadGateway, "failed to list phishlets from miraged", err)
-		}
 		return
 	}
-
-	items := make([]sdk.MiragedPhishletResponse, len(phishlets))
-	for i, p := range phishlets {
-		items[i] = miragedPhishletToResponse(p)
+	providers, err := client.ListDNSProviders()
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "failed to list DNS providers from miraged", err)
+		return
 	}
-	writeJSON(w, http.StatusOK, items)
+	writeJSON(w, http.StatusOK, providers)
 }
 
 func (r *Router) pushMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
-	connectionID := req.PathValue("id")
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
 
 	var body sdk.PushMiragedPhishletRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
@@ -102,16 +99,18 @@ func (r *Router) pushMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.Miraged.PushPhishlet(connectionID, body.YAML); err != nil {
+	if _, err := client.PushPhishlet(miragesdk.PushPhishletRequest{YAML: body.YAML}); err != nil {
 		r.writeError(w, http.StatusBadGateway, "failed to push phishlet", err)
 		return
 	}
-
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *Router) enableMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
-	connectionID := req.PathValue("id")
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
 	name := req.PathValue("name")
 
 	var body sdk.EnableMiragedPhishletRequest
@@ -120,37 +119,46 @@ func (r *Router) enableMiragedPhishlet(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	phishlet, err := r.Miraged.EnablePhishlet(connectionID, name, body.Hostname, body.DNSProvider)
+	resp, err := client.EnablePhishlet(name, miragesdk.EnablePhishletRequest{
+		Hostname:    body.Hostname,
+		DNSProvider: body.DNSProvider,
+	})
 	if err != nil {
 		r.writeError(w, http.StatusBadGateway, "failed to enable phishlet", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*phishlet))
+	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*resp))
 }
 
 func (r *Router) disableMiragedPhishlet(w http.ResponseWriter, req *http.Request) {
-	connectionID := req.PathValue("id")
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
 	name := req.PathValue("name")
 
-	phishlet, err := r.Miraged.DisablePhishlet(connectionID, name)
+	resp, err := client.DisablePhishlet(name)
 	if err != nil {
 		r.writeError(w, http.StatusBadGateway, "failed to disable phishlet", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*phishlet))
+	writeJSON(w, http.StatusOK, miragedPhishletToResponse(*resp))
 }
 
 func (r *Router) getMiragedSession(w http.ResponseWriter, req *http.Request) {
-	connectionID := req.PathValue("id")
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
 	sessionID := req.PathValue("sessionId")
 
-	session, err := r.Miraged.GetSession(connectionID, sessionID)
+	session, err := client.GetSession(sessionID)
 	if err != nil {
 		r.writeError(w, http.StatusBadGateway, "failed to get session", err)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, sdk.MiragedSessionResponse{
+	resp := sdk.MiragedSessionResponse{
 		ID:           session.ID,
 		Phishlet:     session.Phishlet,
 		RemoteAddr:   session.RemoteAddr,
@@ -161,16 +169,22 @@ func (r *Router) getMiragedSession(w http.ResponseWriter, req *http.Request) {
 		CookieTokens: session.CookieTokens,
 		BodyTokens:   session.BodyTokens,
 		HTTPTokens:   session.HTTPTokens,
-		StartedAt:    session.StartedAt,
-		CompletedAt:  session.CompletedAt,
-	})
+		StartedAt:    session.StartedAt.Format(time.RFC3339),
+	}
+	if session.CompletedAt != nil {
+		resp.CompletedAt = session.CompletedAt.Format(time.RFC3339)
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (r *Router) exportMiragedSessionCookies(w http.ResponseWriter, req *http.Request) {
-	connectionID := req.PathValue("id")
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
 	sessionID := req.PathValue("sessionId")
 
-	data, err := r.Miraged.ExportSessionCookies(connectionID, sessionID)
+	data, err := client.ExportSessionCookies(sessionID)
 	if err != nil {
 		r.writeError(w, http.StatusBadGateway, "failed to export cookies", err)
 		return
@@ -183,7 +197,24 @@ func (r *Router) exportMiragedSessionCookies(w http.ResponseWriter, req *http.Re
 	}
 }
 
-func miragedPhishletToResponse(p phishing.MiragedPhishlet) sdk.MiragedPhishletResponse {
+// miragedClient extracts the connection ID from the request path and returns
+// a mirage SDK client. It writes an error response and returns an error if
+// the connection is not found or the client cannot be constructed.
+func (r *Router) miragedClient(w http.ResponseWriter, req *http.Request) (*miragesdk.Client, error) {
+	id := req.PathValue("id")
+	client, err := r.Miraged.Client(id)
+	if err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "connection not found", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to connect to miraged", err)
+		}
+		return nil, err
+	}
+	return client, nil
+}
+
+func miragedPhishletToResponse(p miragesdk.PhishletResponse) sdk.MiragedPhishletResponse {
 	return sdk.MiragedPhishletResponse{
 		Name:        p.Name,
 		Hostname:    p.Hostname,

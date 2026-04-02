@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  listMiraged, enrollMiraged, pushMiragedPhishlet, enableMiragedPhishlet,
+  listMiraged, enrollMiraged, listMiragedDNSProviders, pushMiragedPhishlet, enableMiragedPhishlet,
   listPhishlets, createPhishlet,
   listTargetLists,
   listTemplates, createTemplate, previewTemplate,
@@ -35,6 +35,7 @@ const localPhishlets = ref<Phishlet[]>([])
 const targetLists = ref<TargetList[]>([])
 const templates = ref<EmailTemplate[]>([])
 const smtpProfiles = ref<SMTPProfile[]>([])
+const dnsProviders = ref<string[]>([])
 
 // --- Selections ---
 const selectedConnectionId = ref('')
@@ -105,6 +106,14 @@ async function loadAll() {
     error.value = e.message
   }
 }
+
+watch(selectedConnectionId, async (id) => {
+  dnsProviders.value = []
+  if (!id) return
+  try {
+    dnsProviders.value = await listMiragedDNSProviders(id)
+  } catch { /* DNS providers are optional */ }
+})
 
 onMounted(loadAll)
 
@@ -311,7 +320,10 @@ async function submit() {
           <div class="text-xs font-mono text-dim uppercase tracking-wider mb-4">Enable on {{ selectedConnection?.name }}</div>
           <div class="grid grid-cols-2 gap-4">
             <AppInput v-model="phishletHostname" placeholder="Hostname" required />
-            <AppInput v-model="phishletDnsProvider" placeholder="DNS provider" />
+            <AppSelect v-if="dnsProviders.length > 0" v-model="phishletDnsProvider" label="DNS provider">
+              <option value="">None</option>
+              <option v-for="p in dnsProviders" :key="p" :value="p">{{ p }}</option>
+            </AppSelect>
           </div>
           <div class="flex gap-2 justify-end mt-4">
             <AppButton :disabled="loading || !phishletHostname" @click="enableSelectedPhishlet">
