@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useConfirm } from '../composables/useConfirm'
 import { listMiraged, enrollMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
@@ -56,16 +56,39 @@ async function remove(id: string) {
   }
 }
 
-async function test(id: string) {
-  try {
-    statuses.value[id] = { connected: false, error: 'Testing...' }
-    statuses.value[id] = await testMiraged(id)
-  } catch (e: any) {
-    statuses.value[id] = { connected: false, error: e.message }
+const POLL_INTERVAL = 30_000
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+async function testAll() {
+  await Promise.all(connections.value.map(async (conn) => {
+    try {
+      statuses.value[conn.id] = await testMiraged(conn.id)
+    } catch (e: any) {
+      statuses.value[conn.id] = { connected: false, error: e.message }
+    }
+  }))
+}
+
+function startPolling() {
+  stopPolling()
+  if (connections.value.length > 0) {
+    testAll()
+    pollTimer = setInterval(testAll, POLL_INTERVAL)
   }
 }
 
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+// Restart polling when the connection list changes.
+watch(() => connections.value.length, startPolling)
+
 onMounted(load)
+onUnmounted(stopPolling)
 </script>
 
 <template>
@@ -86,7 +109,7 @@ onMounted(load)
 
     <EmptyState v-if="connections.length === 0 && !showAdd" message="No miraged connections configured." />
 
-    <DataTable v-else-if="connections.length > 0" :columns="[{ label: 'Name' }, { label: 'Address' }, { label: 'Status' }, { label: '', width: 'w-24' }]">
+    <DataTable v-else-if="connections.length > 0" :columns="[{ label: 'Name' }, { label: 'Address' }, { label: 'Status' }, { label: '', width: 'w-12' }]">
       <DataTableRow
         v-for="(conn, i) in connections"
         :key="conn.id"
@@ -95,18 +118,15 @@ onMounted(load)
         <td class="px-4 py-2.5 text-primary">{{ conn.name }}</td>
         <td class="px-4 py-2.5 text-muted">{{ conn.address }}</td>
         <td class="px-4 py-2.5">
-          <span v-if="!statuses[conn.id]" class="text-dim">—</span>
+          <span v-if="!statuses[conn.id]" class="text-dim text-xs">Checking...</span>
           <span v-else-if="statuses[conn.id].connected" class="text-teal">
             <span class="inline-block w-1.5 h-1.5 bg-teal rounded-full mr-1.5 align-middle"></span>
-            {{ statuses[conn.id].version }}
+            Connected
           </span>
           <span v-else class="text-danger text-xs">{{ statuses[conn.id].error }}</span>
         </td>
         <td class="px-4 py-2.5 text-right">
-          <div class="flex items-center gap-4 justify-end">
-            <AppButton variant="secondary" @click="test(conn.id)">Test</AppButton>
-            <DeleteButton @click="remove(conn.id)" />
-          </div>
+          <DeleteButton @click="remove(conn.id)" />
         </td>
       </DataTableRow>
     </DataTable>

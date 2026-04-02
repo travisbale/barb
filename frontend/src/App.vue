@@ -23,7 +23,7 @@ const nav = [
   { to: '/templates', label: 'Templates', icon: IconTemplate },
   { to: '/phishlets', label: 'Phishlets', icon: IconPhishlet },
   { to: '/smtp', label: 'SMTP', icon: IconSMTP },
-  { to: '/settings', label: 'Miraged', icon: IconSettings },
+  { to: '/miraged', label: 'Miraged', icon: IconSettings },
 ]
 
 async function handleLogout() {

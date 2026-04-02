@@ -157,7 +157,7 @@ async function addNewTarget() {
           </button>
         </div>
 
-        <div v-if="showAddTargets" class="mt-4 border-t border-edge pt-4 flex flex-col gap-4">
+        <div v-if="showAddTargets" class="mt-7 border-t border-edge pt-7 flex flex-col gap-7">
           <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150 self-start">
             Import CSV
             <input type="file" accept=".csv" class="hidden" @change="handleCsvImport" />

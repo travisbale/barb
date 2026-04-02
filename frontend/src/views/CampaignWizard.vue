@@ -295,7 +295,7 @@ async function submit() {
           </div>
         </template>
 
-        <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-7">
           <MiragedForm v-model="newConnection" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewConnection = false">Cancel</AppButton>
@@ -370,7 +370,7 @@ async function submit() {
           </div>
         </template>
 
-        <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-7">
           <TemplateForm v-model="newTemplate" min-editor-height="150px" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewTemplate = false">Cancel</AppButton>
@@ -394,7 +394,7 @@ async function submit() {
           </div>
         </template>
 
-        <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-7">
           <SMTPForm v-model="newSmtp" />
           <div class="flex gap-2 justify-end">
             <AppButton variant="ghost" @click="showNewSmtp = false">Cancel</AppButton>
@@ -445,7 +445,7 @@ async function submit() {
 
       <template #actions>
         <AppButton v-if="effectiveStep < 5" :disabled="!canAdvance()" @click="next">
-Next
+          Next
         </AppButton>
         <template v-else>
           <AppButton :disabled="loading || !canAdvance()" @click="submit">
