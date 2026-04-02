@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, watchEffect } from 'vue'
 import {
   listTargetLists, createTargetList, addTarget, importTargetsCSV, listTargets,
   type TargetList, type Target,
@@ -14,6 +14,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'update:targetCount': [value: number]
 }>()
 
 const targetLists = ref<TargetList[]>([])
@@ -34,6 +35,8 @@ async function loadLists() {
 }
 
 loadLists()
+
+watchEffect(() => emit('update:targetCount', targetCount.value))
 
 watch(() => props.modelValue, async (id) => {
   targetPreview.value = []
@@ -173,10 +176,12 @@ async function addNewTarget() {
       <slot />
     </template>
 
-    <div v-else class="flex gap-3 items-end">
-      <AppInput v-model="newListName" placeholder="List name" class="flex-1" />
-      <AppButton variant="ghost" @click="creatingList = false">Cancel</AppButton>
-      <AppButton :disabled="loading" @click="createNewList">{{ loading ? 'Creating...' : 'Create' }}</AppButton>
+    <div v-else class="flex flex-col gap-7">
+      <AppInput v-model="newListName" placeholder="List name" />
+      <div class="flex gap-2 justify-end">
+        <AppButton variant="ghost" @click="creatingList = false">Cancel</AppButton>
+        <AppButton :disabled="loading" @click="createNewList">{{ loading ? 'Creating...' : 'Create' }}</AppButton>
+      </div>
     </div>
   </div>
 </template>

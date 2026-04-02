@@ -5,6 +5,7 @@ const props = defineProps<{
   modelValue: string
   label?: string
   required?: boolean
+  disabled?: boolean
 }>()
 
 defineEmits<{
@@ -38,7 +39,8 @@ const isActive = () => focused.value || hasSelection()
       @focus="focused = true"
       @blur="focused = false"
       :required="required"
-      class="w-full px-3 pt-3 pb-2 pr-9 bg-surface border border-edge text-sm font-mono text-primary appearance-none focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors"
+      :disabled="disabled"
+      class="w-full px-3 pt-3 pb-2 pr-9 bg-surface border border-edge text-sm font-mono text-primary appearance-none focus:outline-none focus:border-amber/40 focus:ring-1 focus:ring-amber/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <slot />
     </select>

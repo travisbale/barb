@@ -129,7 +129,7 @@ watch(() => props.modelValue, (newVal) => {
 
 <template>
   <div>
-    <div v-if="props.label" class="text-xs font-mono text-dim uppercase tracking-wider mb-2">{{ props.label }}</div>
+    <div v-if="props.label" class="text-xs font-mono text-dim mb-2">{{ props.label }}</div>
     <div ref="container" class="code-editor" :style="{ minHeight: props.minHeight ?? '300px' }"></div>
   </div>
 </template>

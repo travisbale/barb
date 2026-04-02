@@ -84,7 +84,7 @@ const selectedSmtp = computed(() => smtpProfiles.value.find(p => p.id === select
 const selectedConnection = computed(() => connections.value.find(c => c.id === selectedConnectionId.value))
 
 const targetListPicker = ref<InstanceType<typeof TargetListPicker> | null>(null)
-const targetCount = computed(() => targetListPicker.value?.targetCount ?? 0)
+const targetCount = ref(0)
 const previewResult = ref<PreviewResult | null>(null)
 
 // --- Load data ---
@@ -121,17 +121,24 @@ onMounted(loadAll)
 function canAdvance(): boolean {
   switch (effectiveStep.value) {
     case 0: return !showNewConnection.value
-    case 1: return !!selectedPhishletName.value && phishletEnabled.value && !showNewPhishlet.value
+    case 1: return !!selectedPhishletName.value && !!phishletHostname.value && !showNewPhishlet.value
     case 2: return !!selectedTargetListId.value
     case 3: return !!selectedTemplateId.value && !showNewTemplate.value
     case 4: return !!selectedSmtpId.value && !showNewSmtp.value
-    case 5: return !!campaignName.value
+    case 5: return !!campaignName.value && !!redirectUrl.value
     default: return false
   }
 }
 
-function next() {
+async function next() {
   error.value = ''
+
+  // Enable the phishlet on miraged before advancing past the phishlet step.
+  if (effectiveStep.value === 1 && !phishletEnabled.value) {
+    await enableSelectedPhishlet()
+    if (!phishletEnabled.value) return
+  }
+
   step.value++
 }
 
@@ -302,10 +309,19 @@ async function submit() {
         <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Phishlet Configuration</div>
 
         <template v-if="!showNewPhishlet">
-          <AppSelect v-model="selectedPhishletName" label="Select a phishlet">
-            <option value="" disabled></option>
-            <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
-          </AppSelect>
+          <div class="flex flex-col gap-7">
+            <AppSelect v-model="selectedPhishletName" label="Select a phishlet">
+              <option value="" disabled></option>
+              <option v-for="p in localPhishlets" :key="p.id" :value="p.name">{{ p.name }}</option>
+            </AppSelect>
+            <div class="grid grid-cols-2 gap-7">
+              <AppInput v-model="phishletHostname" placeholder="Hostname" required />
+              <AppSelect v-model="phishletDnsProvider" label="DNS provider" :disabled="dnsProviders.length === 0">
+                <option value="">{{ dnsProviders.length === 0 ? 'No providers configured' : 'None' }}</option>
+                <option v-for="p in dnsProviders" :key="p" :value="p">{{ p }}</option>
+              </AppSelect>
+            </div>
+          </div>
 
           <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
@@ -314,33 +330,12 @@ async function submit() {
 
         <PhishletForm v-else v-model="newPhishletYaml" :loading="loading"
           @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
-
-        <!-- Enable on miraged -->
-        <div v-if="selectedPhishletName && !phishletEnabled" class="mt-6 border-t border-edge pt-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-4">Enable on {{ selectedConnection?.name }}</div>
-          <div class="grid grid-cols-2 gap-4">
-            <AppInput v-model="phishletHostname" placeholder="Hostname" required />
-            <AppSelect v-if="dnsProviders.length > 0" v-model="phishletDnsProvider" label="DNS provider">
-              <option value="">None</option>
-              <option v-for="p in dnsProviders" :key="p" :value="p">{{ p }}</option>
-            </AppSelect>
-          </div>
-          <div class="flex gap-2 justify-end mt-4">
-            <AppButton :disabled="loading || !phishletHostname" @click="enableSelectedPhishlet">
-              {{ loading ? 'Enabling...' : 'Enable Phishlet' }}
-            </AppButton>
-          </div>
-        </div>
-
-        <div v-if="phishletEnabled" class="mt-4 text-xs font-mono text-teal">
-          Phishlet enabled on {{ selectedConnection?.name }}
-        </div>
       </Card>
 
       <!-- Step 2: Targets -->
       <Card v-else-if="effectiveStep === 2" class="p-7">
         <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Target List</div>
-        <TargetListPicker ref="targetListPicker" v-model="selectedTargetListId">
+        <TargetListPicker ref="targetListPicker" v-model="selectedTargetListId" @update:targetCount="targetCount = $event">
           <div class="mt-8 pt-6 border-t border-edge">
             <button @click="targetListPicker?.startCreateNew()" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
           </div>
@@ -410,14 +405,16 @@ async function submit() {
 
       <!-- Step 5: Review -->
       <Card v-else-if="effectiveStep === 5" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Review & Launch</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Campaign Settings</div>
 
-        <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-7">
           <AppInput v-model="campaignName" placeholder="Campaign name" required />
-          <AppInput v-model="redirectUrl" placeholder="Redirect URL (post-capture destination)" />
-          <AppInput v-model="sendRate" type="number" placeholder="Send rate (emails per minute)" />
+          <div class="grid grid-cols-[1fr_auto] gap-7">
+            <AppInput v-model="redirectUrl" placeholder="Redirect URL (post-capture destination)" required />
+            <AppInput v-model="sendRate" type="number" placeholder="Send rate (per min)" class="w-60" />
+          </div>
 
-          <div class="border-t border-edge pt-4">
+          <div class="border-t border-edge pt-7 mt-3">
             <table class="w-full text-sm font-mono">
               <tbody>
                 <tr v-if="selectedConnection" class="border-b border-edge/50">
@@ -451,7 +448,7 @@ async function submit() {
 Next
         </AppButton>
         <template v-else>
-          <AppButton :disabled="loading || !campaignName" @click="submit">
+          <AppButton :disabled="loading || !canAdvance()" @click="submit">
             {{ loading ? 'Creating...' : 'Create Campaign' }}
           </AppButton>
         </template>
