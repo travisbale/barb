@@ -125,7 +125,7 @@ func enrollHTTP(address, secretHostname, token, csrPEM string) (*miragesdk.Enrol
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrConnectionFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrConnectionFailed, err)
 	}
 	defer resp.Body.Close()
 

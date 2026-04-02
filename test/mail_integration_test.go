@@ -186,6 +186,7 @@ func TestIntegration_SendTestEmail(t *testing.T) {
 		TemplateID:    tmpl.ID,
 		SMTPProfileID: smtp.ID,
 		TargetListID:  list.ID,
+		RedirectURL:   "https://example.com",
 	})
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
@@ -234,7 +235,7 @@ func TestIntegration_CampaignSendsEmails(t *testing.T) {
 	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "bob@example.com", FirstName: "Bob"})
 
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Send Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 600,
+		Name: "Send Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
 	})
 
 	if err := h.Client.StartCampaign(campaign.ID); err != nil {
@@ -280,7 +281,7 @@ func TestIntegration_CustomHeaders(t *testing.T) {
 	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "target@example.com"})
 
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Headers Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 600,
+		Name: "Headers Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
 	})
 
 	h.Client.StartCampaign(campaign.ID)
@@ -318,7 +319,7 @@ func TestIntegration_EnvelopeSender(t *testing.T) {
 	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "target@example.com"})
 
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Envelope Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 600,
+		Name: "Envelope Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
 	})
 	h.Client.StartCampaign(campaign.ID)
 	time.Sleep(2 * time.Second)
@@ -356,7 +357,7 @@ func TestIntegration_CampaignCancelStopsSending(t *testing.T) {
 	}
 
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Cancel Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID,
+		Name: "Cancel Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com",
 		SendRate: 1, // 1 per minute — very slow
 	})
 
@@ -393,7 +394,7 @@ func TestIntegration_TemplateVariablesRendered(t *testing.T) {
 	})
 
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Variables Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 600,
+		Name: "Variables Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
 	})
 	h.Client.StartCampaign(campaign.ID)
 	time.Sleep(2 * time.Second)
