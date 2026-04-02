@@ -33,22 +33,6 @@ type MiragedConnection struct {
 	CreatedAt      time.Time
 }
 
-func (c *MiragedConnection) Validate() error {
-	if c.Name == "" {
-		return ErrNameRequired
-	}
-	if c.Address == "" {
-		return ErrAddressRequired
-	}
-	if c.SecretHostname == "" {
-		return ErrSecretHostnameRequired
-	}
-	if len(c.CertPEM) == 0 || len(c.KeyPEM) == 0 || len(c.CACertPEM) == 0 {
-		return ErrCertsRequired
-	}
-	return nil
-}
-
 type miragedStore interface {
 	CreateConnection(c *MiragedConnection) error
 	GetConnection(id string) (*MiragedConnection, error)

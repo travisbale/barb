@@ -1,19 +1,10 @@
 package phishing
 
 import (
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-var reservedHeaders = map[string]bool{
-	"from": true, "to": true, "cc": true, "bcc": true,
-	"subject": true, "date": true, "message-id": true,
-	"content-type": true, "content-transfer-encoding": true,
-	"mime-version": true, "reply-to": true, "sender": true,
-	"return-path": true,
-}
 
 // SMTPProfile is a configured mail relay for sending phishing emails.
 type SMTPProfile struct {
@@ -37,34 +28,12 @@ type smtpStore interface {
 	ListProfiles() ([]*SMTPProfile, error)
 }
 
-func (p *SMTPProfile) Validate() error {
-	if p.Name == "" {
-		return ErrNameRequired
-	}
-	if p.Host == "" {
-		return ErrHostRequired
-	}
-	if p.FromAddr == "" {
-		return ErrFromAddrRequired
-	}
-	for key := range p.CustomHeaders {
-		if reservedHeaders[strings.ToLower(key)] {
-			return ErrReservedHeader
-		}
-	}
-	return nil
-}
-
 // SMTPService manages SMTP relay profiles.
 type SMTPService struct {
 	Store smtpStore
 }
 
 func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) {
-	if err := profile.Validate(); err != nil {
-		return nil, err
-	}
-
 	if profile.Port == 0 {
 		profile.Port = 587
 	}
@@ -123,10 +92,6 @@ func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTP
 
 	if existing.Port == 0 {
 		existing.Port = 587
-	}
-
-	if err := existing.Validate(); err != nil {
-		return nil, err
 	}
 
 	if err := s.Store.UpdateProfile(existing); err != nil {

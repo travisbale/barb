@@ -46,10 +46,6 @@ type PhishletService struct {
 }
 
 func (s *PhishletService) Create(yamlContent string) (*Phishlet, error) {
-	if yamlContent == "" {
-		return nil, ErrYAMLRequired
-	}
-
 	name, err := extractName(yamlContent)
 	if err != nil {
 		return nil, err
@@ -80,10 +76,6 @@ func (s *PhishletService) Update(id string, yamlContent string) (*Phishlet, erro
 	existing, err := s.Store.GetPhishlet(id)
 	if err != nil {
 		return nil, err
-	}
-
-	if yamlContent == "" {
-		return nil, ErrYAMLRequired
 	}
 
 	name, err := extractName(yamlContent)

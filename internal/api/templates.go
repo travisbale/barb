@@ -23,27 +23,20 @@ func (r *Router) listTemplates(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) createTemplate(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreateTemplateRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.CreateTemplateRequest](w, req)
+	if !ok {
 		return
 	}
 
-	template := &phishing.EmailTemplate{
+	created, err := r.Templates.Create(&phishing.EmailTemplate{
 		Name:           body.Name,
 		Subject:        body.Subject,
 		HTMLBody:       body.HTMLBody,
 		TextBody:       body.TextBody,
 		EnvelopeSender: body.EnvelopeSender,
-	}
-
-	created, err := r.Templates.Create(template)
+	})
 	if err != nil {
-		if isValidationError(err) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create template", err)
-		}
+		r.writeError(w, http.StatusInternalServerError, "failed to create template", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, templateToResponse(created))
@@ -66,9 +59,8 @@ func (r *Router) getTemplate(w http.ResponseWriter, req *http.Request) {
 func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 
-	var body sdk.UpdateTemplateRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.UpdateTemplateRequest](w, req)
+	if !ok {
 		return
 	}
 
@@ -80,12 +72,9 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 		EnvelopeSender: body.EnvelopeSender,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, phishing.ErrNotFound):
+		if errors.Is(err, phishing.ErrNotFound) {
 			r.writeError(w, http.StatusNotFound, "template not found", err)
-		case isValidationError(err):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		default:
+		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to update template", err)
 		}
 		return
@@ -147,22 +136,4 @@ func templateToResponse(t *phishing.EmailTemplate) sdk.TemplateResponse {
 		EnvelopeSender: t.EnvelopeSender,
 		CreatedAt:      t.CreatedAt,
 	}
-}
-
-// isValidationError returns true for domain validation errors that should
-// be returned as 422 to the client.
-func isValidationError(err error) bool {
-	return errors.Is(err, phishing.ErrNameRequired) ||
-		errors.Is(err, phishing.ErrEmailRequired) ||
-		errors.Is(err, phishing.ErrHostRequired) ||
-		errors.Is(err, phishing.ErrFromAddrRequired) ||
-		errors.Is(err, phishing.ErrSubjectRequired) ||
-		errors.Is(err, phishing.ErrBodyRequired) ||
-		errors.Is(err, phishing.ErrAddressRequired) ||
-		errors.Is(err, phishing.ErrAddressInvalid) ||
-		errors.Is(err, phishing.ErrSecretHostnameRequired) ||
-		errors.Is(err, phishing.ErrCertsRequired) ||
-		errors.Is(err, phishing.ErrYAMLRequired) ||
-		errors.Is(err, phishing.ErrTokenRequired) ||
-		errors.Is(err, phishing.ErrReservedHeader)
 }

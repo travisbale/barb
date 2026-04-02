@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -25,13 +24,12 @@ func (r *Router) listSMTPProfiles(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreateSMTPProfileRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.CreateSMTPProfileRequest](w, req)
+	if !ok {
 		return
 	}
 
-	profile := &phishing.SMTPProfile{
+	created, err := r.SMTP.CreateProfile(&phishing.SMTPProfile{
 		Name:          body.Name,
 		Host:          body.Host,
 		Port:          body.Port,
@@ -40,15 +38,9 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		FromAddr:      body.FromAddr,
 		FromName:      body.FromName,
 		CustomHeaders: body.CustomHeaders,
-	}
-
-	created, err := r.SMTP.CreateProfile(profile)
+	})
 	if err != nil {
-		if isValidationError(err) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)
-		}
+		r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)
 		return
 	}
 
@@ -73,9 +65,8 @@ func (r *Router) getSMTPProfile(w http.ResponseWriter, req *http.Request) {
 func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 
-	var body sdk.UpdateSMTPProfileRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.UpdateSMTPProfileRequest](w, req)
+	if !ok {
 		return
 	}
 
@@ -90,12 +81,9 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		CustomHeaders: body.CustomHeaders,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, phishing.ErrNotFound):
+		if errors.Is(err, phishing.ErrNotFound) {
 			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
-		case isValidationError(err):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		default:
+		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to update SMTP profile", err)
 		}
 		return

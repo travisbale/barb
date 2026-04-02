@@ -23,9 +23,8 @@ func (r *Router) listCampaigns(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreateCampaignRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.CreateCampaignRequest](w, req)
+	if !ok {
 		return
 	}
 
@@ -43,7 +42,7 @@ func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
 
 	created, err := r.Campaigns.Create(campaign)
 	if err != nil {
-		if isValidationError(err) || isReferenceError(err) {
+		if isReferenceError(err) {
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
 		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to create campaign", err)
@@ -69,9 +68,8 @@ func (r *Router) getCampaign(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) updateCampaign(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
-	var body sdk.UpdateCampaignRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.UpdateCampaignRequest](w, req)
+	if !ok {
 		return
 	}
 	updated, err := r.Campaigns.Update(id, &phishing.CampaignUpdate{
@@ -90,7 +88,7 @@ func (r *Router) updateCampaign(w http.ResponseWriter, req *http.Request) {
 			r.writeError(w, http.StatusNotFound, "campaign not found", err)
 		case errors.Is(err, phishing.ErrCampaignNotDraft):
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		case isValidationError(err) || isReferenceError(err):
+		case isReferenceError(err):
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
 		default:
 			r.writeError(w, http.StatusInternalServerError, "failed to update campaign", err)
@@ -146,6 +144,23 @@ func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusAccepted, map[string]string{"status": "starting"})
+}
+
+func (r *Router) completeCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+	err := r.Campaigns.Complete(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, phishing.ErrCampaignNotRunning):
+			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "failed to complete campaign", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "completed"})
 }
 
 func (r *Router) cancelCampaign(w http.ResponseWriter, req *http.Request) {

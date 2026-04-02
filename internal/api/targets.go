@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -25,19 +24,14 @@ func (r *Router) listTargetLists(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) createTargetList(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreateTargetListRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.CreateTargetListRequest](w, req)
+	if !ok {
 		return
 	}
 
 	list, err := r.Targets.CreateList(body.Name)
 	if err != nil {
-		if errors.Is(err, phishing.ErrNameRequired) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create target list", err)
-		}
+		r.writeError(w, http.StatusInternalServerError, "failed to create target list", err)
 		return
 	}
 
@@ -92,9 +86,8 @@ func (r *Router) listTargets(w http.ResponseWriter, req *http.Request) {
 func (r *Router) addTarget(w http.ResponseWriter, req *http.Request) {
 	listID := req.PathValue("id")
 
-	var body sdk.AddTargetRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.AddTargetRequest](w, req)
+	if !ok {
 		return
 	}
 
@@ -107,11 +100,7 @@ func (r *Router) addTarget(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := r.Targets.AddTarget(listID, target); err != nil {
-		if errors.Is(err, phishing.ErrEmailRequired) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to add target", err)
-		}
+		r.writeError(w, http.StatusInternalServerError, "failed to add target", err)
 		return
 	}
 

@@ -127,6 +127,9 @@ func (c *Client) DeleteTarget(id string) error {
 // --- Campaigns ---
 
 func (c *Client) CreateCampaign(req CreateCampaignRequest) (*CampaignResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
 	return send[CampaignResponse](c, http.MethodPost, RouteCampaigns, req)
 }
 
@@ -148,6 +151,10 @@ func (c *Client) UpdateCampaign(id string, req UpdateCampaignRequest) (*Campaign
 
 func (c *Client) StartCampaign(id string) error {
 	return discard(c, http.MethodPost, ResolveRoute(RouteCampaignStart, "id", id))
+}
+
+func (c *Client) CompleteCampaign(id string) error {
+	return discard(c, http.MethodPost, ResolveRoute(RouteCampaignComplete, "id", id))
 }
 
 func (c *Client) CancelCampaign(id string) error {

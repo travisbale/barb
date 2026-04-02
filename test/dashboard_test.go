@@ -48,15 +48,16 @@ func TestDashboard_CampaignCounts(t *testing.T) {
 
 	// Create a draft campaign.
 	h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Draft One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID,
+		Name: "Draft One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com",
 	})
 
-	// Create and start a campaign (will complete quickly).
+	// Create, start, and complete a campaign.
 	started, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Started One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 600,
+		Name: "Started One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
 	})
 	h.Client.StartCampaign(started.ID)
 	time.Sleep(1 * time.Second)
+	h.Client.CompleteCampaign(started.ID)
 
 	dashboard, err := h.Client.Dashboard()
 	if err != nil {
@@ -92,7 +93,7 @@ func TestDashboard_ActiveCampaignProgress(t *testing.T) {
 
 	// Start a campaign with slow send rate so it's still active.
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Active Dashboard", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, SendRate: 1,
+		Name: "Active Dashboard", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 1,
 	})
 	h.Client.StartCampaign(campaign.ID)
 	time.Sleep(200 * time.Millisecond)

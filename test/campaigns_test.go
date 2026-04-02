@@ -42,16 +42,24 @@ func createPrerequisites(t *testing.T, h *test.Harness) (targetListID, templateI
 	return list.ID, tmpl.ID, smtp.ID
 }
 
+func validCampaignRequest(listID, tmplID, smtpID string) sdk.CreateCampaignRequest {
+	return sdk.CreateCampaignRequest{
+		Name:          "Test Campaign",
+		TemplateID:    tmplID,
+		SMTPProfileID: smtpID,
+		TargetListID:  listID,
+		RedirectURL:   "https://example.com",
+		SendRate:      10,
+	}
+}
+
 func TestCampaigns_CRUD(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Q1 Phishing",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.Name = "Q1 Phishing"
+	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -98,12 +106,7 @@ func TestCampaigns_PrePopulatesResults(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Results Test",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, err := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -132,11 +135,9 @@ func TestCampaigns_RequiresName(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	_, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.Name = ""
+	_, err := h.Client.CreateCampaign(req)
 	if err == nil {
 		t.Error("expected error for missing name")
 	}
@@ -144,13 +145,11 @@ func TestCampaigns_RequiresName(t *testing.T) {
 
 func TestCampaigns_RequiresTemplate(t *testing.T) {
 	h := test.NewHarness(t)
-	listID, _, smtpID := createPrerequisites(t, h)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	_, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Test",
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.TemplateID = ""
+	_, err := h.Client.CreateCampaign(req)
 	if err == nil {
 		t.Error("expected error for missing template")
 	}
@@ -161,34 +160,25 @@ func TestCampaigns_RejectsInvalidReferences(t *testing.T) {
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
 	// Invalid template.
-	_, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Bad Template",
-		TemplateID:    "nonexistent",
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.TemplateID = "nonexistent"
+	_, err := h.Client.CreateCampaign(req)
 	if err == nil {
 		t.Error("expected error for invalid template reference")
 	}
 
 	// Invalid SMTP profile.
-	_, err = h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Bad SMTP",
-		TemplateID:    tmplID,
-		SMTPProfileID: "nonexistent",
-		TargetListID:  listID,
-	})
+	req = validCampaignRequest(listID, tmplID, smtpID)
+	req.SMTPProfileID = "nonexistent"
+	_, err = h.Client.CreateCampaign(req)
 	if err == nil {
 		t.Error("expected error for invalid SMTP profile reference")
 	}
 
 	// Invalid target list.
-	_, err = h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Bad List",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  "nonexistent",
-	})
+	req = validCampaignRequest(listID, tmplID, smtpID)
+	req.TargetListID = "nonexistent"
+	_, err = h.Client.CreateCampaign(req)
 	if err == nil {
 		t.Error("expected error for invalid target list reference")
 	}
@@ -198,13 +188,9 @@ func TestCampaigns_Start(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Start Test",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		SendRate:      600, // fast — 10 per second
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600 // fast — 10 per second
+	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -213,14 +199,23 @@ func TestCampaigns_Start(t *testing.T) {
 		t.Fatalf("StartCampaign: %v", err)
 	}
 
-	// Wait for the background goroutine to finish sending.
+	// Wait for emails to send.
 	time.Sleep(1 * time.Second)
 
-	// Verify the campaign status changed.
+	// Campaign stays active until explicitly completed.
 	got, err := h.Client.GetCampaign(created.ID)
 	if err != nil {
 		t.Fatalf("GetCampaign: %v", err)
 	}
+	if got.Status != "active" {
+		t.Errorf("Status = %q, want %q", got.Status, "active")
+	}
+
+	// Complete the campaign.
+	if err := h.Client.CompleteCampaign(created.ID); err != nil {
+		t.Fatalf("CompleteCampaign: %v", err)
+	}
+	got, _ = h.Client.GetCampaign(created.ID)
 	if got.Status != "completed" {
 		t.Errorf("Status = %q, want %q", got.Status, "completed")
 	}
@@ -246,19 +241,15 @@ func TestCampaigns_StartRequiresDraft(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Draft Test",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		SendRate:      600,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, _ := h.Client.CreateCampaign(req)
 
 	// Start it once.
 	h.Client.StartCampaign(created.ID)
 	time.Sleep(500 * time.Millisecond)
 
-	// Starting again should fail — it's now completed, not draft.
+	// Starting again should fail — it's now active, not draft.
 	err := h.Client.StartCampaign(created.ID)
 	if err == nil {
 		t.Error("expected error starting a non-draft campaign")
@@ -269,14 +260,15 @@ func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Results Test", TemplateID: tmplID, SMTPProfileID: smtpID, TargetListID: listID, SendRate: 600,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
 	h.Client.StartCampaign(created.ID)
 	time.Sleep(1 * time.Second)
+	h.Client.CompleteCampaign(created.ID)
 
 	results, err := h.Client.ListCampaignResults(created.ID)
 	if err != nil {
@@ -318,13 +310,9 @@ func TestCampaigns_Cancel(t *testing.T) {
 		FromAddr: "it@example.com",
 	})
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Cancel Test",
-		TemplateID:    tmpl.ID,
-		SMTPProfileID: smtp.ID,
-		TargetListID:  list.ID,
-		SendRate:      1, // 1 per minute — very slow, so it's still running when we cancel
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 1 // 1 per minute — very slow, so it's still running when we cancel
+	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -333,7 +321,6 @@ func TestCampaigns_Cancel(t *testing.T) {
 		t.Fatalf("StartCampaign: %v", err)
 	}
 
-	// Give the goroutine a moment to start sending.
 	// Give the goroutine a moment to start sending.
 	time.Sleep(200 * time.Millisecond)
 
@@ -361,12 +348,7 @@ func TestCampaigns_CancelNotRunning(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Not Running",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 
 	// Cancel a draft campaign — should fail.
 	err := h.Client.CancelCampaign(created.ID)
@@ -379,18 +361,18 @@ func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Already Done",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		SendRate:      600,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
-	// Campaign should be completed by now.
+	// Complete it explicitly.
+	h.Client.CompleteCampaign(created.ID)
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancelling a completed campaign should fail.
 	err := h.Client.CancelCampaign(created.ID)
 	if err == nil {
 		t.Error("expected error cancelling a completed campaign")
@@ -401,13 +383,10 @@ func TestCampaigns_Update(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Original Name",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		SendRate:      5,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.Name = "Original Name"
+	req.SendRate = 5
+	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -449,12 +428,7 @@ func TestCampaigns_UpdateReferences(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Ref Update",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, err := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -490,12 +464,7 @@ func TestCampaigns_UpdateRejectsInvalidReferences(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Bad Ref Update",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		TemplateID: strPtr("nonexistent"),
@@ -523,16 +492,13 @@ func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Started Campaign",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		SendRate:      600,
-	})
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
+	h.Client.CompleteCampaign(created.ID)
 
 	// Campaign is now completed — update should fail.
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
@@ -558,12 +524,7 @@ func TestCampaigns_SendTestEmail(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Test Email Campaign",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, err := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
@@ -590,12 +551,7 @@ func TestCampaigns_SendTestEmailRequiresAddress(t *testing.T) {
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
-	created, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "No Email",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-	})
+	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 
 	err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: ""})
 	if err == nil {

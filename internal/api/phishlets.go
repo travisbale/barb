@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -23,19 +22,14 @@ func (r *Router) listPhishlets(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) createPhishlet(w http.ResponseWriter, req *http.Request) {
-	var body sdk.CreatePhishletRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.CreatePhishletRequest](w, req)
+	if !ok {
 		return
 	}
 
 	created, err := r.Phishlets.Create(body.YAML)
 	if err != nil {
-		if isValidationError(err) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create phishlet", err)
-		}
+		r.writeError(w, http.StatusInternalServerError, "failed to create phishlet", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, phishletToResponse(created))
@@ -58,20 +52,16 @@ func (r *Router) getPhishlet(w http.ResponseWriter, req *http.Request) {
 func (r *Router) updatePhishlet(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 
-	var body sdk.UpdatePhishletRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+	body, ok := decodeAndValidate[sdk.UpdatePhishletRequest](w, req)
+	if !ok {
 		return
 	}
 
 	updated, err := r.Phishlets.Update(id, body.YAML)
 	if err != nil {
-		switch {
-		case errors.Is(err, phishing.ErrNotFound):
+		if errors.Is(err, phishing.ErrNotFound) {
 			r.writeError(w, http.StatusNotFound, "phishlet not found", err)
-		case isValidationError(err):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
-		default:
+		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to update phishlet", err)
 		}
 		return

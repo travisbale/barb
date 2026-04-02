@@ -21,19 +21,6 @@ type EmailTemplate struct {
 	CreatedAt      time.Time
 }
 
-func (t *EmailTemplate) Validate() error {
-	if t.Name == "" {
-		return ErrNameRequired
-	}
-	if t.Subject == "" {
-		return ErrSubjectRequired
-	}
-	if t.HTMLBody == "" && t.TextBody == "" {
-		return ErrBodyRequired
-	}
-	return nil
-}
-
 type templateStore interface {
 	CreateTemplate(t *EmailTemplate) error
 	GetTemplate(id string) (*EmailTemplate, error)
@@ -48,10 +35,6 @@ type TemplateService struct {
 }
 
 func (s *TemplateService) Create(template *EmailTemplate) (*EmailTemplate, error) {
-	if err := template.Validate(); err != nil {
-		return nil, err
-	}
-
 	template.ID = uuid.New().String()
 	template.CreatedAt = time.Now()
 
@@ -95,10 +78,6 @@ func (s *TemplateService) Update(id string, update *TemplateUpdate) (*EmailTempl
 	}
 	if update.EnvelopeSender != nil {
 		existing.EnvelopeSender = *update.EnvelopeSender
-	}
-
-	if err := existing.Validate(); err != nil {
-		return nil, err
 	}
 
 	if err := s.Store.UpdateTemplate(existing); err != nil {
