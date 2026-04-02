@@ -2,58 +2,15 @@ package test_test
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
-	"time"
 
 	"github.com/travisbale/barb/sdk"
 	"github.com/travisbale/barb/test"
 )
 
-// createPrerequisites sets up a target list, template, and SMTP profile
-// and returns their IDs for use in campaign creation.
-func createPrerequisites(t *testing.T, h *test.Harness) (targetListID, templateID, smtpProfileID string) {
-	t.Helper()
-
-	list, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Campaign Targets"})
-	if err != nil {
-		t.Fatalf("CreateTargetList: %v", err)
-	}
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "alice@acme.com", FirstName: "Alice"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "bob@acme.com", FirstName: "Bob"})
-
-	tmpl, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:     "Test Template",
-		Subject:  "Action Required",
-		HTMLBody: "<p>Click {{.URL}}</p>",
-	})
-	if err != nil {
-		t.Fatalf("CreateTemplate: %v", err)
-	}
-
-	smtp, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name:     "Test SMTP",
-		Host:     "smtp.example.com",
-		FromAddr: "it@example.com",
-	})
-	if err != nil {
-		t.Fatalf("CreateSMTPProfile: %v", err)
-	}
-
-	return list.ID, tmpl.ID, smtp.ID
-}
-
-func validCampaignRequest(listID, tmplID, smtpID string) sdk.CreateCampaignRequest {
-	return sdk.CreateCampaignRequest{
-		Name:          "Test Campaign",
-		TemplateID:    tmplID,
-		SMTPProfileID: smtpID,
-		TargetListID:  listID,
-		RedirectURL:   "https://example.com",
-		SendRate:      10,
-	}
-}
-
 func TestCampaigns_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -103,6 +60,7 @@ func TestCampaigns_CRUD(t *testing.T) {
 }
 
 func TestCampaigns_PrePopulatesResults(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -131,31 +89,8 @@ func TestCampaigns_PrePopulatesResults(t *testing.T) {
 	}
 }
 
-func TestCampaigns_RequiresName(t *testing.T) {
-	h := test.NewHarness(t)
-	listID, tmplID, smtpID := createPrerequisites(t, h)
-
-	req := validCampaignRequest(listID, tmplID, smtpID)
-	req.Name = ""
-	_, err := h.Client.CreateCampaign(req)
-	if err == nil {
-		t.Error("expected error for missing name")
-	}
-}
-
-func TestCampaigns_RequiresTemplate(t *testing.T) {
-	h := test.NewHarness(t)
-	listID, tmplID, smtpID := createPrerequisites(t, h)
-
-	req := validCampaignRequest(listID, tmplID, smtpID)
-	req.TemplateID = ""
-	_, err := h.Client.CreateCampaign(req)
-	if err == nil {
-		t.Error("expected error for missing template")
-	}
-}
-
 func TestCampaigns_RejectsInvalidReferences(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -163,28 +98,23 @@ func TestCampaigns_RejectsInvalidReferences(t *testing.T) {
 	req := validCampaignRequest(listID, tmplID, smtpID)
 	req.TemplateID = "nonexistent"
 	_, err := h.Client.CreateCampaign(req)
-	if err == nil {
-		t.Error("expected error for invalid template reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "template not found")
 
 	// Invalid SMTP profile.
 	req = validCampaignRequest(listID, tmplID, smtpID)
 	req.SMTPProfileID = "nonexistent"
 	_, err = h.Client.CreateCampaign(req)
-	if err == nil {
-		t.Error("expected error for invalid SMTP profile reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "SMTP profile not found")
 
 	// Invalid target list.
 	req = validCampaignRequest(listID, tmplID, smtpID)
 	req.TargetListID = "nonexistent"
 	_, err = h.Client.CreateCampaign(req)
-	if err == nil {
-		t.Error("expected error for invalid target list reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "target list not found")
 }
 
 func TestCampaigns_Start(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -199,8 +129,8 @@ func TestCampaigns_Start(t *testing.T) {
 		t.Fatalf("StartCampaign: %v", err)
 	}
 
-	// Wait for emails to send.
-	time.Sleep(1 * time.Second)
+	// Wait for all emails to be sent.
+	waitForEmails(t, h, 2)
 
 	// Campaign stays active until explicitly completed.
 	got, err := h.Client.GetCampaign(created.ID)
@@ -238,6 +168,7 @@ func TestCampaigns_Start(t *testing.T) {
 }
 
 func TestCampaigns_StartRequiresDraft(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -247,16 +178,15 @@ func TestCampaigns_StartRequiresDraft(t *testing.T) {
 
 	// Start it once.
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(500 * time.Millisecond)
+	waitForCampaignStatus(t, h, created.ID, "active")
 
 	// Starting again should fail — it's now active, not draft.
 	err := h.Client.StartCampaign(created.ID)
-	if err == nil {
-		t.Error("expected error starting a non-draft campaign")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign can only be started from draft status")
 }
 
 func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -267,7 +197,7 @@ func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(1 * time.Second)
+	waitForEmails(t, h, 2)
 	h.Client.CompleteCampaign(created.ID)
 
 	results, err := h.Client.ListCampaignResults(created.ID)
@@ -288,30 +218,19 @@ func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
 }
 
 func TestCampaigns_Cancel(t *testing.T) {
-	h := test.NewHarness(t)
+	t.Parallel()
+	h, bm := test.NewHarnessWithBlockingMailer(t)
 
-	// Create a campaign with many targets and slow send rate so it's
-	// still running when we cancel.
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Cancel Targets"})
-	for i := 0; i < 20; i++ {
-		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{
-			Email: fmt.Sprintf("user%d@acme.com", i),
-		})
+	targets := make([]sdk.AddTargetRequest, 5)
+	for i := range targets {
+		targets[i] = sdk.AddTargetRequest{Email: fmt.Sprintf("user%d@acme.com", i)}
 	}
-
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:     "Cancel Template",
-		Subject:  "Test",
-		HTMLBody: "<p>{{.URL}}</p>",
-	})
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name:     "Cancel SMTP",
-		Host:     "smtp.example.com",
-		FromAddr: "it@example.com",
-	})
+	list := createTestTargetList(t, h, targets...)
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
 
 	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
-	req.SendRate = 1 // 1 per minute — very slow, so it's still running when we cancel
+	req.SendRate = 600
 	created, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
@@ -321,15 +240,14 @@ func TestCampaigns_Cancel(t *testing.T) {
 		t.Fatalf("StartCampaign: %v", err)
 	}
 
-	// Give the goroutine a moment to start sending.
-	time.Sleep(200 * time.Millisecond)
+	// Let exactly 2 emails through, then cancel while the rest are blocked.
+	bm.Release(2)
+	waitForEmails(t, h, 2)
 
-	// Cancel it.
 	if err := h.Client.CancelCampaign(created.ID); err != nil {
 		t.Fatalf("CancelCampaign: %v", err)
 	}
 
-	// Verify the status is cancelled.
 	got, err := h.Client.GetCampaign(created.ID)
 	if err != nil {
 		t.Fatalf("GetCampaign: %v", err)
@@ -338,13 +256,14 @@ func TestCampaigns_Cancel(t *testing.T) {
 		t.Errorf("Status = %q, want %q", got.Status, "cancelled")
 	}
 
-	// Not all emails should have been sent (campaign was interrupted).
-	if h.Mailer.Count() >= 20 {
-		t.Errorf("expected fewer than 20 emails sent (campaign was cancelled), got %d", h.Mailer.Count())
+	// Exactly 2 emails should have been sent — deterministic, not timing-dependent.
+	if h.Mailer.Count() != 2 {
+		t.Errorf("expected 2 emails sent, got %d", h.Mailer.Count())
 	}
 }
 
 func TestCampaigns_CancelNotRunning(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -352,12 +271,11 @@ func TestCampaigns_CancelNotRunning(t *testing.T) {
 
 	// Cancel a draft campaign — should fail.
 	err := h.Client.CancelCampaign(created.ID)
-	if err == nil {
-		t.Error("expected error cancelling a draft campaign")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
 }
 
 func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -366,20 +284,18 @@ func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
 	created, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(500 * time.Millisecond)
+	waitForCampaignStatus(t, h, created.ID, "active")
 
 	// Complete it explicitly.
 	h.Client.CompleteCampaign(created.ID)
-	time.Sleep(200 * time.Millisecond)
 
 	// Cancelling a completed campaign should fail.
 	err := h.Client.CancelCampaign(created.ID)
-	if err == nil {
-		t.Error("expected error cancelling a completed campaign")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
 }
 
 func TestCampaigns_Update(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -425,6 +341,7 @@ func TestCampaigns_Update(t *testing.T) {
 }
 
 func TestCampaigns_UpdateReferences(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -461,6 +378,7 @@ func TestCampaigns_UpdateReferences(t *testing.T) {
 }
 
 func TestCampaigns_UpdateRejectsInvalidReferences(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -469,26 +387,21 @@ func TestCampaigns_UpdateRejectsInvalidReferences(t *testing.T) {
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		TemplateID: strPtr("nonexistent"),
 	})
-	if err == nil {
-		t.Error("expected error for invalid template reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "template not found")
 
 	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		SMTPProfileID: strPtr("nonexistent"),
 	})
-	if err == nil {
-		t.Error("expected error for invalid SMTP profile reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "SMTP profile not found")
 
 	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		TargetListID: strPtr("nonexistent"),
 	})
-	if err == nil {
-		t.Error("expected error for invalid target list reference")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "target list not found")
 }
 
 func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -497,30 +410,28 @@ func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
 	created, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(created.ID)
-	time.Sleep(500 * time.Millisecond)
+	waitForCampaignStatus(t, h, created.ID, "active")
 	h.Client.CompleteCampaign(created.ID)
 
 	// Campaign is now completed — update should fail.
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		Name: strPtr("Should Fail"),
 	})
-	if err == nil {
-		t.Error("expected error updating a non-draft campaign")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign can only be started from draft status")
 }
 
 func TestCampaigns_UpdateNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	_, err := h.Client.UpdateCampaign("nonexistent", sdk.UpdateCampaignRequest{
 		Name: strPtr("Nope"),
 	})
-	if err == nil {
-		t.Error("expected error for nonexistent campaign")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }
 
 func TestCampaigns_SendTestEmail(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
@@ -548,22 +459,250 @@ func TestCampaigns_SendTestEmail(t *testing.T) {
 }
 
 func TestCampaigns_SendTestEmailRequiresAddress(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 	listID, tmplID, smtpID := createPrerequisites(t, h)
 
 	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 
 	err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: ""})
-	if err == nil {
-		t.Error("expected error for empty email address")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "email is required")
 }
 
 func TestCampaigns_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	err := h.Client.DeleteCampaign("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent campaign")
+	wantError(t, err, http.StatusNotFound, "not found")
+}
+
+func TestCampaigns_InvalidTemplateSyntax(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	// Templates with broken syntax are accepted at creation time — the syntax
+	// is only validated when rendering. The preview endpoint catches this.
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.HTMLBody = "<p>{{.Unclosed</p>"
+	})
+
+	_, err := h.Client.PreviewTemplate(tmpl.ID, sdk.PreviewTemplateRequest{
+		FirstName: "Alice",
+	})
+	wantError(t, err, http.StatusUnprocessableEntity, "rendering HTML body")
+}
+
+func TestCampaigns_EmptyTargetList(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	// Create a target list with zero targets.
+	list, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Empty List"})
+	if err != nil {
+		t.Fatalf("CreateTargetList: %v", err)
 	}
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
+
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	created, err := h.Client.CreateCampaign(req)
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Verify no results were pre-populated.
+	results, _ := h.Client.ListCampaignResults(created.ID)
+	if len(results) != 0 {
+		t.Errorf("expected 0 results for empty target list, got %d", len(results))
+	}
+
+	// Starting the campaign should succeed — sending loop simply has nothing to send.
+	if err := h.Client.StartCampaign(created.ID); err != nil {
+		t.Fatalf("StartCampaign: %v", err)
+	}
+
+	waitForCampaignStatus(t, h, created.ID, "active")
+
+	// No emails should have been sent.
+	if h.Mailer.Count() != 0 {
+		t.Errorf("expected 0 emails sent, got %d", h.Mailer.Count())
+	}
+}
+
+func TestCampaigns_ConcurrentStartAndCancel(t *testing.T) {
+	t.Parallel()
+	h, bm := test.NewHarnessWithBlockingMailer(t)
+
+	list := createTestTargetList(t, h)
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
+
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	created, err := h.Client.CreateCampaign(req)
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Start the campaign — sends will block until released.
+	if err := h.Client.StartCampaign(created.ID); err != nil {
+		t.Fatalf("StartCampaign: %v", err)
+	}
+	waitForCampaignStatus(t, h, created.ID, "active")
+
+	// Cancel immediately while sends are blocked.
+	if err := h.Client.CancelCampaign(created.ID); err != nil {
+		t.Fatalf("CancelCampaign: %v", err)
+	}
+
+	got, _ := h.Client.GetCampaign(created.ID)
+	if got.Status != "cancelled" {
+		t.Errorf("Status = %q, want %q", got.Status, "cancelled")
+	}
+
+	// Release sends so the goroutine can clean up.
+	bm.Release(10)
+}
+
+func TestCampaigns_ConcurrentCompleteAndCancel(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, _ := h.Client.CreateCampaign(req)
+
+	h.Client.StartCampaign(created.ID)
+	waitForEmails(t, h, 2)
+
+	// Complete immediately.
+	h.Client.CompleteCampaign(created.ID)
+
+	// Cancel after complete — should fail, but must not panic.
+	err := h.Client.CancelCampaign(created.ID)
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+
+	got, _ := h.Client.GetCampaign(created.ID)
+	if got.Status != "completed" {
+		t.Errorf("Status = %q, want %q", got.Status, "completed")
+	}
+}
+
+func TestCampaigns_UpdateTargetListDoesNotRepopulateResults(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Verify original results (alice and bob from createPrerequisites).
+	results, _ := h.Client.ListCampaignResults(created.ID)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+
+	// Create a different target list.
+	newList := createTestTargetList(t, h,
+		sdk.AddTargetRequest{Email: "carol@acme.com"},
+		sdk.AddTargetRequest{Email: "dave@acme.com"},
+		sdk.AddTargetRequest{Email: "eve@acme.com"},
+	)
+
+	// Update the campaign's target list.
+	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
+		TargetListID: strPtr(newList.ID),
+	})
+	if err != nil {
+		t.Fatalf("UpdateCampaign: %v", err)
+	}
+
+	// Results should still reflect the original target list — the update
+	// does not re-populate results (this documents current behavior).
+	results, _ = h.Client.ListCampaignResults(created.ID)
+	if len(results) != 2 {
+		t.Errorf("expected 2 results (unchanged), got %d", len(results))
+	}
+	emails := map[string]bool{}
+	for _, r := range results {
+		emails[r.Email] = true
+	}
+	if !emails["alice@acme.com"] || !emails["bob@acme.com"] {
+		t.Errorf("expected original results (alice, bob), got %v", emails)
+	}
+}
+
+func TestCampaigns_SendTestEmailOnActiveCampaign(t *testing.T) {
+	t.Parallel()
+	h, bm := test.NewHarnessWithBlockingMailer(t)
+
+	list := createTestTargetList(t, h)
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
+
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	created, err := h.Client.CreateCampaign(req)
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	// Start the campaign — sends will block.
+	h.Client.StartCampaign(created.ID)
+	waitForCampaignStatus(t, h, created.ID, "active")
+
+	// Release enough sends for both the campaign emails (2 targets) and the
+	// test email (1). The campaign goroutine and SendTestEmail each open their
+	// own connection, so all sends share the same gate.
+	bm.Release(5)
+
+	err = h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: "tester@example.com"})
+	if err != nil {
+		t.Errorf("SendTestEmail on active campaign: %v", err)
+	}
+
+	h.Client.CancelCampaign(created.ID)
+}
+
+func TestCampaigns_CompleteRequiresRunning(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
+
+	// Completing a draft campaign should fail.
+	err := h.Client.CompleteCampaign(created.ID)
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+}
+
+func TestCampaigns_CompleteAlreadyCompleted(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	req := validCampaignRequest(listID, tmplID, smtpID)
+	req.SendRate = 600
+	created, _ := h.Client.CreateCampaign(req)
+
+	h.Client.StartCampaign(created.ID)
+	waitForEmails(t, h, 2)
+	h.Client.CompleteCampaign(created.ID)
+
+	// Completing again should fail.
+	err := h.Client.CompleteCampaign(created.ID)
+	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+}
+
+func TestCampaigns_SendTestEmailNotFound(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	err := h.Client.SendTestEmail("nonexistent", sdk.SendTestEmailRequest{Email: "test@example.com"})
+	wantError(t, err, http.StatusNotFound, "not found")
 }

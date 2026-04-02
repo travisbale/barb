@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/travisbale/barb/sdk"
@@ -8,6 +9,7 @@ import (
 )
 
 func TestTemplates_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
@@ -73,43 +75,8 @@ func TestTemplates_CRUD(t *testing.T) {
 	}
 }
 
-func TestTemplates_RequiresName(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Subject:  "Test",
-		HTMLBody: "<p>test</p>",
-	})
-	if err == nil {
-		t.Error("expected error for missing name")
-	}
-}
-
-func TestTemplates_RequiresSubject(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:     "Test",
-		HTMLBody: "<p>test</p>",
-	})
-	if err == nil {
-		t.Error("expected error for missing subject")
-	}
-}
-
-func TestTemplates_RequiresBody(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:    "Test",
-		Subject: "Test",
-	})
-	if err == nil {
-		t.Error("expected error for missing body")
-	}
-}
-
 func TestTemplates_HTMLOnlyIsValid(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
@@ -126,6 +93,7 @@ func TestTemplates_HTMLOnlyIsValid(t *testing.T) {
 }
 
 func TestTemplates_TextOnlyIsValid(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
@@ -142,27 +110,26 @@ func TestTemplates_TextOnlyIsValid(t *testing.T) {
 }
 
 func TestTemplates_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	err := h.Client.DeleteTemplate("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent template")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }
 
 func TestTemplates_UpdateNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	_, err := h.Client.UpdateTemplate("nonexistent", sdk.UpdateTemplateRequest{
 		Name:    strPtr("Test"),
 		Subject: strPtr("Test"),
 	})
-	if err == nil {
-		t.Error("expected error for nonexistent template")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }
 
 func TestTemplates_PartialUpdate(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{

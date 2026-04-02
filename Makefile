@@ -27,11 +27,11 @@ clean:
 
 test:
 	@echo "Running all tests (including integration)..."
-	@go test -count=1 -timeout=120s ./...
+	@go test -race -count=1 -timeout=120s ./...
 
 unit:
 	@echo "Running unit tests only..."
-	@go test -tags unit -count=1 -timeout=60s ./...
+	@go test -race -tags unit -count=1 -timeout=60s ./...
 
 fmt:
 	@echo "Formatting code..."

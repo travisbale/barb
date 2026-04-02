@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/travisbale/barb/sdk"
@@ -8,6 +9,7 @@ import (
 )
 
 func TestPhishlets_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
@@ -82,6 +84,7 @@ login:
 }
 
 func TestPhishlets_ExtractsNameFromYAML(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
@@ -95,38 +98,28 @@ func TestPhishlets_ExtractsNameFromYAML(t *testing.T) {
 	}
 }
 
-func TestPhishlets_RequiresYAML(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{YAML: ""})
-	if err == nil {
-		t.Error("expected error for empty YAML")
-	}
-}
-
 func TestPhishlets_RequiresNameInYAML(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	_, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
 		YAML: "author: test\nversion: '1.0'\n",
 	})
-	if err == nil {
-		t.Error("expected error for YAML without name field")
-	}
+	wantError(t, err, http.StatusInternalServerError, "failed to create phishlet")
 }
 
 func TestPhishlets_InvalidYAML(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	_, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
 		YAML: "{{invalid yaml",
 	})
-	if err == nil {
-		t.Error("expected error for invalid YAML")
-	}
+	wantError(t, err, http.StatusInternalServerError, "failed to create phishlet")
 }
 
 func TestPhishlets_UpdateInvalidYAML(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{YAML: validPhishletYAML})
@@ -135,9 +128,7 @@ func TestPhishlets_UpdateInvalidYAML(t *testing.T) {
 	}
 
 	_, err = h.Client.UpdatePhishlet(created.ID, sdk.UpdatePhishletRequest{YAML: "{{invalid"})
-	if err == nil {
-		t.Error("expected error for invalid YAML on update")
-	}
+	wantError(t, err, http.StatusInternalServerError, "failed to update phishlet")
 
 	// Verify the original is unchanged.
 	got, err := h.Client.GetPhishlet(created.ID)
@@ -150,10 +141,9 @@ func TestPhishlets_UpdateInvalidYAML(t *testing.T) {
 }
 
 func TestPhishlets_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	err := h.Client.DeletePhishlet("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent phishlet")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }

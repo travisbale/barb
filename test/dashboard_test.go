@@ -3,13 +3,13 @@ package test_test
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/travisbale/barb/sdk"
 	"github.com/travisbale/barb/test"
 )
 
 func TestDashboard_Empty(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	dashboard, err := h.Client.Dashboard()
@@ -34,29 +34,22 @@ func TestDashboard_Empty(t *testing.T) {
 }
 
 func TestDashboard_CampaignCounts(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
-	// Create prerequisites.
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Dashboard Targets"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "alice@acme.com"})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name: "Dashboard Template", Subject: "Test", HTMLBody: "<p>test</p>",
-	})
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Dashboard SMTP", Host: "smtp.example.com", FromAddr: "from@example.com",
-	})
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "alice@acme.com"})
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
 
 	// Create a draft campaign.
-	h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Draft One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com",
-	})
+	h.Client.CreateCampaign(validCampaignRequest(list.ID, tmpl.ID, smtp.ID))
 
 	// Create, start, and complete a campaign.
-	started, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Started One", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	started, _ := h.Client.CreateCampaign(req)
 	h.Client.StartCampaign(started.ID)
-	time.Sleep(1 * time.Second)
+	waitForEmails(t, h, 1)
 	h.Client.CompleteCampaign(started.ID)
 
 	dashboard, err := h.Client.Dashboard()
@@ -75,28 +68,24 @@ func TestDashboard_CampaignCounts(t *testing.T) {
 }
 
 func TestDashboard_ActiveCampaignProgress(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	// Create prerequisites with many targets.
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Dashboard Active Targets"})
-	for i := 0; i < 20; i++ {
-		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{
-			Email: fmt.Sprintf("user%d@acme.com", i),
-		})
+	targets := make([]sdk.AddTargetRequest, 20)
+	for i := range targets {
+		targets[i] = sdk.AddTargetRequest{Email: fmt.Sprintf("user%d@acme.com", i)}
 	}
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name: "Dashboard Active Template", Subject: "Test", HTMLBody: "<p>test</p>",
-	})
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Dashboard Active SMTP", Host: "smtp.example.com", FromAddr: "from@example.com",
-	})
+	list := createTestTargetList(t, h, targets...)
+	tmpl := createTestTemplate(t, h)
+	smtp := createTestSMTP(t, h)
 
 	// Start a campaign with slow send rate so it's still active.
 	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
 		Name: "Active Dashboard", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 1,
 	})
 	h.Client.StartCampaign(campaign.ID)
-	time.Sleep(200 * time.Millisecond)
+	waitForCampaignStatus(t, h, campaign.ID, "active")
 
 	dashboard, err := h.Client.Dashboard()
 	if err != nil {
@@ -118,6 +107,7 @@ func TestDashboard_ActiveCampaignProgress(t *testing.T) {
 }
 
 func TestDashboard_TemplatePreview(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	tmpl, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
@@ -151,6 +141,7 @@ func TestDashboard_TemplatePreview(t *testing.T) {
 }
 
 func TestDashboard_TemplatePreviewNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	_, err := h.Client.PreviewTemplate("nonexistent", sdk.PreviewTemplateRequest{

@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,13 +61,21 @@ type mailpitList struct {
 	Total    int              `json:"messages_count"`
 }
 
-func startMailpit(t *testing.T) (smtpHost string, smtpPort int, apiURL string) {
-	t.Helper()
+// Shared Mailpit container — started once and reused across all integration tests.
+var (
+	mailpitOnce     sync.Once
+	sharedSMTPHost  string
+	sharedSMTPPort  int
+	sharedAPIURL    string
+	mailpitSkipMsg  string
+	mailpitStartErr error
+)
+
+func startSharedMailpit() {
+	// Disable Ryuk reaper — testcontainers can't detect process exit in all environments.
+	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+
 	ctx := context.Background()
-
-	// Disable Ryuk reaper — we clean up via t.Cleanup.
-	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
-
 	req := testcontainers.ContainerRequest{
 		Image:        "axllent/mailpit:latest",
 		ExposedPorts: []string{"1025/tcp", "8025/tcp"},
@@ -80,26 +91,41 @@ func startMailpit(t *testing.T) (smtpHost string, smtpPort int, apiURL string) {
 		Started:          true,
 	})
 	if err != nil {
-		t.Skipf("skipping: could not start mailpit container: %v", err)
+		mailpitSkipMsg = fmt.Sprintf("could not start mailpit container: %v", err)
+		mailpitStartErr = err
+		return
 	}
-	t.Cleanup(func() { container.Terminate(ctx) })
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		t.Fatalf("getting container host: %v", err)
+		mailpitStartErr = fmt.Errorf("getting container host: %w", err)
+		return
 	}
-
 	smtpMapped, err := container.MappedPort(ctx, "1025/tcp")
 	if err != nil {
-		t.Fatalf("getting SMTP port: %v", err)
+		mailpitStartErr = fmt.Errorf("getting SMTP port: %w", err)
+		return
 	}
-
 	apiMapped, err := container.MappedPort(ctx, "8025/tcp")
 	if err != nil {
-		t.Fatalf("getting API port: %v", err)
+		mailpitStartErr = fmt.Errorf("getting API port: %w", err)
+		return
 	}
 
-	return host, smtpMapped.Int(), fmt.Sprintf("http://%s:%d", host, apiMapped.Int())
+	sharedSMTPHost = host
+	sharedSMTPPort = smtpMapped.Int()
+	sharedAPIURL = fmt.Sprintf("http://%s:%d", host, apiMapped.Int())
+}
+
+// requireMailpit ensures the shared Mailpit container is running.
+// Each test uses unique recipient addresses so no clearing is needed.
+func requireMailpit(t *testing.T) (smtpHost string, smtpPort int, apiURL string) {
+	t.Helper()
+	mailpitOnce.Do(startSharedMailpit)
+	if mailpitStartErr != nil {
+		t.Skipf("skipping: %s", mailpitSkipMsg)
+	}
+	return sharedSMTPHost, sharedSMTPPort, sharedAPIURL
 }
 
 func getMailpitMessages(t *testing.T, apiURL string) mailpitList {
@@ -132,6 +158,43 @@ func getMailpitMessage(t *testing.T, apiURL, id string) mailpitMessageDetail {
 	return result
 }
 
+// searchMailpit queries Mailpit for messages matching a search query.
+func searchMailpit(t *testing.T, apiURL, query string) mailpitList {
+	t.Helper()
+	resp, err := http.Get(apiURL + "/api/v1/search?query=" + url.QueryEscape(query))
+	if err != nil {
+		t.Fatalf("searching mailpit: %v", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var result mailpitList
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("parsing mailpit search: %v (body: %s)", err, body)
+	}
+	return result
+}
+
+// waitForMailpit polls Mailpit until at least n messages matching the query
+// have been received. If query is empty, returns all messages.
+func waitForMailpit(t *testing.T, apiURL string, n int, query string) mailpitList {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var result mailpitList
+		if query == "" {
+			result = getMailpitMessages(t, apiURL)
+		} else {
+			result = searchMailpit(t, apiURL, query)
+		}
+		if result.Total >= n {
+			return result
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %d messages (query=%q)", n, query)
+	return mailpitList{}
+}
+
 func getMailpitMessageHeaders(t *testing.T, apiURL, id string) map[string][]string {
 	t.Helper()
 	resp, err := http.Get(apiURL + "/api/v1/message/" + id + "/headers")
@@ -148,109 +211,77 @@ func getMailpitMessageHeaders(t *testing.T, apiURL, id string) map[string][]stri
 }
 
 func TestIntegration_SendTestEmail(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	// Create SMTP profile pointing to Mailpit.
-	smtp, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name:     "Mailpit",
-		Host:     smtpHost,
-		Port:     smtpPort,
-		FromAddr: "phisher@example.com",
-		FromName: "IT Support",
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
+		r.FromAddr = "phisher@sendtest.example.com"
+		r.FromName = "IT Support"
 	})
-	if err != nil {
-		t.Fatalf("CreateSMTPProfile: %v", err)
-	}
-
-	// Create a template.
-	tmpl, err := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:     "Test Email Template",
-		Subject:  "Hello {{.FirstName}}",
-		HTMLBody: "<p>Dear {{.FirstName}}, click <a href=\"{{.URL}}\">here</a>.</p>",
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.Subject = "Hello {{.FirstName}}"
+		r.HTMLBody = "<p>Dear {{.FirstName}}, click <a href=\"{{.URL}}\">here</a>.</p>"
 	})
-	if err != nil {
-		t.Fatalf("CreateTemplate: %v", err)
-	}
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "victim@sendtest.example.com", FirstName: "Alice"})
 
-	// Create a target list.
-	list, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Test Targets"})
-	if err != nil {
-		t.Fatalf("CreateTargetList: %v", err)
-	}
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "victim@example.com", FirstName: "Alice"})
-
-	// Create a draft campaign.
-	campaign, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name:          "Integration Test",
-		TemplateID:    tmpl.ID,
-		SMTPProfileID: smtp.ID,
-		TargetListID:  list.ID,
-		RedirectURL:   "https://example.com",
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	campaign, err := h.Client.CreateCampaign(req)
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
 
-	// Send a test email.
-	err = h.Client.SendTestEmail(campaign.ID, sdk.SendTestEmailRequest{Email: "operator@example.com"})
+	err = h.Client.SendTestEmail(campaign.ID, sdk.SendTestEmailRequest{Email: "operator@sendtest.example.com"})
 	if err != nil {
 		t.Fatalf("SendTestEmail: %v", err)
 	}
 
-	// Verify Mailpit received the email.
-	time.Sleep(500 * time.Millisecond)
-	messages := getMailpitMessages(t, mailpitAPI)
-	if messages.Total != 1 {
-		t.Fatalf("expected 1 message in mailpit, got %d", messages.Total)
-	}
+	messages := waitForMailpit(t, mailpitAPI, 1, "to:sendtest.example.com")
 
 	msg := messages.Messages[0]
 	if msg.Subject != "Hello Test" {
 		t.Errorf("Subject = %q, want %q", msg.Subject, "Hello Test")
 	}
-	if msg.From.Address != "phisher@example.com" {
-		t.Errorf("From = %q, want %q", msg.From.Address, "phisher@example.com")
+	if msg.From.Address != "phisher@sendtest.example.com" {
+		t.Errorf("From = %q, want %q", msg.From.Address, "phisher@sendtest.example.com")
 	}
 	if msg.From.Name != "IT Support" {
 		t.Errorf("FromName = %q, want %q", msg.From.Name, "IT Support")
 	}
-	if len(msg.To) == 0 || msg.To[0].Address != "operator@example.com" {
-		t.Errorf("To = %v, want operator@example.com", msg.To)
+	if len(msg.To) == 0 || msg.To[0].Address != "operator@sendtest.example.com" {
+		t.Errorf("To = %v, want operator@sendtest.example.com", msg.To)
 	}
 }
 
 func TestIntegration_CampaignSendsEmails(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Mailpit", Host: smtpHost, Port: smtpPort, FromAddr: "noreply@example.com",
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
 	})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name: "Campaign Template", Subject: "Important: {{.FirstName}}", HTMLBody: "<p>Click {{.URL}}</p>",
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.Subject = "Important: {{.FirstName}}"
 	})
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Campaign Targets"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "alice@example.com", FirstName: "Alice"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "bob@example.com", FirstName: "Bob"})
+	list := createTestTargetList(t, h,
+		sdk.AddTargetRequest{Email: "alice@sends.example.com", FirstName: "Alice"},
+		sdk.AddTargetRequest{Email: "bob@sends.example.com", FirstName: "Bob"},
+	)
 
-	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Send Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	campaign, _ := h.Client.CreateCampaign(req)
 
 	if err := h.Client.StartCampaign(campaign.ID); err != nil {
 		t.Fatalf("StartCampaign: %v", err)
 	}
 
-	// Wait for sending to complete.
-	time.Sleep(2 * time.Second)
+	messages := waitForMailpit(t, mailpitAPI, 2, "to:sends.example.com")
 
-	messages := getMailpitMessages(t, mailpitAPI)
-	if messages.Total != 2 {
-		t.Fatalf("expected 2 messages in mailpit, got %d", messages.Total)
-	}
-
-	// Verify subjects were rendered per-target.
 	subjects := map[string]bool{}
 	for _, msg := range messages.Messages {
 		subjects[msg.Subject] = true
@@ -264,35 +295,31 @@ func TestIntegration_CampaignSendsEmails(t *testing.T) {
 }
 
 func TestIntegration_CustomHeaders(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Mailpit Headers", Host: smtpHost, Port: smtpPort, FromAddr: "test@example.com",
-		CustomHeaders: map[string]string{
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
+		r.CustomHeaders = map[string]string{
 			"X-Mailer":     "Outlook 16.0",
 			"X-Custom-Tag": "phishing-test",
-		},
+		}
 	})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name: "Headers Template", Subject: "Test Headers", HTMLBody: "<p>test</p>",
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.Subject = "Test Headers"
 	})
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Header Targets"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "target@example.com"})
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "target@headers.example.com"})
 
-	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Headers Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	campaign, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(campaign.ID)
-	time.Sleep(2 * time.Second)
 
-	messages := getMailpitMessages(t, mailpitAPI)
-	if messages.Total != 1 {
-		t.Fatalf("expected 1 message, got %d", messages.Total)
-	}
+	messages := waitForMailpit(t, mailpitAPI, 1, "to:headers.example.com")
 
-	// Verify custom headers via Mailpit's headers API.
 	headers := getMailpitMessageHeaders(t, mailpitAPI, messages.Messages[0].ID)
 	if v := headers["X-Mailer"]; len(v) == 0 || v[0] != "Outlook 16.0" {
 		t.Errorf("X-Mailer = %v, want [Outlook 16.0]", v)
@@ -303,38 +330,32 @@ func TestIntegration_CustomHeaders(t *testing.T) {
 }
 
 func TestIntegration_EnvelopeSender(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Mailpit", Host: smtpHost, Port: smtpPort, FromAddr: "visible@example.com",
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
+		r.FromAddr = "visible@envelope.example.com"
 	})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:           "Envelope Test",
-		Subject:        "Envelope Sender Test",
-		HTMLBody:       "<p>test</p>",
-		EnvelopeSender: "bounce@attacker.com",
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.Subject = "Envelope Sender Test"
+		r.EnvelopeSender = "bounce@attacker.com"
 	})
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Envelope Targets"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "target@example.com"})
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "target@envelope.example.com"})
 
-	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Envelope Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	campaign, _ := h.Client.CreateCampaign(req)
 	h.Client.StartCampaign(campaign.ID)
-	time.Sleep(2 * time.Second)
 
-	messages := getMailpitMessages(t, mailpitAPI)
-	if messages.Total != 1 {
-		t.Fatalf("expected 1 message, got %d", messages.Total)
+	messages := waitForMailpit(t, mailpitAPI, 1, "to:envelope.example.com")
+
+	if messages.Messages[0].From.Address != "visible@envelope.example.com" {
+		t.Errorf("From = %q, want visible@envelope.example.com", messages.Messages[0].From.Address)
 	}
 
-	// From header should be the SMTP profile's address.
-	if messages.Messages[0].From.Address != "visible@example.com" {
-		t.Errorf("From = %q, want visible@example.com", messages.Messages[0].From.Address)
-	}
-
-	// Return-Path should be the envelope sender.
 	detail := getMailpitMessage(t, mailpitAPI, messages.Messages[0].ID)
 	if detail.ReturnPath != "bounce@attacker.com" {
 		t.Errorf("ReturnPath = %q, want bounce@attacker.com", detail.ReturnPath)
@@ -342,31 +363,33 @@ func TestIntegration_EnvelopeSender(t *testing.T) {
 }
 
 func TestIntegration_CampaignCancelStopsSending(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Mailpit", Host: smtpHost, Port: smtpPort, FromAddr: "test@example.com",
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
 	})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name: "Cancel Template", Subject: "Cancel Test", HTMLBody: "<p>test</p>",
-	})
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Cancel Targets"})
-	for i := 0; i < 20; i++ {
-		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: fmt.Sprintf("user%d@example.com", i)})
-	}
+	tmpl := createTestTemplate(t, h)
 
-	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Cancel Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com",
-		SendRate: 1, // 1 per minute — very slow
-	})
+	targets := make([]sdk.AddTargetRequest, 20)
+	for i := range targets {
+		targets[i] = sdk.AddTargetRequest{Email: fmt.Sprintf("user%d@cancel.example.com", i)}
+	}
+	list := createTestTargetList(t, h, targets...)
+
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 1 // 1 per minute — very slow
+	campaign, _ := h.Client.CreateCampaign(req)
 
 	h.Client.StartCampaign(campaign.ID)
-	time.Sleep(500 * time.Millisecond)
+	waitForMailpit(t, mailpitAPI, 1, "to:cancel.example.com")
 	h.Client.CancelCampaign(campaign.ID)
-	time.Sleep(500 * time.Millisecond)
 
-	messages := getMailpitMessages(t, mailpitAPI)
+	// Brief pause for cancellation to propagate.
+	time.Sleep(100 * time.Millisecond)
+	messages := searchMailpit(t, mailpitAPI, "to:cancel.example.com")
 	if messages.Total >= 20 {
 		t.Errorf("expected fewer than 20 emails (campaign cancelled), got %d", messages.Total)
 	}
@@ -376,33 +399,29 @@ func TestIntegration_CampaignCancelStopsSending(t *testing.T) {
 }
 
 func TestIntegration_TemplateVariablesRendered(t *testing.T) {
-	smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+	t.Parallel()
+	smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
 
-	smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Mailpit", Host: smtpHost, Port: smtpPort, FromAddr: "test@example.com",
+	smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+		r.Host = smtpHost
+		r.Port = smtpPort
 	})
-	tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-		Name:     "Variable Template",
-		Subject:  "Hello {{.FirstName}} {{.LastName}}",
-		HTMLBody: "<p>Dear {{.FirstName}}, please visit <a href=\"{{.URL}}\">this link</a>.</p>",
-		TextBody: "Dear {{.FirstName}} {{.LastName}}, visit {{.URL}}",
+	tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+		r.Subject = "Hello {{.FirstName}} {{.LastName}}"
+		r.HTMLBody = "<p>Dear {{.FirstName}}, please visit <a href=\"{{.URL}}\">this link</a>.</p>"
+		r.TextBody = "Dear {{.FirstName}} {{.LastName}}, visit {{.URL}}"
 	})
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Variable Targets"})
-	h.Client.AddTarget(list.ID, sdk.AddTargetRequest{
-		Email: "alice@example.com", FirstName: "Alice", LastName: "Smith",
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{
+		Email: "alice@variables.example.com", FirstName: "Alice", LastName: "Smith",
 	})
 
-	campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-		Name: "Variables Test", TemplateID: tmpl.ID, SMTPProfileID: smtp.ID, TargetListID: list.ID, RedirectURL: "https://example.com", SendRate: 600,
-	})
+	req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+	req.SendRate = 600
+	campaign, _ := h.Client.CreateCampaign(req)
 	h.Client.StartCampaign(campaign.ID)
-	time.Sleep(2 * time.Second)
 
-	messages := getMailpitMessages(t, mailpitAPI)
-	if messages.Total != 1 {
-		t.Fatalf("expected 1 message, got %d", messages.Total)
-	}
+	messages := waitForMailpit(t, mailpitAPI, 1, "to:variables.example.com")
 
 	msg := messages.Messages[0]
 	if msg.Subject != "Hello Alice Smith" {

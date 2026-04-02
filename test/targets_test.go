@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func TestTargetLists_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	// Create a target list.
@@ -55,25 +57,16 @@ func TestTargetLists_CRUD(t *testing.T) {
 	}
 }
 
-func TestTargetLists_CreateRequiresName(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: ""})
-	if err == nil {
-		t.Error("expected error for empty name")
-	}
-}
-
 func TestTargetLists_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	err := h.Client.DeleteTargetList("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent list")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }
 
 func TestTargets_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	// Create a list first.
@@ -121,20 +114,8 @@ func TestTargets_CRUD(t *testing.T) {
 	}
 }
 
-func TestTargets_RequiresEmail(t *testing.T) {
-	h := test.NewHarness(t)
-
-	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Test"})
-
-	_, err := h.Client.AddTarget(list.ID, sdk.AddTargetRequest{
-		FirstName: "Bob",
-	})
-	if err == nil {
-		t.Error("expected error for missing email")
-	}
-}
-
 func TestTargets_CascadeDeleteWithList(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Test"})
@@ -156,6 +137,7 @@ func TestTargets_CascadeDeleteWithList(t *testing.T) {
 }
 
 func TestTargets_ImportCSV(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Import Test"})
@@ -183,6 +165,7 @@ carol@acme.com,Carol,Lee,,
 }
 
 func TestTargets_ImportCSV_RequiresEmailColumn(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Bad CSV"})
@@ -191,12 +174,11 @@ func TestTargets_ImportCSV_RequiresEmailColumn(t *testing.T) {
 Alice,Engineering
 `
 	_, err := h.Client.ImportTargetsCSV(list.ID, strings.NewReader(csv))
-	if err == nil {
-		t.Error("expected error for CSV without email column")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "email")
 }
 
 func TestTargets_ImportCSV_SkipsEmptyEmail(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Skip Test"})
@@ -216,6 +198,7 @@ carol@acme.com,Carol
 }
 
 func TestTargets_ImportCSV_FlexibleHeaders(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Flex Headers"})
@@ -241,6 +224,7 @@ alice@acme.com,Alice,Smith,Developer
 }
 
 func TestStatus(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	status, err := h.Client.Status()

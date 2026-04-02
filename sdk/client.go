@@ -10,10 +10,25 @@ import (
 	"net/http/cookiejar"
 )
 
+type validatable interface {
+	Validate() error
+}
+
 // Client communicates with the Barb API.
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+}
+
+// HTTPClient returns the underlying HTTP client, including its cookie jar.
+// Useful for tests that need to make raw requests with the same session.
+func (c *Client) HTTPClient() *http.Client {
+	return c.httpClient
+}
+
+// BaseURL returns the base URL of the API server.
+func (c *Client) BaseURL() string {
+	return c.baseURL
 }
 
 // NewClient creates a Client that talks to the Barb API at baseURL.
@@ -127,9 +142,6 @@ func (c *Client) DeleteTarget(id string) error {
 // --- Campaigns ---
 
 func (c *Client) CreateCampaign(req CreateCampaignRequest) (*CampaignResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
 	return send[CampaignResponse](c, http.MethodPost, RouteCampaigns, req)
 }
 
@@ -267,9 +279,6 @@ func (c *Client) DeleteSMTPProfile(id string) error {
 // --- Miraged Connections ---
 
 func (c *Client) EnrollMiraged(req EnrollMiragedRequest) (*MiragedResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
 	return send[MiragedResponse](c, http.MethodPost, RouteMiraged, req)
 }
 
@@ -304,7 +313,7 @@ func (c *Client) EnableMiragedPhishlet(connectionID, name string, req EnableMira
 
 func (c *Client) DisableMiragedPhishlet(connectionID, name string) (*MiragedPhishletResponse, error) {
 	route := ResolveRoute(RouteMiragedPhishletDisable, "id", connectionID, "name", name)
-	return send[MiragedPhishletResponse](c, http.MethodPost, route, nil)
+	return sendNoBody[MiragedPhishletResponse](c, http.MethodPost, route)
 }
 
 func (c *Client) PushMiragedPhishlet(connectionID string, yaml string) error {
@@ -372,7 +381,29 @@ func get[T any](c *Client, path string) (*T, error) {
 	return &result, nil
 }
 
-func send[T any](c *Client, method, path string, body any) (*T, error) {
+// sendNoBody is like send but for endpoints that take no request body.
+func sendNoBody[T any](c *Client, method, path string) (*T, error) {
+	resp, err := c.do(method, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if err := checkStatus(resp); err != nil {
+		return nil, err
+	}
+
+	var result T
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("unable to decode response, expected JSON from API")
+	}
+	return &result, nil
+}
+
+func send[T any](c *Client, method, path string, body validatable) (*T, error) {
+	if err := body.Validate(); err != nil {
+		return nil, err
+	}
 	resp, err := c.do(method, path, body)
 	if err != nil {
 		return nil, err
@@ -399,14 +430,24 @@ func discard(c *Client, method, path string) error {
 	return checkStatus(resp)
 }
 
+// APIError is returned when the server responds with an HTTP error status code.
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("api: %s", e.Message)
+	}
+	return fmt.Sprintf("api: HTTP %d", e.StatusCode)
+}
+
 func checkStatus(resp *http.Response) error {
 	if resp.StatusCode < 400 {
 		return nil
 	}
 	var e ErrorResponse
 	_ = json.NewDecoder(resp.Body).Decode(&e)
-	if e.Error != "" {
-		return fmt.Errorf("api: %s", e.Error)
-	}
-	return fmt.Errorf("api: HTTP %d", resp.StatusCode)
+	return &APIError{StatusCode: resp.StatusCode, Message: e.Error}
 }

@@ -55,17 +55,85 @@ func (c *mockConn) Send(_ *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, t
 
 func (c *mockConn) Close() error { return nil }
 
+// BlockingMailer wraps MockMailer but blocks each Send until explicitly released.
+// Use this for deterministic cancel/concurrency tests.
+type BlockingMailer struct {
+	MockMailer
+	// gate is buffered — send a value to release one blocked Send call.
+	gate chan struct{}
+	// done is closed during test cleanup to unblock any pending sends.
+	done chan struct{}
+}
+
+func NewBlockingMailer() *BlockingMailer {
+	return &BlockingMailer{
+		gate: make(chan struct{}, 100),
+		done: make(chan struct{}),
+	}
+}
+
+// Release allows n pending or future Send calls to proceed.
+func (b *BlockingMailer) Release(n int) {
+	for i := 0; i < n; i++ {
+		b.gate <- struct{}{}
+	}
+}
+
+// Close unblocks all pending and future Send calls. Called during test cleanup.
+func (b *BlockingMailer) CloseGate() {
+	select {
+	case <-b.done:
+	default:
+		close(b.done)
+	}
+}
+
+func (b *BlockingMailer) Dial(ctx context.Context, profile *phishing.SMTPProfile) (phishing.MailConn, error) {
+	return &blockingConn{mailer: b}, nil
+}
+
+type blockingConn struct {
+	mailer *BlockingMailer
+}
+
+func (c *blockingConn) Send(profile *phishing.SMTPProfile, tmpl *phishing.EmailTemplate, target *phishing.Target, lureURL string) error {
+	// Block until released or test cleanup.
+	select {
+	case <-c.mailer.gate:
+	case <-c.mailer.done:
+		return fmt.Errorf("mailer closed")
+	}
+	c.mailer.mu.Lock()
+	defer c.mailer.mu.Unlock()
+	c.mailer.Sent = append(c.mailer.Sent, MockEmail{To: target.Email, Subject: tmpl.Subject})
+	return nil
+}
+
+func (c *blockingConn) Close() error { return nil }
+
 // Harness is a fully-wired test environment. Obtain one via NewHarness.
 type Harness struct {
 	Client *sdk.Client
 	Mailer *MockMailer
 	Addr   string
+	DB     *sqlite.DB
 }
 
 // NewHarness starts a server in-process with an in-memory database and a mock
 // mailer. All resources are cleaned up via t.Cleanup.
 func NewHarness(t *testing.T) *Harness {
 	return newHarness(t, &MockMailer{})
+}
+
+// NewHarnessWithBlockingMailer starts a server with a BlockingMailer that
+// blocks each Send until explicitly released via Release().
+func NewHarnessWithBlockingMailer(t *testing.T) (*Harness, *BlockingMailer) {
+	bm := NewBlockingMailer()
+	h := newHarness(t, bm)
+	h.Mailer = &bm.MockMailer
+	// Unblock any pending sends when the test finishes.
+	t.Cleanup(func() { bm.CloseGate() })
+	return h, bm
 }
 
 // NewHarnessWithMailer starts a server with a real mailer for integration tests.
@@ -83,8 +151,11 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 	t.Cleanup(func() { _ = db.Close() })
 
 	var mockMailer *MockMailer
-	if m, ok := mailer.(*MockMailer); ok {
+	switch m := mailer.(type) {
+	case *MockMailer:
 		mockMailer = m
+	case *BlockingMailer:
+		mockMailer = &m.MockMailer
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
@@ -156,6 +227,7 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 		Client: client,
 		Mailer: mockMailer,
 		Addr:   addr,
+		DB:     db,
 	}
 }
 

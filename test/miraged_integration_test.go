@@ -153,25 +153,15 @@ func TestIntegration_Miraged(t *testing.T) {
 		}
 
 		// Create a campaign that references this miraged + phishlet.
-		smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-			Name: "Lure SMTP", Host: "localhost", Port: 1025, FromAddr: "test@example.com",
-		})
-		tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-			Name: "Lure Template", Subject: "Test", HTMLBody: "<p>{{.URL}}</p>",
-		})
-		list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Lure Targets"})
-		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "target@example.com"})
+		smtp := createTestSMTP(t, h)
+		tmpl := createTestTemplate(t, h)
+		list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "target@example.com"})
 
-		campaign, err := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-			Name:          "Lure Test",
-			TemplateID:    tmpl.ID,
-			SMTPProfileID: smtp.ID,
-			TargetListID:  list.ID,
-			MiragedID:     conn.ID,
-			Phishlet:      "example",
-			RedirectURL:   "https://example.com",
-			SendRate:      600,
-		})
+		req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+		req.MiragedID = conn.ID
+		req.Phishlet = "example"
+		req.SendRate = 600
+		campaign, err := h.Client.CreateCampaign(req)
 		if err != nil {
 			t.Fatalf("CreateCampaign: %v", err)
 		}
@@ -181,7 +171,7 @@ func TestIntegration_Miraged(t *testing.T) {
 			t.Fatalf("StartCampaign: %v", err)
 		}
 
-		time.Sleep(2 * time.Second)
+		waitForCampaignStatus(t, h, campaign.ID, "active")
 
 		// Verify the campaign has a lure URL.
 		got, err := h.Client.GetCampaign(campaign.ID)
@@ -194,39 +184,30 @@ func TestIntegration_Miraged(t *testing.T) {
 	})
 
 	t.Run("TestEmailWithLure", func(t *testing.T) {
-		smtpHost, smtpPort, mailpitAPI := startMailpit(t)
+		smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 
-		smtp, _ := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-			Name: "Mailpit Lure", Host: smtpHost, Port: smtpPort, FromAddr: "test@example.com",
+		smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+			r.Host = smtpHost
+			r.Port = smtpPort
 		})
-		tmpl, _ := h.Client.CreateTemplate(sdk.CreateTemplateRequest{
-			Name: "Lure Email", Subject: "Click here", HTMLBody: "<p>Visit <a href=\"{{.URL}}\">this link</a></p>",
+		tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+			r.Subject = "Click here"
+			r.HTMLBody = "<p>Visit <a href=\"{{.URL}}\">this link</a></p>"
 		})
-		list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Lure Email Targets"})
-		h.Client.AddTarget(list.ID, sdk.AddTargetRequest{Email: "victim@example.com"})
+		list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "victim@lure.example.com"})
 
-		campaign, _ := h.Client.CreateCampaign(sdk.CreateCampaignRequest{
-			Name:          "Test Email Lure",
-			TemplateID:    tmpl.ID,
-			SMTPProfileID: smtp.ID,
-			TargetListID:  list.ID,
-			MiragedID:     conn.ID,
-			Phishlet:      "example",
-			RedirectURL:   "https://example.com",
-		})
+		req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
+		req.MiragedID = conn.ID
+		req.Phishlet = "example"
+		campaign, _ := h.Client.CreateCampaign(req)
 
 		// Send a test email — this creates a persistent lure and includes its URL.
-		err := h.Client.SendTestEmail(campaign.ID, sdk.SendTestEmailRequest{Email: "operator@example.com"})
+		err := h.Client.SendTestEmail(campaign.ID, sdk.SendTestEmailRequest{Email: "operator@lure.example.com"})
 		if err != nil {
 			t.Fatalf("SendTestEmail: %v", err)
 		}
 
-		time.Sleep(500 * time.Millisecond)
-
-		messages := getMailpitMessages(t, mailpitAPI)
-		if messages.Total != 1 {
-			t.Fatalf("expected 1 message, got %d", messages.Total)
-		}
+		messages := waitForMailpit(t, mailpitAPI, 1, "to:lure.example.com")
 
 		// Verify the email body contains a real lure URL (not the placeholder).
 		detail := getMailpitMessage(t, mailpitAPI, messages.Messages[0].ID)

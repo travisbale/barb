@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/travisbale/barb/sdk"
@@ -8,38 +9,36 @@ import (
 )
 
 func TestAuth_UnauthenticatedRequestReturns401(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	// Create a second client without a session.
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 
 	_, err := unauthenticated.ListCampaigns()
-	if err == nil {
-		t.Error("expected error for unauthenticated request")
-	}
+	wantError(t, err, http.StatusUnauthorized, "authentication required")
 }
 
 func TestAuth_LoginWithBadPassword(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 	err := unauthenticated.Login(sdk.LoginRequest{Username: "admin", Password: "wrong"})
-	if err == nil {
-		t.Error("expected error for bad password")
-	}
+	wantError(t, err, http.StatusUnauthorized, "invalid username or password")
 }
 
 func TestAuth_LoginWithBadUsername(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 	err := unauthenticated.Login(sdk.LoginRequest{Username: "nobody", Password: "whatever"})
-	if err == nil {
-		t.Error("expected error for nonexistent user")
-	}
+	wantError(t, err, http.StatusUnauthorized, "invalid username or password")
 }
 
 func TestAuth_MeReturnsCurrentUser(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	user, err := h.Client.Me()
@@ -55,6 +54,7 @@ func TestAuth_MeReturnsCurrentUser(t *testing.T) {
 }
 
 func TestAuth_ChangePasswordValidation(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	// Wrong current password.
@@ -62,21 +62,18 @@ func TestAuth_ChangePasswordValidation(t *testing.T) {
 		CurrentPassword: "wrong",
 		NewPassword:     "new-password-123",
 	})
-	if err == nil {
-		t.Error("expected error for wrong current password")
-	}
+	wantError(t, err, http.StatusUnauthorized, "current password is incorrect")
 
 	// Too short new password.
 	err = h.Client.ChangePassword(sdk.ChangePasswordRequest{
 		CurrentPassword: "test-password-12345",
 		NewPassword:     "short",
 	})
-	if err == nil {
-		t.Error("expected error for password too short")
-	}
+	wantError(t, err, http.StatusUnprocessableEntity, "password must be at least 8 characters")
 }
 
 func TestAuth_StatusEndpointIsPublic(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	unauthenticated := sdk.NewClient("http://" + h.Addr)

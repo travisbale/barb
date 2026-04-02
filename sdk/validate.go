@@ -158,6 +158,11 @@ func (r PushMiragedPhishletRequest) Validate() error {
 	return nil
 }
 
+// --- Preview / Enable (no required fields) ---
+
+func (r PreviewTemplateRequest) Validate() error       { return nil }
+func (r EnableMiragedPhishletRequest) Validate() error { return nil }
+
 func validateHeaders(headers map[string]string) error {
 	for key := range headers {
 		if reservedHeaders[strings.ToLower(key)] {

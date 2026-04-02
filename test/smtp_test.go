@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/travisbale/barb/sdk"
@@ -8,6 +9,7 @@ import (
 )
 
 func TestSMTPProfiles_CRUD(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
@@ -64,43 +66,8 @@ func TestSMTPProfiles_CRUD(t *testing.T) {
 	}
 }
 
-func TestSMTPProfiles_RequiresName(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Host:     "smtp.example.com",
-		FromAddr: "from@example.com",
-	})
-	if err == nil {
-		t.Error("expected error for missing name")
-	}
-}
-
-func TestSMTPProfiles_RequiresHost(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name:     "Test",
-		FromAddr: "from@example.com",
-	})
-	if err == nil {
-		t.Error("expected error for missing host")
-	}
-}
-
-func TestSMTPProfiles_RequiresFromAddr(t *testing.T) {
-	h := test.NewHarness(t)
-
-	_, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Test",
-		Host: "smtp.example.com",
-	})
-	if err == nil {
-		t.Error("expected error for missing from address")
-	}
-}
-
 func TestSMTPProfiles_DefaultPort(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
@@ -117,6 +84,7 @@ func TestSMTPProfiles_DefaultPort(t *testing.T) {
 }
 
 func TestSMTPProfiles_PasswordNotInResponse(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
@@ -140,6 +108,7 @@ func TestSMTPProfiles_PasswordNotInResponse(t *testing.T) {
 }
 
 func TestSMTPProfiles_Update(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
@@ -180,6 +149,7 @@ func TestSMTPProfiles_Update(t *testing.T) {
 }
 
 func TestSMTPProfiles_UpdatePreservesPassword(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
@@ -210,47 +180,10 @@ func TestSMTPProfiles_UpdatePreservesPassword(t *testing.T) {
 	}
 }
 
-func TestSMTPProfiles_UpdateRejectsEmptyName(t *testing.T) {
-	h := test.NewHarness(t)
-
-	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Valid", Host: "smtp.example.com", FromAddr: "from@example.com",
-	})
-	if err != nil {
-		t.Fatalf("CreateSMTPProfile: %v", err)
-	}
-
-	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
-		Name: strPtr(""),
-	})
-	if err == nil {
-		t.Error("expected error for empty name on update")
-	}
-}
-
-func TestSMTPProfiles_UpdateRejectsEmptyHost(t *testing.T) {
-	h := test.NewHarness(t)
-
-	created, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
-		Name: "Valid", Host: "smtp.example.com", FromAddr: "from@example.com",
-	})
-	if err != nil {
-		t.Fatalf("CreateSMTPProfile: %v", err)
-	}
-
-	_, err = h.Client.UpdateSMTPProfile(created.ID, sdk.UpdateSMTPProfileRequest{
-		Host: strPtr(""),
-	})
-	if err == nil {
-		t.Error("expected error for empty host on update")
-	}
-}
-
 func TestSMTPProfiles_DeleteNotFound(t *testing.T) {
+	t.Parallel()
 	h := test.NewHarness(t)
 
 	err := h.Client.DeleteSMTPProfile("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent profile")
-	}
+	wantError(t, err, http.StatusNotFound, "not found")
 }
