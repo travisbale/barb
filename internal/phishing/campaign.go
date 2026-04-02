@@ -46,27 +46,12 @@ type Campaign struct {
 	MiragedID     string
 	Phishlet      string
 	RedirectURL   string
+	LureID        string
 	LureURL       string
 	SendRate      int
 	CreatedAt     time.Time
 	StartedAt     *time.Time
 	CompletedAt   *time.Time
-}
-
-func (c *Campaign) Validate() error {
-	if c.Name == "" {
-		return ErrNameRequired
-	}
-	if c.TemplateID == "" {
-		return ErrTemplateRequired
-	}
-	if c.SMTPProfileID == "" {
-		return ErrSMTPProfileRequired
-	}
-	if c.TargetListID == "" {
-		return ErrTargetListRequired
-	}
-	return nil
 }
 
 // CampaignResult tracks the status of a single target within a campaign.
@@ -124,10 +109,6 @@ type CampaignService struct {
 }
 
 func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
-	if err := campaign.Validate(); err != nil {
-		return nil, err
-	}
-
 	// Verify references exist.
 	if _, err := s.Templates.GetTemplate(campaign.TemplateID); err != nil {
 		return nil, ErrTemplateNotFound
@@ -201,8 +182,17 @@ func (s *CampaignService) Start(id string) error {
 	return nil
 }
 
+// Complete ends a running campaign and sets its status to completed.
+func (s *CampaignService) Complete(id string) error {
+	return s.endCampaign(id, CampaignCompleted)
+}
+
 // Cancel stops a running campaign and sets its status to cancelled.
 func (s *CampaignService) Cancel(id string) error {
+	return s.endCampaign(id, CampaignCancelled)
+}
+
+func (s *CampaignService) endCampaign(id string, status CampaignStatus) error {
 	s.runningMu.Lock()
 	cancel, ok := s.running[id]
 	s.runningMu.Unlock()
@@ -211,13 +201,16 @@ func (s *CampaignService) Cancel(id string) error {
 		return ErrCampaignNotRunning
 	}
 
+	// Signal the run goroutine to stop and clean up.
 	cancel()
 
+	now := time.Now()
 	campaign, err := s.Store.GetCampaign(id)
 	if err != nil {
 		return err
 	}
-	campaign.Status = CampaignCancelled
+	campaign.Status = status
+	campaign.CompletedAt = &now
 	return s.Store.UpdateCampaign(campaign)
 }
 
@@ -248,7 +241,9 @@ func (s *CampaignService) untrackRunning(id string) {
 	delete(s.running, id)
 }
 
-// run orchestrates the campaign: creates the lure, sends emails, and marks complete.
+// run orchestrates the campaign: creates the lure, sends emails, and waits
+// for the operator to complete or cancel. Cleanup (lure deletion, phishlet
+// disabling) happens when the campaign ends for any reason.
 func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 	if err := s.createLure(campaign); err != nil {
 		return
@@ -263,10 +258,10 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 
 	s.sendEmails(ctx, campaign)
 
-	// Only mark complete if the campaign wasn't cancelled.
-	if ctx.Err() == nil {
-		s.complete(campaign)
-	}
+	// Wait for the operator to complete or cancel the campaign.
+	<-ctx.Done()
+
+	s.cleanup(campaign)
 }
 
 func (s *CampaignService) createLure(campaign *Campaign) error {
@@ -311,6 +306,7 @@ func (s *CampaignService) ensureLure(campaign *Campaign) error {
 		s.Logger.Error("failed to create lure", "error", err)
 		return err
 	}
+	campaign.LureID = lure.ID
 	campaign.LureURL = lure.URL
 	s.Logger.Info("lure created", "campaign_id", campaign.ID, "lure_url", lure.URL)
 	return nil
@@ -403,12 +399,28 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 	}
 }
 
-func (s *CampaignService) complete(campaign *Campaign) {
-	completedAt := time.Now()
-	campaign.Status = CampaignCompleted
-	campaign.CompletedAt = &completedAt
-	if err := s.Store.UpdateCampaign(campaign); err != nil {
-		s.Logger.Error("failed to mark campaign completed", "error", err)
+// cleanup deletes the lure and disables the phishlet on miraged.
+func (s *CampaignService) cleanup(campaign *Campaign) {
+	if s.Miraged == nil {
+		return
+	}
+
+	client, err := s.Miraged.Client(campaign.MiragedID)
+	if err != nil {
+		s.Logger.Error("failed to connect to miraged for cleanup", "error", err)
+		return
+	}
+
+	if err := client.DeleteLure(campaign.LureID); err != nil {
+		s.Logger.Error("failed to delete lure", "campaign_id", campaign.ID, "error", err)
+	} else {
+		s.Logger.Info("lure deleted", "campaign_id", campaign.ID)
+	}
+
+	if _, err := client.DisablePhishlet(campaign.Phishlet); err != nil {
+		s.Logger.Error("failed to disable phishlet", "campaign_id", campaign.ID, "error", err)
+	} else {
+		s.Logger.Info("phishlet disabled", "campaign_id", campaign.ID, "phishlet", campaign.Phishlet)
 	}
 }
 
@@ -469,10 +481,6 @@ func (s *CampaignService) Update(id string, update *CampaignUpdate) (*Campaign, 
 	}
 	if update.SendRate != nil {
 		campaign.SendRate = *update.SendRate
-	}
-
-	if err := campaign.Validate(); err != nil {
-		return nil, err
 	}
 
 	if err := s.Store.UpdateCampaign(campaign); err != nil {

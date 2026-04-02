@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     miraged_id      TEXT    NOT NULL DEFAULT '',
     phishlet        TEXT    NOT NULL DEFAULT '',
     redirect_url    TEXT    NOT NULL DEFAULT '',
+    lure_id         TEXT    NOT NULL DEFAULT '',
     lure_url        TEXT    NOT NULL DEFAULT '',
     send_rate       INTEGER NOT NULL DEFAULT 10,
     created_at      INTEGER NOT NULL,

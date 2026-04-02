@@ -2,6 +2,7 @@ package phishing
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -18,32 +19,61 @@ type SessionMonitor struct {
 }
 
 // Watch connects to the miraged instance's SSE stream and processes
-// session events until the context is cancelled or the stream ends.
+// session events until the context is cancelled. Automatically reconnects
+// with exponential backoff if the stream fails or disconnects.
 func (m *SessionMonitor) Watch(ctx context.Context, miragedID string) {
+	backoff := time.Second
+	const maxBackoff = 30 * time.Second
+
+	for {
+		start := time.Now()
+		err := m.stream(ctx, miragedID)
+		if ctx.Err() != nil {
+			m.Logger.Info("session monitor stopped", "miraged_id", miragedID)
+			return
+		}
+
+		// Reset backoff if the stream was connected for a reasonable duration.
+		if time.Since(start) > maxBackoff {
+			backoff = time.Second
+		}
+
+		m.Logger.Warn("session stream disconnected, reconnecting",
+			"miraged_id", miragedID, "error", err, "backoff", backoff)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff):
+		}
+
+		backoff = min(backoff*2, maxBackoff)
+	}
+}
+
+// stream opens a single SSE connection and processes events until it
+// closes or the context is cancelled. Returns the reason for disconnection.
+func (m *SessionMonitor) stream(ctx context.Context, miragedID string) error {
 	client, err := m.Miraged.Client(miragedID)
 	if err != nil {
-		m.Logger.Error("failed to connect to miraged for monitoring", "miraged_id", miragedID, "error", err)
-		return
+		return err
 	}
 
 	ch, cancel, err := client.StreamSessions()
 	if err != nil {
-		m.Logger.Error("failed to start session stream", "miraged_id", miragedID, "error", err)
-		return
+		return err
 	}
 	defer cancel()
 
-	m.Logger.Info("session monitor started", "miraged_id", miragedID)
+	m.Logger.Info("session monitor connected", "miraged_id", miragedID)
 
 	for {
 		select {
 		case <-ctx.Done():
-			m.Logger.Info("session monitor stopped", "miraged_id", miragedID)
-			return
+			return ctx.Err()
 		case event, ok := <-ch:
 			if !ok {
-				m.Logger.Warn("session stream closed", "miraged_id", miragedID)
-				return
+				return fmt.Errorf("stream closed by server")
 			}
 			m.handleEvent(miragedID, event)
 		}

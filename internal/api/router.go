@@ -95,6 +95,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("PATCH", sdk.RouteCampaign, r.updateCampaign)
 	auth("DELETE", sdk.RouteCampaign, r.deleteCampaign)
 	auth("POST", sdk.RouteCampaignStart, r.startCampaign)
+	auth("POST", sdk.RouteCampaignComplete, r.completeCampaign)
 	auth("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
 	auth("POST", sdk.RouteCampaignTestEmail, r.sendTestEmail)
 	auth("GET", sdk.RouteCampaignResults, r.listCampaignResults)

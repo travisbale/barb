@@ -278,6 +278,10 @@ export function startCampaign(id: string): Promise<void> {
   return request('POST', `/campaigns/${id}/start`)
 }
 
+export function completeCampaign(id: string): Promise<void> {
+  return request('POST', `/campaigns/${id}/complete`)
+}
+
 export function cancelCampaign(id: string): Promise<void> {
   return request('POST', `/campaigns/${id}/cancel`)
 }

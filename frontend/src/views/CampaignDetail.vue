@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
 import {
-  getCampaign, startCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
+  getCampaign, startCampaign, completeCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
   getMiragedSession, exportMiragedSessionCookies, updateCampaign,
   getTemplate, getSMTPProfile, getTargetList, listTargets,
   listTemplates, listSMTPProfiles, listMiraged, enrollMiraged,
@@ -36,6 +36,7 @@ const campaign = ref<Campaign | null>(null)
 const results = ref<CampaignResult[]>([])
 const error = ref('')
 const starting = ref(false)
+const completing = ref(false)
 const cancelling = ref(false)
 const showTestEmail = ref(false)
 const testEmailAddress = ref('')
@@ -275,8 +276,23 @@ async function start() {
   }
 }
 
+async function complete() {
+  if (!await confirm('Complete this campaign? The lure and phishlet will be disabled.', { label: 'Complete', variant: 'primary' })) return
+  completing.value = true
+  error.value = ''
+  try {
+    await completeCampaign(id)
+    await load()
+    stopPolling()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    completing.value = false
+  }
+}
+
 async function cancel() {
-  if (!confirm('Cancel this campaign? Sending will stop immediately.')) return
+  if (!await confirm('Cancel this campaign? The lure and phishlet will be disabled.', { label: 'Cancel', variant: 'danger' })) return
   cancelling.value = true
   error.value = ''
   try {
@@ -427,6 +443,9 @@ onUnmounted(stopPolling)
       <AppButton v-if="isDraft" variant="secondary" @click="showTestEmail = !showTestEmail">Send Test</AppButton>
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
         {{ starting ? 'Starting...' : 'Start Campaign' }}
+      </AppButton>
+      <AppButton v-if="isActive" :disabled="completing" @click="complete">
+        {{ completing ? 'Completing...' : 'Complete Campaign' }}
       </AppButton>
       <AppButton v-if="isActive" variant="danger" :disabled="cancelling" @click="cancel">
         {{ cancelling ? 'Cancelling...' : 'Cancel Campaign' }}

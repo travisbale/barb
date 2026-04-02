@@ -14,9 +14,9 @@ func NewCampaignStore(db *DB) *Campaigns { return &Campaigns{db: db} }
 
 func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
 	_, err := s.db.db.Exec(
-		`INSERT INTO campaigns (id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_url, send_rate, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureURL, c.SendRate, c.CreatedAt.Unix(),
+		`INSERT INTO campaigns (id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureID, c.LureURL, c.SendRate, c.CreatedAt.Unix(),
 	)
 	if isConflict(err) {
 		return phishing.ErrConflict
@@ -26,7 +26,7 @@ func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
 
 func (s *Campaigns) GetCampaign(id string) (*phishing.Campaign, error) {
 	row := s.db.db.QueryRow(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_url, send_rate, created_at, started_at, completed_at
+		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns WHERE id = ?`, id,
 	)
 	return scanCampaign(row)
@@ -34,9 +34,9 @@ func (s *Campaigns) GetCampaign(id string) (*phishing.Campaign, error) {
 
 func (s *Campaigns) UpdateCampaign(c *phishing.Campaign) error {
 	res, err := s.db.db.Exec(
-		`UPDATE campaigns SET name = ?, status = ?, template_id = ?, smtp_profile_id = ?, target_list_id = ?, miraged_id = ?, phishlet = ?, redirect_url = ?, lure_url = ?, send_rate = ?, started_at = ?, completed_at = ?
+		`UPDATE campaigns SET name = ?, status = ?, template_id = ?, smtp_profile_id = ?, target_list_id = ?, miraged_id = ?, phishlet = ?, redirect_url = ?, lure_id = ?, lure_url = ?, send_rate = ?, started_at = ?, completed_at = ?
 		 WHERE id = ?`,
-		c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureURL, c.SendRate, timeToUnix(c.StartedAt), timeToUnix(c.CompletedAt), c.ID,
+		c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureID, c.LureURL, c.SendRate, timeToUnix(c.StartedAt), timeToUnix(c.CompletedAt), c.ID,
 	)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (s *Campaigns) DeleteCampaign(id string) error {
 
 func (s *Campaigns) ListCampaigns() ([]*phishing.Campaign, error) {
 	rows, err := s.db.db.Query(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_url, send_rate, created_at, started_at, completed_at
+		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -134,7 +134,7 @@ func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, 
 
 func (s *Campaigns) ListActiveCampaignsByMiraged(miragedID string) ([]*phishing.Campaign, error) {
 	rows, err := s.db.db.Query(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_url, send_rate, created_at, started_at, completed_at
+		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns WHERE miraged_id = ? AND status IN (?, ?)
 		 ORDER BY created_at DESC`,
 		miragedID, phishing.CampaignActive, phishing.CampaignCompleted,
@@ -184,7 +184,7 @@ func scanCampaign(row scanner) (*phishing.Campaign, error) {
 		createdAt              int64
 		startedAt, completedAt sql.NullInt64
 	)
-	err := row.Scan(&c.ID, &c.Name, &c.Status, &c.TemplateID, &c.SMTPProfileID, &c.TargetListID, &c.MiragedID, &c.Phishlet, &c.RedirectURL, &c.LureURL, &c.SendRate, &createdAt, &startedAt, &completedAt)
+	err := row.Scan(&c.ID, &c.Name, &c.Status, &c.TemplateID, &c.SMTPProfileID, &c.TargetListID, &c.MiragedID, &c.Phishlet, &c.RedirectURL, &c.LureID, &c.LureURL, &c.SendRate, &createdAt, &startedAt, &completedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, phishing.ErrNotFound
 	}
