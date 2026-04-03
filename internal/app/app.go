@@ -91,6 +91,10 @@ func New(cfg Config) (*App, error) {
 		mux.Handle("/", spaHandler(frontendHandler, cfg.Frontend))
 	}
 
+	// Resume session monitors for any campaigns that were active before
+	// the last shutdown.
+	campaignSvc.Resume()
+
 	return &App{
 		Campaigns: campaignSvc,
 		handler:   mux,

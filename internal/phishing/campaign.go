@@ -207,39 +207,73 @@ func (s *CampaignService) Cancel(id string) error {
 }
 
 func (s *CampaignService) endCampaign(id string, status CampaignStatus) error {
-	s.runningMu.Lock()
-	cancel, ok := s.running[id]
-	s.runningMu.Unlock()
-
-	if !ok {
-		return ErrCampaignNotRunning
-	}
-
-	// Signal the run goroutine to stop and clean up.
-	cancel()
-
-	now := time.Now()
 	campaign, err := s.Store.GetCampaign(id)
 	if err != nil {
 		return err
 	}
+	if campaign.Status != CampaignActive {
+		return ErrCampaignNotRunning
+	}
+
+	// Stop the goroutine if one is running (may not be after a restart).
+	s.runningMu.Lock()
+	if cancel, ok := s.running[id]; ok {
+		cancel()
+	}
+	s.runningMu.Unlock()
+
+	now := time.Now()
 	campaign.Status = status
 	campaign.CompletedAt = &now
 	if err := s.Store.UpdateCampaign(campaign); err != nil {
 		return err
 	}
 	s.Bus.PublishStatusChange(campaign.ID, campaign.Status)
+
+	// Clean up miraged resources only on explicit complete/cancel.
+	s.cleanup(campaign)
+
 	return nil
 }
 
-// Shutdown cancels all running campaigns.
+// Resume restarts session monitors for any campaigns that are still active
+// in the database. Called on startup to reconnect after a restart.
+func (s *CampaignService) Resume() {
+	campaigns, err := s.Store.ListCampaigns()
+	if err != nil {
+		s.Logger.Error("failed to list campaigns for resume", "error", err)
+		return
+	}
+
+	for _, campaign := range campaigns {
+		if campaign.Status != CampaignActive {
+			continue
+		}
+		if campaign.MiragedID == "" || s.Monitor == nil {
+			continue
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		s.trackRunning(campaign.ID, cancel)
+
+		go func(c *Campaign) {
+			defer s.untrackRunning(c.ID)
+			s.Logger.Info("resuming session monitor", "campaign_id", c.ID)
+			s.Monitor.Watch(ctx, c.MiragedID)
+		}(campaign)
+	}
+}
+
+// Shutdown stops all campaign goroutines without changing campaign status
+// or cleaning up miraged resources. Campaigns remain active in the database
+// and their lures stay live — the session monitor will reconnect on restart.
 func (s *CampaignService) Shutdown() {
 	s.runningMu.Lock()
 	defer s.runningMu.Unlock()
 
 	for id, cancel := range s.running {
 		cancel()
-		s.Logger.Info("cancelled running campaign", "campaign_id", id)
+		s.Logger.Info("stopping campaign goroutine", "campaign_id", id)
 	}
 	s.running = nil
 }
@@ -260,8 +294,7 @@ func (s *CampaignService) untrackRunning(id string) {
 }
 
 // run orchestrates the campaign: creates the lure, sends emails, and waits
-// for the operator to complete or cancel. Cleanup (lure deletion, phishlet
-// disabling) happens when the campaign ends for any reason.
+// for the context to be cancelled (by Complete, Cancel, or Shutdown).
 func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 	if err := s.createLure(campaign); err != nil {
 		return
@@ -276,10 +309,8 @@ func (s *CampaignService) run(ctx context.Context, campaign *Campaign) {
 
 	s.sendEmails(ctx, campaign)
 
-	// Wait for the operator to complete or cancel the campaign.
+	// Wait for the operator to complete, cancel, or barb to shut down.
 	<-ctx.Done()
-
-	s.cleanup(campaign)
 }
 
 func (s *CampaignService) createLure(campaign *Campaign) error {
