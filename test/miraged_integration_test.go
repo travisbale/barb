@@ -183,6 +183,73 @@ func TestIntegration_Miraged(t *testing.T) {
 		}
 	})
 
+	t.Run("PerTargetTrackingURLs", func(t *testing.T) {
+		smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
+
+		smtpStore := sqlite.NewSMTPStore(h.DB, h.Cipher)
+		if err := smtpStore.CreateProfile(&phishing.SMTPProfile{
+			ID: "smtp-tracking-test", Name: "Tracking SMTP", Host: smtpHost,
+			Port: smtpPort, FromAddr: "test@tracking.example.com", CreatedAt: time.Now(),
+		}); err != nil {
+			t.Fatalf("CreateProfile: %v", err)
+		}
+		tmpl := createTestTemplate(t, h, func(r *sdk.CreateTemplateRequest) {
+			r.Subject = "Tracked email"
+			r.HTMLBody = "<p>Click <a href=\"{{.URL}}\">here</a></p>"
+		})
+		list := createTestTargetList(t, h,
+			sdk.AddTargetRequest{Email: "alice@tracking.example.com", FirstName: "Alice"},
+			sdk.AddTargetRequest{Email: "bob@tracking.example.com", FirstName: "Bob"},
+		)
+
+		req := validCampaignRequest(list.ID, tmpl.ID, "smtp-tracking-test")
+		req.MiragedID = conn.ID
+		req.Phishlet = "example"
+		req.SendRate = 600
+		campaign, err := h.Client.CreateCampaign(req)
+		if err != nil {
+			t.Fatalf("CreateCampaign: %v", err)
+		}
+
+		if err := h.Client.StartCampaign(campaign.ID); err != nil {
+			t.Fatalf("StartCampaign: %v", err)
+		}
+
+		// Wait for both emails.
+		messages := waitForMailpit(t, mailpitAPI, 2, "to:tracking.example.com")
+
+		// Extract the lure URLs from both emails.
+		urls := map[string]string{}
+		for _, msg := range messages.Messages {
+			detail := getMailpitMessage(t, mailpitAPI, msg.ID)
+			// Find the href URL in the HTML.
+			start := strings.Index(detail.HTML, "href=\"")
+			if start == -1 {
+				t.Fatalf("no href found in email to %s", msg.To[0].Address)
+			}
+			start += len("href=\"")
+			end := strings.Index(detail.HTML[start:], "\"")
+			url := detail.HTML[start : start+end]
+			urls[msg.To[0].Address] = url
+		}
+
+		aliceURL := urls["alice@tracking.example.com"]
+		bobURL := urls["bob@tracking.example.com"]
+
+		// Both URLs should contain the encrypted tracking param.
+		if !strings.Contains(aliceURL, "?p=") {
+			t.Errorf("alice's URL missing ?p= param: %s", aliceURL)
+		}
+		if !strings.Contains(bobURL, "?p=") {
+			t.Errorf("bob's URL missing ?p= param: %s", bobURL)
+		}
+
+		// The URLs should be different (different encrypted tracking tokens).
+		if aliceURL == bobURL {
+			t.Error("alice and bob received the same URL — tracking params should be unique per target")
+		}
+	})
+
 	t.Run("TestEmailWithLure", func(t *testing.T) {
 		smtpHost, smtpPort, mailpitAPI := requireMailpit(t)
 

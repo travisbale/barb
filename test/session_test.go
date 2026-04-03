@@ -136,9 +136,14 @@ func mockMiraged(t *testing.T) (address, secretHostname string, clientCertPEM, c
 		})
 	})
 
-	// Stub: delete lure (cleanup).
-	mux.HandleFunc("DELETE /api/lures/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
+	// Stub: generate lure URL with tracking params + delete lure.
+	mux.HandleFunc("/api/lures/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			json.NewEncoder(w).Encode(map[string]any{"url": "https://mock-miraged/lure-1?p=encrypted"})
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+		}
 	})
 
 	// Stub: disable phishlet (cleanup).
@@ -221,40 +226,70 @@ func TestCampaigns_SessionCorrelation(t *testing.T) {
 	}
 	waitForEmails(t, h, 1)
 
-	sessionEvent := miragesdk.SessionResponse{
-		ID:        "session-123",
-		Phishlet:  "example",
-		Username:  "alice@acme.com",
-		Password:  "hunter2",
-		StartedAt: time.Now().Add(-30 * time.Second),
+	// Get the result ID to use as a tracking token.
+	results, _ := h.Client.ListCampaignResults(campaign.ID)
+	var resultID string
+	for _, r := range results {
+		if r.Email == "alice@acme.com" {
+			resultID = r.ID
+			break
+		}
+	}
+	if resultID == "" {
+		t.Fatal("could not find result for alice@acme.com")
 	}
 
-	// Stage 1: Push credential capture — result should become "captured".
-	events <- miragesdk.SessionEvent{Type: miragesdk.EventCredsCaptured, Session: sessionEvent}
+	sessionEvent := miragesdk.SessionResponse{
+		ID:         "session-123",
+		Phishlet:   "example",
+		Username:   "alice@acme.com",
+		Password:   "hunter2",
+		LureParams: map[string]string{"t": resultID},
+		StartedAt:  time.Now().Add(-30 * time.Second),
+	}
+
+	// Stage 1: Push session created with tracking param — result should become "clicked".
+	events <- miragesdk.SessionEvent{Type: miragesdk.EventSessionCreated, Session: sessionEvent}
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		results, _ := h.Client.ListCampaignResults(campaign.ID)
 		for _, r := range results {
-			if r.Email == "alice@acme.com" && r.Status == "captured" {
+			if r.Email == "alice@acme.com" && r.Status == "clicked" {
 				if r.SessionID != "session-123" {
 					t.Errorf("SessionID = %q, want %q", r.SessionID, "session-123")
 				}
 				if r.ClickedAt == nil {
-					t.Error("ClickedAt is nil, expected a timestamp")
-				}
-				if r.CapturedAt == nil {
-					t.Error("CapturedAt is nil, expected a timestamp")
+					t.Error("ClickedAt is nil after click")
 				}
 				goto stage2
 			}
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	t.Fatal("timed out waiting for captured status")
+	t.Fatal("timed out waiting for clicked status")
 
 stage2:
-	// Stage 2: Push session completed — result should become "completed".
+	// Stage 2: Push credential capture — result should become "captured".
+	events <- miragesdk.SessionEvent{Type: miragesdk.EventCredsCaptured, Session: sessionEvent}
+
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		results, _ := h.Client.ListCampaignResults(campaign.ID)
+		for _, r := range results {
+			if r.Email == "alice@acme.com" && r.Status == "captured" {
+				if r.CapturedAt == nil {
+					t.Error("CapturedAt is nil after capture")
+				}
+				goto stage3
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for captured status")
+
+stage3:
+	// Stage 3: Push session completed — result should become "completed".
 	events <- miragesdk.SessionEvent{Type: miragesdk.EventSessionCompleted, Session: sessionEvent}
 
 	deadline = time.Now().Add(5 * time.Second)
@@ -262,7 +297,7 @@ stage2:
 		results, _ := h.Client.ListCampaignResults(campaign.ID)
 		for _, r := range results {
 			if r.Email == "alice@acme.com" && r.Status == "completed" {
-				return // success
+				return // success — full lifecycle: sent → clicked → captured → completed
 			}
 		}
 		time.Sleep(100 * time.Millisecond)

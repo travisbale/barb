@@ -132,34 +132,10 @@ func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, 
 	return out, rows.Err()
 }
 
-func (s *Campaigns) ListActiveCampaignsByMiraged(miragedID string) ([]*phishing.Campaign, error) {
-	rows, err := s.db.db.Query(
-		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
-		 FROM campaigns WHERE miraged_id = ? AND status IN (?, ?)
-		 ORDER BY created_at DESC`,
-		miragedID, phishing.CampaignActive, phishing.CampaignCompleted,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []*phishing.Campaign
-	for rows.Next() {
-		campaign, err := scanCampaign(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, campaign)
-	}
-	return out, rows.Err()
-}
-
-func (s *Campaigns) GetResultByEmail(campaignID, email string) (*phishing.CampaignResult, error) {
+func (s *Campaigns) GetResult(id string) (*phishing.CampaignResult, error) {
 	row := s.db.db.QueryRow(
 		`SELECT id, campaign_id, target_id, email, status, sent_at, clicked_at, captured_at, session_id
-		 FROM campaign_results WHERE campaign_id = ? AND email = ? COLLATE NOCASE LIMIT 1`,
-		campaignID, email,
+		 FROM campaign_results WHERE id = ?`, id,
 	)
 	var (
 		result                        phishing.CampaignResult

@@ -91,57 +91,63 @@ func (m *SessionMonitor) stream(ctx context.Context, miragedID string) error {
 }
 
 func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEvent) {
-	switch event.Type {
-	case miragesdk.EventCredsCaptured, miragesdk.EventSessionCompleted:
-	default:
-		m.Logger.Debug("ignoring non-capture event", "type", event.Type)
-		return
-	}
-
 	session := event.Session
-	if session.Username == "" {
-		m.Logger.Debug("ignoring event with empty username", "session_id", session.ID)
+
+	resultID, ok := session.LureParams["t"]
+	if !ok {
 		return
 	}
 
-	campaigns, err := m.Campaigns.ListActiveCampaignsByMiraged(miragedID)
-	if err != nil {
-		m.Logger.Error("failed to list campaigns for correlation", "error", err)
-		return
-	}
-	m.Logger.Debug("correlating session against campaigns",
-		"session_id", session.ID, "username", session.Username,
-		"phishlet", session.Phishlet, "campaign_count", len(campaigns),
-	)
-
-	for _, campaign := range campaigns {
-		if campaign.Phishlet != "" && campaign.Phishlet != session.Phishlet {
-			m.Logger.Debug("skipping campaign — phishlet mismatch",
-				"campaign_id", campaign.ID, "campaign_phishlet", campaign.Phishlet,
-				"session_phishlet", session.Phishlet,
-			)
-			continue
-		}
-		m.correlate(campaign, event.Type, session)
-	}
+	m.correlateByToken(resultID, event.Type, session)
 }
 
-func (m *SessionMonitor) correlate(campaign *Campaign, eventType miragesdk.EventType, session miragesdk.SessionResponse) {
-	result, err := m.Campaigns.GetResultByEmail(campaign.ID, session.Username)
+// correlateByToken uses the tracking token (result ID) from the lure URL
+// to directly look up and update the campaign result.
+func (m *SessionMonitor) correlateByToken(resultID string, eventType miragesdk.EventType, session miragesdk.SessionResponse) {
+	result, err := m.Campaigns.GetResult(resultID)
 	if err != nil {
-		m.Logger.Debug("no matching result for session",
-			"campaign_id", campaign.ID, "username", session.Username, "error", err,
-		)
+		m.Logger.Debug("no result for tracking token", "token", resultID)
 		return
 	}
 
+	if !m.updateResult(result, eventType, session) {
+		return
+	}
+
+	if err := m.Campaigns.UpdateResult(result); err != nil {
+		m.Logger.Error("failed to update result", "result_id", resultID, "error", err)
+		return
+	}
+
+	m.Bus.PublishResultUpdate(result.CampaignID, result)
+	m.Logger.Info("session correlated",
+		"campaign_id", result.CampaignID,
+		"event", string(eventType),
+		"email", result.Email,
+		"session_id", session.ID,
+	)
+}
+
+// updateResult applies the event to the result. Returns false if no update is needed.
+func (m *SessionMonitor) updateResult(result *CampaignResult, eventType miragesdk.EventType, session miragesdk.SessionResponse) bool {
 	switch eventType {
-	case miragesdk.EventCredsCaptured:
-		if result.SessionID != "" {
-			return // already correlated
+	case miragesdk.EventSessionCreated:
+		if result.ClickedAt != nil {
+			return false
 		}
 		clickedAt := session.StartedAt
 		result.ClickedAt = &clickedAt
+		result.Status = ResultClicked
+		result.SessionID = session.ID
+
+	case miragesdk.EventCredsCaptured:
+		if result.Status == ResultCaptured || result.Status == ResultCompleted {
+			return false
+		}
+		if result.ClickedAt == nil {
+			clickedAt := session.StartedAt
+			result.ClickedAt = &clickedAt
+		}
 		now := time.Now()
 		result.Status = ResultCaptured
 		result.CapturedAt = &now
@@ -149,22 +155,12 @@ func (m *SessionMonitor) correlate(campaign *Campaign, eventType miragesdk.Event
 
 	case miragesdk.EventSessionCompleted:
 		if result.Status == ResultCompleted {
-			return // already complete
+			return false
 		}
 		result.Status = ResultCompleted
+
+	default:
+		return false
 	}
-
-	if err := m.Campaigns.UpdateResult(result); err != nil {
-		m.Logger.Error("failed to update result", "result_id", result.ID, "error", err)
-		return
-	}
-
-	m.Bus.PublishResultUpdate(campaign.ID, result)
-
-	m.Logger.Info("session correlated",
-		"campaign_id", campaign.ID,
-		"event", string(eventType),
-		"email", result.Email,
-		"session_id", session.ID,
-	)
+	return true
 }

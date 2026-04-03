@@ -76,9 +76,8 @@ type campaignStore interface {
 	ListCampaigns() ([]*Campaign, error)
 	CreateResults(results []*CampaignResult) error
 	UpdateResult(result *CampaignResult) error
+	GetResult(id string) (*CampaignResult, error)
 	ListResults(campaignID string) ([]*CampaignResult, error)
-	ListActiveCampaignsByMiraged(miragedID string) ([]*Campaign, error)
-	GetResultByEmail(campaignID, email string) (*CampaignResult, error)
 }
 
 // MailConn represents an open SMTP connection that can send multiple
@@ -411,6 +410,17 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		targets[t.ID] = t
 	}
 
+	// Build a miraged client for per-target URL generation if available.
+	var miragedClient *miragesdk.Client
+	if campaign.MiragedID != "" && campaign.LureID != "" && s.Miraged != nil {
+		mc, err := s.Miraged.Client(campaign.MiragedID)
+		if err != nil {
+			s.Logger.Error("failed to connect to miraged for URL generation", "error", err)
+		} else {
+			miragedClient = mc
+		}
+	}
+
 	interval := time.Minute / time.Duration(max(campaign.SendRate, 1))
 
 	for i, result := range results {
@@ -432,10 +442,23 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 			continue
 		}
 
+		// Generate a per-target URL with an encrypted tracking param.
+		lureURL := campaign.LureURL
+		if miragedClient != nil {
+			resp, err := miragedClient.GenerateLureURL(campaign.LureID, miragesdk.GenerateURLRequest{
+				Params: map[string]string{"t": result.ID},
+			})
+			if err != nil {
+				s.Logger.Error("failed to generate tracked URL", "email", target.Email, "error", err)
+			} else {
+				lureURL = resp.URL
+			}
+		}
+
 		sentAt := time.Now()
 		result.SentAt = &sentAt
 
-		if err := conn.Send(profile, tmpl, target, campaign.LureURL); err != nil {
+		if err := conn.Send(profile, tmpl, target, lureURL); err != nil {
 			result.Status = ResultFailed
 			s.Logger.Error("failed to send email", "campaign_id", campaign.ID, "email", target.Email, "error", err)
 		} else {
