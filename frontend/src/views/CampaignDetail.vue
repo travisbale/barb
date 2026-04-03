@@ -629,7 +629,7 @@ onUnmounted(stopPolling)
         <!-- Credentials -->
         <div v-if="selectedSession.username || selectedSession.password">
           <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Credentials</div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
             <div v-if="selectedSession.username" class="px-3 py-2 bg-bg border border-edge">
               <div class="text-xs text-dim font-mono">Username</div>
               <div class="text-sm text-teal font-mono select-all">{{ selectedSession.username }}</div>
@@ -644,10 +644,10 @@ onUnmounted(stopPolling)
         <!-- Custom fields -->
         <div v-if="selectedSession.custom && Object.keys(selectedSession.custom).length > 0">
           <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Custom Fields</div>
-          <div class="flex flex-col gap-1">
-            <div v-for="(value, key) in selectedSession.custom" :key="key" class="px-3 py-2 bg-bg border border-edge flex justify-between">
-              <span class="text-xs text-dim font-mono">{{ key }}</span>
-              <span class="text-sm text-primary font-mono select-all">{{ value }}</span>
+          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+            <div v-for="(value, key) in selectedSession.custom" :key="key" class="px-3 py-2 bg-bg border border-edge">
+              <div class="text-xs text-dim font-mono">{{ key }}</div>
+              <div class="text-sm text-primary font-mono select-all">{{ value }}</div>
             </div>
           </div>
         </div>
@@ -660,24 +660,36 @@ onUnmounted(stopPolling)
           </div>
           <div v-for="(cookies, domain) in selectedSession.cookie_tokens" :key="domain" class="mb-3">
             <div class="text-xs text-muted font-mono mb-1">{{ domain }}</div>
-            <div class="flex flex-col gap-1">
-              <div v-for="(value, name) in cookies" :key="name" class="px-3 py-1.5 bg-bg border border-edge flex justify-between gap-4">
-                <span class="text-xs text-dim font-mono shrink-0">{{ name }}</span>
-                <span class="text-xs text-primary font-mono select-all truncate">{{ value }}</span>
+            <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+              <div v-for="(value, name) in cookies" :key="name" class="px-3 py-2 bg-bg border border-edge">
+                <div class="text-xs text-dim font-mono">{{ name }}</div>
+                <div class="text-sm text-primary font-mono select-all break-all">{{ value }}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Metadata -->
-        <div class="text-xs font-mono text-dim flex flex-wrap gap-4">
-          <span v-if="selectedSession.remote_addr">IP: {{ selectedSession.remote_addr }}</span>
-          <span v-if="selectedSession.phishlet">Phishlet: {{ selectedSession.phishlet }}</span>
-          <span v-if="selectedSession.started_at">Started: {{ new Date(selectedSession.started_at).toLocaleString() }}</span>
-        </div>
-
-        <div v-if="selectedSession.user_agent" class="text-xs font-mono text-dim break-all">
-          {{ selectedSession.user_agent }}
+        <!-- Details -->
+        <div>
+          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Details</div>
+          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+            <div v-if="selectedSession.remote_addr" class="px-3 py-2 bg-bg border border-edge">
+              <div class="text-xs text-dim font-mono">IP Address</div>
+              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.remote_addr }}</div>
+            </div>
+            <div v-if="selectedSession.phishlet" class="px-3 py-2 bg-bg border border-edge">
+              <div class="text-xs text-dim font-mono">Phishlet</div>
+              <div class="text-sm text-primary font-mono">{{ selectedSession.phishlet }}</div>
+            </div>
+            <div v-if="selectedSession.started_at" class="px-3 py-2 bg-bg border border-edge">
+              <div class="text-xs text-dim font-mono">Started</div>
+              <div class="text-sm text-primary font-mono">{{ new Date(selectedSession.started_at).toLocaleString() }}</div>
+            </div>
+            <div v-if="selectedSession.user_agent" class="px-3 py-2 bg-bg border border-edge col-span-2">
+              <div class="text-xs text-dim font-mono">User Agent</div>
+              <div class="text-sm text-primary font-mono select-all break-all">{{ selectedSession.user_agent }}</div>
+            </div>
+          </div>
         </div>
       </div>
     </Card>

@@ -45,7 +45,7 @@ func New(cfg Config) (*App, error) {
 
 	targetSvc := &phishing.TargetService{Store: targetStore}
 	templateSvc := &phishing.TemplateService{Store: templateStore}
-	smtpSvc := &phishing.SMTPService{Store: smtpStore}
+	smtpSvc := &phishing.SMTPService{Store: smtpStore, Mailer: cfg.Mailer}
 	miragedSvc := &phishing.MiragedService{Store: miragedStore}
 	phishletSvc := &phishing.PhishletService{Store: phishletStore}
 

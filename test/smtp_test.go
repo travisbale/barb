@@ -1,9 +1,14 @@
 package test_test
 
 import (
+	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/travisbale/barb/internal/delivery"
+	"github.com/travisbale/barb/internal/phishing"
+	"github.com/travisbale/barb/internal/store/sqlite"
 	"github.com/travisbale/barb/sdk"
 	"github.com/travisbale/barb/test"
 )
@@ -186,4 +191,69 @@ func TestSMTPProfiles_DeleteNotFound(t *testing.T) {
 
 	err := h.Client.DeleteSMTPProfile("nonexistent")
 	wantError(t, err, http.StatusNotFound, "not found")
+}
+
+func TestSMTPProfiles_CreateRejectsUnreachableHost(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
+
+	_, err := h.Client.CreateSMTPProfile(sdk.CreateSMTPProfileRequest{
+		Name:     "Bad SMTP",
+		Host:     "127.0.0.1",
+		Port:     19999,
+		FromAddr: "from@example.com",
+	})
+	wantError(t, err, http.StatusUnprocessableEntity, "Could not connect to the SMTP server")
+}
+
+func TestSMTPProfiles_UpdateRejectsUnreachableHost(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
+
+	// Insert a profile directly into the store to bypass the create dial check.
+	store := sqlite.NewSMTPStore(h.DB, nil)
+	if err := store.CreateProfile(&phishing.SMTPProfile{
+		ID: "smtp-update-test", Name: "Original", Host: "smtp.example.com",
+		Port: 587, FromAddr: "from@example.com", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+
+	_, err := h.Client.UpdateSMTPProfile("smtp-update-test", sdk.UpdateSMTPProfileRequest{
+		Host: strPtr("127.0.0.1"),
+		Port: intPtr(19999),
+	})
+	wantError(t, err, http.StatusUnprocessableEntity, "Could not connect to the SMTP server")
+}
+
+func TestSMTPProfiles_StartCampaignRejectsUnreachableSMTP(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarnessWithMailer(t, &delivery.Sender{Logger: slog.Default()})
+
+	// Insert an SMTP profile directly to bypass the create dial check.
+	store := sqlite.NewSMTPStore(h.DB, nil)
+	if err := store.CreateProfile(&phishing.SMTPProfile{
+		ID: "smtp-start-test", Name: "Unreachable", Host: "127.0.0.1",
+		Port: 19999, FromAddr: "from@example.com", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("CreateProfile: %v", err)
+	}
+
+	tmpl := createTestTemplate(t, h)
+	list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "alice@example.com"})
+
+	req := validCampaignRequest(list.ID, tmpl.ID, "smtp-start-test")
+	campaign, err := h.Client.CreateCampaign(req)
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	err = h.Client.StartCampaign(campaign.ID)
+	wantError(t, err, http.StatusUnprocessableEntity, "Could not connect to the SMTP server")
+
+	// Campaign should still be in draft.
+	got, _ := h.Client.GetCampaign(campaign.ID)
+	if got.Status != "draft" {
+		t.Errorf("Status = %q, want %q", got.Status, "draft")
+	}
 }

@@ -29,7 +29,7 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	created, err := r.SMTP.CreateProfile(&phishing.SMTPProfile{
+	created, err := r.SMTP.CreateProfile(req.Context(), &phishing.SMTPProfile{
 		Name:          body.Name,
 		Host:          body.Host,
 		Port:          body.Port,
@@ -40,7 +40,11 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		CustomHeaders: body.CustomHeaders,
 	})
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)
+		if errors.Is(err, phishing.ErrSMTPConnectionFailed) {
+			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)
+		}
 		return
 	}
 
@@ -70,7 +74,7 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	updated, err := r.SMTP.UpdateProfile(id, &phishing.SMTPProfileUpdate{
+	updated, err := r.SMTP.UpdateProfile(req.Context(), id, &phishing.SMTPProfileUpdate{
 		Name:          body.Name,
 		Host:          body.Host,
 		Port:          body.Port,
@@ -81,9 +85,12 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		CustomHeaders: body.CustomHeaders,
 	})
 	if err != nil {
-		if errors.Is(err, phishing.ErrNotFound) {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
 			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
-		} else {
+		case errors.Is(err, phishing.ErrSMTPConnectionFailed):
+			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
+		default:
 			r.writeError(w, http.StatusInternalServerError, "failed to update SMTP profile", err)
 		}
 		return

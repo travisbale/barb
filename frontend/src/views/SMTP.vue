@@ -73,6 +73,7 @@ function closeForm() {
   showForm.value = false
   editingId.value = null
   form.value = { ...emptyForm }
+  error.value = ''
 }
 
 async function submit() {

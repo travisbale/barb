@@ -157,8 +157,9 @@ func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
 }
 
 // Start validates the campaign is in draft status and begins sending
-// emails in a background goroutine.
-func (s *CampaignService) Start(id string) error {
+// emails in a background goroutine. It verifies SMTP connectivity before
+// launching to surface configuration errors immediately.
+func (s *CampaignService) Start(ctx context.Context, id string) error {
 	campaign, err := s.Store.GetCampaign(id)
 	if err != nil {
 		return err
@@ -166,6 +167,17 @@ func (s *CampaignService) Start(id string) error {
 	if campaign.Status != CampaignDraft {
 		return ErrCampaignNotDraft
 	}
+
+	// Verify the SMTP server is reachable before starting.
+	profile, err := s.SMTP.GetProfile(campaign.SMTPProfileID)
+	if err != nil {
+		return fmt.Errorf("loading SMTP profile: %w", err)
+	}
+	conn, err := s.Mailer.Dial(ctx, profile)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrSMTPConnectionFailed, err)
+	}
+	_ = conn.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s.trackRunning(campaign.ID, cancel)

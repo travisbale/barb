@@ -128,7 +128,7 @@ func (r *Router) listCampaignResults(w http.ResponseWriter, req *http.Request) {
 func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 
-	err := r.Campaigns.Start(id)
+	err := r.Campaigns.Start(req.Context(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
@@ -137,6 +137,8 @@ func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
 		case isReferenceError(err):
 			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+		case errors.Is(err, phishing.ErrSMTPConnectionFailed):
+			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
 		default:
 			r.writeError(w, http.StatusInternalServerError, "failed to start campaign", err)
 		}

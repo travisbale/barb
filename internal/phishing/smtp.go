@@ -1,6 +1,8 @@
 package phishing
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,16 +32,33 @@ type smtpStore interface {
 
 // SMTPService manages SMTP relay profiles.
 type SMTPService struct {
-	Store smtpStore
+	Store  smtpStore
+	Mailer Mailer
 }
 
-func (s *SMTPService) CreateProfile(profile *SMTPProfile) (*SMTPProfile, error) {
+// verifyConnection dials the SMTP server to confirm it's reachable.
+func (s *SMTPService) verifyConnection(ctx context.Context, profile *SMTPProfile) error {
+	if s.Mailer == nil {
+		return nil
+	}
+	conn, err := s.Mailer.Dial(ctx, profile)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrSMTPConnectionFailed, err)
+	}
+	_ = conn.Close()
+	return nil
+}
+
+func (s *SMTPService) CreateProfile(ctx context.Context, profile *SMTPProfile) (*SMTPProfile, error) {
 	if profile.Port == 0 {
 		profile.Port = 587
 	}
 	profile.ID = uuid.New().String()
 	profile.CreatedAt = time.Now()
 
+	if err := s.verifyConnection(ctx, profile); err != nil {
+		return nil, err
+	}
 	if err := s.Store.CreateProfile(profile); err != nil {
 		return nil, err
 	}
@@ -59,7 +78,7 @@ type SMTPProfileUpdate struct {
 	CustomHeaders *map[string]string
 }
 
-func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTPProfile, error) {
+func (s *SMTPService) UpdateProfile(ctx context.Context, id string, update *SMTPProfileUpdate) (*SMTPProfile, error) {
 	existing, err := s.Store.GetProfile(id)
 	if err != nil {
 		return nil, err
@@ -92,6 +111,13 @@ func (s *SMTPService) UpdateProfile(id string, update *SMTPProfileUpdate) (*SMTP
 
 	if existing.Port == 0 {
 		existing.Port = 587
+	}
+
+	// Verify connectivity when connection details change.
+	if update.Host != nil || update.Port != nil || update.Username != nil || update.Password != nil {
+		if err := s.verifyConnection(ctx, existing); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.Store.UpdateProfile(existing); err != nil {

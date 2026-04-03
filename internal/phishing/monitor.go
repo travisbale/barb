@@ -54,11 +54,13 @@ func (m *SessionMonitor) Watch(ctx context.Context, miragedID string) {
 // stream opens a single SSE connection and processes events until it
 // closes or the context is cancelled. Returns the reason for disconnection.
 func (m *SessionMonitor) stream(ctx context.Context, miragedID string) error {
+	m.Logger.Debug("opening session stream", "miraged_id", miragedID)
 	client, err := m.Miraged.Client(miragedID)
 	if err != nil {
 		return err
 	}
 
+	m.Logger.Debug("connecting to session stream", "miraged_id", miragedID)
 	ch, cancel, err := client.StreamSessions()
 	if err != nil {
 		return err
@@ -75,6 +77,13 @@ func (m *SessionMonitor) stream(ctx context.Context, miragedID string) error {
 			if !ok {
 				return fmt.Errorf("stream closed by server")
 			}
+			m.Logger.Debug("session event received",
+				"miraged_id", miragedID,
+				"type", event.Type,
+				"session_id", event.Session.ID,
+				"username", event.Session.Username,
+				"phishlet", event.Session.Phishlet,
+			)
 			m.handleEvent(miragedID, event)
 		}
 	}
@@ -84,11 +93,13 @@ func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEv
 	switch event.Type {
 	case miragesdk.EventCredsCaptured, miragesdk.EventSessionCompleted:
 	default:
+		m.Logger.Debug("ignoring non-capture event", "type", event.Type)
 		return
 	}
 
 	session := event.Session
 	if session.Username == "" {
+		m.Logger.Debug("ignoring event with empty username", "session_id", session.ID)
 		return
 	}
 
@@ -97,9 +108,17 @@ func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEv
 		m.Logger.Error("failed to list campaigns for correlation", "error", err)
 		return
 	}
+	m.Logger.Debug("correlating session against campaigns",
+		"session_id", session.ID, "username", session.Username,
+		"phishlet", session.Phishlet, "campaign_count", len(campaigns),
+	)
 
 	for _, campaign := range campaigns {
 		if campaign.Phishlet != "" && campaign.Phishlet != session.Phishlet {
+			m.Logger.Debug("skipping campaign — phishlet mismatch",
+				"campaign_id", campaign.ID, "campaign_phishlet", campaign.Phishlet,
+				"session_phishlet", session.Phishlet,
+			)
 			continue
 		}
 		m.correlate(campaign, session)
@@ -109,10 +128,16 @@ func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEv
 func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.SessionResponse) {
 	result, err := m.Campaigns.GetResultByEmail(campaign.ID, session.Username)
 	if err != nil {
-		return // not found or DB error — nothing to correlate
+		m.Logger.Debug("no matching result for session",
+			"campaign_id", campaign.ID, "username", session.Username, "error", err,
+		)
+		return
 	}
 	if result.SessionID != "" {
-		return // already correlated
+		m.Logger.Debug("session already correlated",
+			"campaign_id", campaign.ID, "result_id", result.ID, "session_id", result.SessionID,
+		)
+		return
 	}
 
 	// Record the click time from when the session started (target first visited the lure).
