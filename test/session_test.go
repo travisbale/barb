@@ -221,25 +221,20 @@ func TestCampaigns_SessionCorrelation(t *testing.T) {
 	}
 	waitForEmails(t, h, 1)
 
-	// Push a credential capture event through the mock SSE stream.
-	events <- miragesdk.SessionEvent{
-		Type: miragesdk.EventCredsCaptured,
-		Session: miragesdk.SessionResponse{
-			ID:        "session-123",
-			Phishlet:  "example",
-			Username:  "alice@acme.com",
-			Password:  "hunter2",
-			StartedAt: time.Now().Add(-30 * time.Second),
-		},
+	sessionEvent := miragesdk.SessionResponse{
+		ID:        "session-123",
+		Phishlet:  "example",
+		Username:  "alice@acme.com",
+		Password:  "hunter2",
+		StartedAt: time.Now().Add(-30 * time.Second),
 	}
 
-	// Poll until the result is correlated.
+	// Stage 1: Push credential capture — result should become "captured".
+	events <- miragesdk.SessionEvent{Type: miragesdk.EventCredsCaptured, Session: sessionEvent}
+
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		results, err := h.Client.ListCampaignResults(campaign.ID)
-		if err != nil {
-			t.Fatalf("ListCampaignResults: %v", err)
-		}
+		results, _ := h.Client.ListCampaignResults(campaign.ID)
 		for _, r := range results {
 			if r.Email == "alice@acme.com" && r.Status == "captured" {
 				if r.SessionID != "session-123" {
@@ -251,10 +246,26 @@ func TestCampaigns_SessionCorrelation(t *testing.T) {
 				if r.CapturedAt == nil {
 					t.Error("CapturedAt is nil, expected a timestamp")
 				}
+				goto stage2
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for captured status")
+
+stage2:
+	// Stage 2: Push session completed — result should become "completed".
+	events <- miragesdk.SessionEvent{Type: miragesdk.EventSessionCompleted, Session: sessionEvent}
+
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		results, _ := h.Client.ListCampaignResults(campaign.ID)
+		for _, r := range results {
+			if r.Email == "alice@acme.com" && r.Status == "completed" {
 				return // success
 			}
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	t.Fatal("timed out waiting for session correlation")
+	t.Fatal("timed out waiting for completed status")
 }

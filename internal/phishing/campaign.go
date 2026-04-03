@@ -27,11 +27,12 @@ type ResultStatus = string
 
 // Result status constants.
 const (
-	ResultPending  ResultStatus = "pending"
-	ResultSent     ResultStatus = "sent"
-	ResultFailed   ResultStatus = "failed"
-	ResultClicked  ResultStatus = "clicked"
-	ResultCaptured ResultStatus = "captured"
+	ResultPending   ResultStatus = "pending"
+	ResultSent      ResultStatus = "sent"
+	ResultFailed    ResultStatus = "failed"
+	ResultClicked   ResultStatus = "clicked"
+	ResultCaptured  ResultStatus = "captured"
+	ResultCompleted ResultStatus = "completed"
 )
 
 // Campaign ties together a target list, email template, and SMTP profile
@@ -102,6 +103,7 @@ type CampaignService struct {
 	Miraged   *MiragedService
 	Monitor   *SessionMonitor
 	Mailer    Mailer
+	Bus       *CampaignBus
 	Logger    *slog.Logger
 
 	running   map[string]context.CancelFunc
@@ -223,7 +225,11 @@ func (s *CampaignService) endCampaign(id string, status CampaignStatus) error {
 	}
 	campaign.Status = status
 	campaign.CompletedAt = &now
-	return s.Store.UpdateCampaign(campaign)
+	if err := s.Store.UpdateCampaign(campaign); err != nil {
+		return err
+	}
+	s.Bus.PublishStatusChange(campaign.ID, campaign.Status)
+	return nil
 }
 
 // Shutdown cancels all running campaigns.
@@ -332,6 +338,7 @@ func (s *CampaignService) activate(campaign *Campaign) error {
 		s.Logger.Error("failed to activate campaign", "error", err)
 		return err
 	}
+	s.Bus.PublishStatusChange(campaign.ID, campaign.Status)
 	return nil
 }
 
@@ -408,6 +415,7 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		if err := s.Store.UpdateResult(result); err != nil {
 			s.Logger.Error("failed to update result", "error", err)
 		}
+		s.Bus.PublishResultUpdate(campaign.ID, result)
 	}
 }
 

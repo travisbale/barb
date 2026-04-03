@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/travisbale/barb/internal/phishing"
@@ -238,6 +239,86 @@ func (r *Router) sendTestEmail(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
+func (r *Router) streamCampaign(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("id")
+
+	// Verify the campaign exists.
+	if _, err := r.Campaigns.Get(id); err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "failed to get campaign", err)
+		}
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		r.writeError(w, http.StatusInternalServerError, "streaming not supported", nil)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	ch := r.Campaigns.Bus.Subscribe(id)
+	defer r.Campaigns.Bus.Unsubscribe(id, ch)
+
+	// Send current state so the client doesn't miss events that fired
+	// before the subscription was established.
+	campaign, _ := r.Campaigns.Get(id)
+	if campaign != nil {
+		statusData, _ := json.Marshal(sdk.CampaignEvent{
+			Type:       sdk.EventCampaignStatus,
+			CampaignID: id,
+			Status:     string(campaign.Status),
+		})
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", sdk.EventCampaignStatus, statusData)
+		flusher.Flush()
+	}
+	results, _ := r.Campaigns.Results(id)
+	for _, result := range results {
+		if result.Status == "pending" {
+			continue
+		}
+		resp := resultToResponse(result)
+		resultData, _ := json.Marshal(sdk.CampaignEvent{
+			Type:       sdk.EventResultUpdated,
+			CampaignID: id,
+			Result:     &resp,
+		})
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", sdk.EventResultUpdated, resultData)
+	}
+	flusher.Flush()
+
+	for {
+		select {
+		case <-req.Context().Done():
+			return
+		case event := <-ch:
+			sseEvent := sdk.CampaignEvent{
+				Type:       event.Type,
+				CampaignID: event.CampaignID,
+				Status:     event.Status,
+			}
+			if event.Result != nil {
+				r := resultToResponse(event.Result)
+				sseEvent.Result = &r
+			}
+			data, err := json.Marshal(sseEvent)
+			if err != nil {
+				r.Logger.Error("failed to marshal SSE event", "error", err)
+				continue
+			}
+			fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, data)
+			flusher.Flush()
+		}
+	}
 }
 
 func isReferenceError(err error) bool {

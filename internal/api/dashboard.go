@@ -16,12 +16,13 @@ func (r *Router) getDashboard(w http.ResponseWriter, req *http.Request) {
 	active := make([]sdk.ActiveCampaignInfo, len(stats.ActiveCampaigns))
 	for i, a := range stats.ActiveCampaigns {
 		active[i] = sdk.ActiveCampaignInfo{
-			ID:       a.ID,
-			Name:     a.Name,
-			Sent:     a.Sent,
-			Failed:   a.Failed,
-			Captured: a.Captured,
-			Total:    a.Total,
+			ID:        a.ID,
+			Name:      a.Name,
+			Sent:      a.Sent,
+			Failed:    a.Failed,
+			Captured:  a.Captured,
+			Completed: a.Completed,
+			Total:     a.Total,
 		}
 	}
 

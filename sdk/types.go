@@ -192,6 +192,21 @@ type CampaignResultResponse struct {
 	SessionID  string     `json:"session_id,omitempty"`
 }
 
+// --- Campaign Events (SSE) ---
+
+// CampaignEvent is delivered by StreamCampaign for result updates and status changes.
+type CampaignEvent struct {
+	Type       string                  `json:"type"`
+	CampaignID string                  `json:"campaign_id"`
+	Result     *CampaignResultResponse `json:"result,omitempty"`
+	Status     string                  `json:"status,omitempty"`
+}
+
+const (
+	EventResultUpdated  = "result.updated"
+	EventCampaignStatus = "campaign.status"
+)
+
 // --- Miraged Connections ---
 
 type EnrollMiragedRequest struct {
@@ -297,12 +312,13 @@ type RecentCapture struct {
 }
 
 type ActiveCampaignInfo struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Sent     int    `json:"sent"`
-	Failed   int    `json:"failed"`
-	Captured int    `json:"captured"`
-	Total    int    `json:"total"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Sent      int    `json:"sent"`
+	Failed    int    `json:"failed"`
+	Captured  int    `json:"captured"`
+	Completed int    `json:"completed"`
+	Total     int    `json:"total"`
 }
 
 // --- System ---

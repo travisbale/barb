@@ -23,12 +23,13 @@ type CampaignCounts struct {
 }
 
 type ActiveCampaign struct {
-	ID       string
-	Name     string
-	Sent     int
-	Failed   int
-	Captured int
-	Total    int
+	ID        string
+	Name      string
+	Sent      int
+	Failed    int
+	Captured  int
+	Completed int
+	Total     int
 }
 
 type RecentCapture struct {
@@ -75,7 +76,7 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 			return nil, err
 		}
 
-		var sent, failed, captured int
+		var sent, failed, captured, completed int
 		for _, result := range results {
 			switch result.Status {
 			case ResultSent:
@@ -92,19 +93,30 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 						SessionID:    result.SessionID,
 					})
 				}
+			case ResultCompleted:
+				completed++
+				if result.CapturedAt != nil {
+					allCaptures = append(allCaptures, RecentCapture{
+						Email:        result.Email,
+						CampaignName: campaign.Name,
+						CapturedAt:   result.CapturedAt.Format(time.RFC3339),
+						SessionID:    result.SessionID,
+					})
+				}
 			}
 		}
 
-		stats.TotalCaptures += captured
+		stats.TotalCaptures += captured + completed
 
 		if campaign.Status == CampaignActive {
 			stats.ActiveCampaigns = append(stats.ActiveCampaigns, ActiveCampaign{
-				ID:       campaign.ID,
-				Name:     campaign.Name,
-				Sent:     sent,
-				Failed:   failed,
-				Captured: captured,
-				Total:    len(results),
+				ID:        campaign.ID,
+				Name:      campaign.Name,
+				Sent:      sent,
+				Failed:    failed,
+				Captured:  captured,
+				Completed: completed,
+				Total:     len(results),
 			})
 		}
 	}

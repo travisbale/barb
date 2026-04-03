@@ -15,6 +15,7 @@ import (
 type SessionMonitor struct {
 	Campaigns campaignStore
 	Miraged   *MiragedService
+	Bus       *CampaignBus
 	Logger    *slog.Logger
 }
 
@@ -121,11 +122,11 @@ func (m *SessionMonitor) handleEvent(miragedID string, event miragesdk.SessionEv
 			)
 			continue
 		}
-		m.correlate(campaign, session)
+		m.correlate(campaign, event.Type, session)
 	}
 }
 
-func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.SessionResponse) {
+func (m *SessionMonitor) correlate(campaign *Campaign, eventType miragesdk.EventType, session miragesdk.SessionResponse) {
 	result, err := m.Campaigns.GetResultByEmail(campaign.ID, session.Username)
 	if err != nil {
 		m.Logger.Debug("no matching result for session",
@@ -133,29 +134,37 @@ func (m *SessionMonitor) correlate(campaign *Campaign, session miragesdk.Session
 		)
 		return
 	}
-	if result.SessionID != "" {
-		m.Logger.Debug("session already correlated",
-			"campaign_id", campaign.ID, "result_id", result.ID, "session_id", result.SessionID,
-		)
-		return
+
+	switch eventType {
+	case miragesdk.EventCredsCaptured:
+		if result.SessionID != "" {
+			return // already correlated
+		}
+		clickedAt := session.StartedAt
+		result.ClickedAt = &clickedAt
+		now := time.Now()
+		result.Status = ResultCaptured
+		result.CapturedAt = &now
+		result.SessionID = session.ID
+
+	case miragesdk.EventSessionCompleted:
+		if result.Status == ResultCompleted {
+			return // already complete
+		}
+		result.Status = ResultCompleted
 	}
-
-	// Record the click time from when the session started (target first visited the lure).
-	clickedAt := session.StartedAt
-	result.ClickedAt = &clickedAt
-
-	now := time.Now()
-	result.Status = ResultCaptured
-	result.CapturedAt = &now
-	result.SessionID = session.ID
 
 	if err := m.Campaigns.UpdateResult(result); err != nil {
 		m.Logger.Error("failed to update result", "result_id", result.ID, "error", err)
-	} else {
-		m.Logger.Info("session correlated",
-			"campaign_id", campaign.ID,
-			"email", result.Email,
-			"session_id", session.ID,
-		)
+		return
 	}
+
+	m.Bus.PublishResultUpdate(campaign.ID, result)
+
+	m.Logger.Info("session correlated",
+		"campaign_id", campaign.ID,
+		"event", string(eventType),
+		"email", result.Email,
+		"session_id", session.ID,
+	)
 }

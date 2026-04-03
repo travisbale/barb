@@ -49,9 +49,12 @@ func New(cfg Config) (*App, error) {
 	miragedSvc := &phishing.MiragedService{Store: miragedStore}
 	phishletSvc := &phishing.PhishletService{Store: phishletStore}
 
+	bus := phishing.NewCampaignBus()
+
 	monitor := &phishing.SessionMonitor{
 		Campaigns: campaignStore,
 		Miraged:   miragedSvc,
+		Bus:       bus,
 		Logger:    cfg.Logger,
 	}
 
@@ -64,6 +67,7 @@ func New(cfg Config) (*App, error) {
 		Miraged:   miragedSvc,
 		Monitor:   monitor,
 		Mailer:    cfg.Mailer,
+		Bus:       bus,
 		Logger:    cfg.Logger,
 	}
 

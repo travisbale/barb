@@ -99,6 +99,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("POST", sdk.RouteCampaignCancel, r.cancelCampaign)
 	auth("POST", sdk.RouteCampaignTestEmail, r.sendTestEmail)
 	auth("GET", sdk.RouteCampaignResults, r.listCampaignResults)
+	auth("GET", sdk.RouteCampaignStream, r.streamCampaign)
 
 	// Miraged connections
 	auth("GET", sdk.RouteMiraged, r.listMiraged)

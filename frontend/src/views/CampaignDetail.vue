@@ -268,7 +268,7 @@ async function start() {
   try {
     await startCampaign(id)
     await load()
-    startPolling()
+    startStreaming()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -283,7 +283,7 @@ async function complete() {
   try {
     await completeCampaign(id)
     await load()
-    stopPolling()
+    stopStreaming()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -298,7 +298,7 @@ async function cancel() {
   try {
     await cancelCampaign(id)
     await load()
-    stopPolling()
+    stopStreaming()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -321,20 +321,45 @@ async function sendTest() {
   }
 }
 
-let pollInterval: ReturnType<typeof setInterval> | null = null
+let eventSource: EventSource | null = null
 
-function startPolling() {
-  stopPolling()
-  pollInterval = setInterval(async () => {
-    await load()
-    if (!isActive.value) stopPolling()
-  }, 2000)
+function startStreaming() {
+  stopStreaming()
+  eventSource = new EventSource(`/api/campaigns/${id}/stream`)
+
+  eventSource.addEventListener('result.updated', (e) => {
+    const event = JSON.parse(e.data)
+    const result = event.result as CampaignResult
+    const idx = results.value.findIndex(r => r.id === result.id)
+    if (idx !== -1) {
+      results.value[idx] = result
+    }
+  })
+
+  eventSource.addEventListener('campaign.status', (e) => {
+    const event = JSON.parse(e.data)
+    if (campaign.value) {
+      campaign.value.status = event.status
+    }
+    // Stop streaming when the campaign is no longer active.
+    if (event.status !== 'active') {
+      stopStreaming()
+    }
+  })
+
+  eventSource.onerror = () => {
+    // EventSource.CLOSED means the server rejected the connection (e.g., 404).
+    // The browser will not reconnect in this case.
+    if (eventSource?.readyState === EventSource.CLOSED) {
+      stopStreaming()
+    }
+  }
 }
 
-function stopPolling() {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-    pollInterval = null
+function stopStreaming() {
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
   }
 }
 
@@ -343,21 +368,23 @@ const statusColor: Record<string, string> = {
   sent: 'text-muted',
   failed: 'text-danger',
   clicked: 'text-amber',
-  captured: 'text-teal',
+  captured: 'text-amber',
+  completed: 'text-teal',
 }
 
 const sentCount = computed(() => results.value.filter(result => result.status !== 'pending').length)
 const totalCount = computed(() => results.value.length)
-const clickedCount = computed(() => results.value.filter(result => result.status === 'clicked' || result.status === 'captured').length)
-const capturedCount = computed(() => results.value.filter(result => result.status === 'captured').length)
+const clickedCount = computed(() => results.value.filter(result => ['clicked', 'captured', 'completed'].includes(result.status)).length)
+const capturedCount = computed(() => results.value.filter(result => result.status === 'captured' || result.status === 'completed').length)
+const completedCount = computed(() => results.value.filter(result => result.status === 'completed').length)
 const captureRate = computed(() => {
   const delivered = sentCount.value
-  return delivered > 0 ? capturedCount.value / delivered : 0
+  return delivered > 0 ? completedCount.value / delivered : 0
 })
 
 async function viewSession(result: CampaignResult) {
   if (!result.session_id || !campaign.value?.miraged_id) return
-  stopPolling()
+  stopStreaming()
   selectedSession.value = null
   sessionError.value = ''
   sessionLoading.value = true
@@ -373,7 +400,7 @@ async function viewSession(result: CampaignResult) {
 function closeSession() {
   selectedSession.value = null
   sessionError.value = ''
-  if (isActive.value) startPolling()
+  if (isActive.value) startStreaming()
 }
 
 function downloadCookies() {
@@ -409,10 +436,10 @@ function exportCSV() {
 
 onMounted(async () => {
   await load()
-  if (isActive.value) startPolling()
+  if (isActive.value) startStreaming()
 })
 
-onUnmounted(stopPolling)
+onUnmounted(stopStreaming)
 </script>
 
 <template>
@@ -433,7 +460,8 @@ onUnmounted(stopPolling)
             }">{{ campaign?.status }}</span>
             <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
             <span v-if="clickedCount > 0" class="text-xs text-amber font-mono">{{ clickedCount }} clicked</span>
-            <span v-if="capturedCount > 0" class="text-xs text-teal font-mono">{{ capturedCount }} captured</span>
+            <span v-if="capturedCount > 0" class="text-xs text-amber font-mono">{{ capturedCount }} captured</span>
+            <span v-if="completedCount > 0" class="text-xs text-teal font-mono">{{ completedCount }} completed</span>
             <span v-if="captureRate > 0" class="text-xs text-dim font-mono">({{ (captureRate * 100).toFixed(1) }}%)</span>
           </div>
           <span v-if="campaign?.lure_url" class="text-xs text-dim font-mono select-all">{{ campaign.lure_url }}</span>

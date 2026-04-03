@@ -18,6 +18,7 @@ const (
 	RouteCampaignCancel    = "/api/campaigns/{id}/cancel"
 	RouteCampaignResults   = "/api/campaigns/{id}/results"
 	RouteCampaignTestEmail = "/api/campaigns/{id}/test-email"
+	RouteCampaignStream    = "/api/campaigns/{id}/stream"
 
 	// Email Templates
 	RouteTemplates       = "/api/templates"

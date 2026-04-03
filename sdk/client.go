@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
+	"strings"
 )
 
 type validatable interface {
@@ -192,6 +194,56 @@ func (c *Client) ListCampaignResults(id string) ([]CampaignResultResponse, error
 		return nil, err
 	}
 	return *resp, nil
+}
+
+// StreamCampaign opens an SSE connection for real-time campaign events.
+// Returns a channel that receives events and a cancel function to close the stream.
+func (c *Client) StreamCampaign(id string) (<-chan CampaignEvent, func(), error) {
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+ResolveRoute(RouteCampaignStream, "id", id), nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("stream request: %w", err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("stream connect: %w", err)
+	}
+	if err := checkStatus(resp); err != nil {
+		resp.Body.Close()
+		return nil, nil, err
+	}
+
+	ch := make(chan CampaignEvent, 16)
+	cancel := func() { _ = resp.Body.Close() }
+
+	go func() {
+		defer close(ch)
+		defer resp.Body.Close()
+
+		scanner := bufio.NewScanner(resp.Body)
+		var eventType string
+		var dataLine string
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			if et, ok := strings.CutPrefix(line, "event: "); ok {
+				eventType = et
+			} else if data, ok := strings.CutPrefix(line, "data: "); ok {
+				dataLine = data
+			} else if line == "" && dataLine != "" {
+				var event CampaignEvent
+				if json.Unmarshal([]byte(dataLine), &event) == nil {
+					event.Type = eventType
+					ch <- event
+				}
+				eventType = ""
+				dataLine = ""
+			}
+		}
+	}()
+
+	return ch, cancel, nil
 }
 
 // --- Email Templates ---
