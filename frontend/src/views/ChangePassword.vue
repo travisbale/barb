@@ -38,7 +38,7 @@ async function submit() {
         <div class="font-mono text-xs text-dim mt-1 tracking-wider">Change your password to continue</div>
       </div>
 
-      <form @submit.prevent="submit" class="flex flex-col gap-5">
+      <form @submit.prevent="submit" class="flex flex-col gap-7">
         <AppInput v-model="currentPassword" placeholder="Current password" type="password" required autofocus />
         <AppInput v-model="newPassword" placeholder="New password (8+ characters)" type="password" required />
         <AppInput v-model="confirmPassword" placeholder="Confirm new password" type="password" required />
