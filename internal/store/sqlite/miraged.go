@@ -3,20 +3,31 @@ package sqlite
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/travisbale/barb/internal/crypto/aes"
 	"github.com/travisbale/barb/internal/phishing"
 )
 
-type Miraged struct{ db *DB }
+type Miraged struct {
+	db     *DB
+	cipher *aes.Cipher
+}
 
-func NewMiragedStore(db *DB) *Miraged { return &Miraged{db: db} }
+func NewMiragedStore(db *DB, cipher *aes.Cipher) *Miraged {
+	return &Miraged{db: db, cipher: cipher}
+}
 
 func (s *Miraged) CreateConnection(c *phishing.MiragedConnection) error {
-	_, err := s.db.db.Exec(
+	encryptedKey, err := s.cipher.Encrypt(c.KeyPEM)
+	if err != nil {
+		return fmt.Errorf("encrypting client key: %w", err)
+	}
+	_, err = s.db.db.Exec(
 		`INSERT INTO miraged_connections (id, name, address, secret_hostname, cert_pem, key_pem, ca_cert_pem, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.Name, c.Address, c.SecretHostname, c.CertPEM, c.KeyPEM, c.CACertPEM, c.CreatedAt.Unix(),
+		c.ID, c.Name, c.Address, c.SecretHostname, c.CertPEM, encryptedKey, c.CACertPEM, c.CreatedAt.Unix(),
 	)
 	if isConflict(err) {
 		return phishing.ErrConflict
@@ -29,7 +40,7 @@ func (s *Miraged) GetConnection(id string) (*phishing.MiragedConnection, error) 
 		`SELECT id, name, address, secret_hostname, cert_pem, key_pem, ca_cert_pem, created_at
 		 FROM miraged_connections WHERE id = ?`, id,
 	)
-	return scanMiragedConnection(row)
+	return s.scanMiragedConnection(row)
 }
 
 func (s *Miraged) UpdateConnectionName(id, name string) (*phishing.MiragedConnection, error) {
@@ -63,7 +74,7 @@ func (s *Miraged) ListConnections() ([]*phishing.MiragedConnection, error) {
 
 	var out []*phishing.MiragedConnection
 	for rows.Next() {
-		c, err := scanMiragedConnection(rows)
+		c, err := s.scanMiragedConnection(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -72,17 +83,22 @@ func (s *Miraged) ListConnections() ([]*phishing.MiragedConnection, error) {
 	return out, rows.Err()
 }
 
-func scanMiragedConnection(row scanner) (*phishing.MiragedConnection, error) {
+func (s *Miraged) scanMiragedConnection(row scanner) (*phishing.MiragedConnection, error) {
 	var (
-		c         phishing.MiragedConnection
-		createdAt int64
+		c            phishing.MiragedConnection
+		encryptedKey []byte
+		createdAt    int64
 	)
-	err := row.Scan(&c.ID, &c.Name, &c.Address, &c.SecretHostname, &c.CertPEM, &c.KeyPEM, &c.CACertPEM, &createdAt)
+	err := row.Scan(&c.ID, &c.Name, &c.Address, &c.SecretHostname, &c.CertPEM, &encryptedKey, &c.CACertPEM, &createdAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, phishing.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
+	}
+	c.KeyPEM, err = s.cipher.Decrypt(encryptedKey)
+	if err != nil {
+		return nil, fmt.Errorf("decrypting client key for connection %s: %w", c.ID, err)
 	}
 	c.CreatedAt = time.Unix(createdAt, 0)
 	return &c, nil

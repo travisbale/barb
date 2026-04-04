@@ -40,7 +40,7 @@ func New(cfg Config) (*App, error) {
 	templateStore := sqlite.NewTemplateStore(cfg.DB)
 	smtpStore := sqlite.NewSMTPStore(cfg.DB, cfg.Cipher)
 	campaignStore := sqlite.NewCampaignStore(cfg.DB)
-	miragedStore := sqlite.NewMiragedStore(cfg.DB)
+	miragedStore := sqlite.NewMiragedStore(cfg.DB, cfg.Cipher)
 	phishletStore := sqlite.NewPhishletStore(cfg.DB)
 
 	targetSvc := &phishing.TargetService{Store: targetStore}

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS smtp_profiles (
     host        TEXT    NOT NULL,
     port        INTEGER NOT NULL DEFAULT 587,
     username    TEXT    NOT NULL DEFAULT '',
-    password    TEXT    NOT NULL DEFAULT '',
+    password    BLOB,
     from_addr   TEXT    NOT NULL,
     from_name       TEXT    NOT NULL DEFAULT '',
     custom_headers  TEXT    NOT NULL DEFAULT '{}',

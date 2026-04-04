@@ -117,6 +117,7 @@ type Harness struct {
 	Mailer *MockMailer
 	Addr   string
 	DB     *sqlite.DB
+	Cipher *aes.Cipher
 }
 
 // NewHarness starts a server in-process with an in-memory database and a mock
@@ -177,9 +178,10 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 		CreatedAt:    time.Now(),
 	})
 
+	cipher := aes.NewCipher(testKey)
 	application, err := app.New(app.Config{
 		DB:       db,
-		Cipher:   aes.NewCipher(testKey),
+		Cipher:   cipher,
 		Frontend: emptyFS{},
 		Mailer:   mailer,
 		Version:  "test",
@@ -228,6 +230,7 @@ func newHarness(t *testing.T, mailer phishing.Mailer) *Harness {
 		Mailer: mockMailer,
 		Addr:   addr,
 		DB:     db,
+		Cipher: cipher,
 	}
 }
 

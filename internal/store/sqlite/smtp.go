@@ -21,7 +21,7 @@ func NewSMTPStore(db *DB, cipher *aes.Cipher) *SMTP {
 }
 
 func (s *SMTP) CreateProfile(p *phishing.SMTPProfile) error {
-	encrypted, err := s.cipher.Encrypt(p.Password)
+	encrypted, err := s.cipher.Encrypt([]byte(p.Password))
 	if err != nil {
 		return fmt.Errorf("encrypting password: %w", err)
 	}
@@ -57,7 +57,7 @@ func (s *SMTP) DeleteProfile(id string) error {
 }
 
 func (s *SMTP) UpdateProfile(p *phishing.SMTPProfile) error {
-	encrypted, err := s.cipher.Encrypt(p.Password)
+	encrypted, err := s.cipher.Encrypt([]byte(p.Password))
 	if err != nil {
 		return fmt.Errorf("encrypting password: %w", err)
 	}
@@ -100,7 +100,7 @@ func (s *SMTP) ListProfiles() ([]*phishing.SMTPProfile, error) {
 func (s *SMTP) scanSMTPProfile(row scanner) (*phishing.SMTPProfile, error) {
 	var (
 		p            phishing.SMTPProfile
-		encryptedPwd string
+		encryptedPwd []byte
 		headersJSON  string
 		createdAt    int64
 	)
@@ -111,10 +111,11 @@ func (s *SMTP) scanSMTPProfile(row scanner) (*phishing.SMTPProfile, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.Password, err = s.cipher.Decrypt(encryptedPwd)
+	decrypted, err := s.cipher.Decrypt(encryptedPwd)
 	if err != nil {
 		return nil, fmt.Errorf("decrypting password for profile %s: %w", p.ID, err)
 	}
+	p.Password = string(decrypted)
 	p.CustomHeaders = make(map[string]string)
 	if headersJSON != "" && headersJSON != "{}" {
 		if err := json.Unmarshal([]byte(headersJSON), &p.CustomHeaders); err != nil {

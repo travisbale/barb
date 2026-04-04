@@ -16,7 +16,7 @@ func TestMiraged_Rename(t *testing.T) {
 	h := test.NewHarness(t)
 
 	// Insert a connection directly — enrollment requires a real miraged.
-	store := sqlite.NewMiragedStore(h.DB)
+	store := sqlite.NewMiragedStore(h.DB, h.Cipher)
 	conn := &phishing.MiragedConnection{
 		ID: "rename-test", Name: "Old Name", Address: "127.0.0.1:443",
 		SecretHostname: "mgmt.local", CertPEM: []byte("cert"), KeyPEM: []byte("key"),

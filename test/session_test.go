@@ -184,7 +184,7 @@ func TestCampaigns_SessionCorrelation(t *testing.T) {
 
 	// Insert a miraged connection directly into the store, bypassing the
 	// enrollment handshake which requires a real miraged instance.
-	miragedStore := sqlite.NewMiragedStore(h.DB)
+	miragedStore := sqlite.NewMiragedStore(h.DB, h.Cipher)
 	conn := &phishing.MiragedConnection{
 		ID:             "test-miraged",
 		Name:           "Mock Miraged",

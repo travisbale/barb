@@ -1,6 +1,7 @@
 package aes
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -13,59 +14,59 @@ func testKey() []byte {
 }
 
 func TestRoundTrip(t *testing.T) {
-	cipher := NewCipher(testKey())
+	c := NewCipher(testKey())
 
-	encrypted, err := cipher.Encrypt("hunter2")
+	encrypted, err := c.Encrypt([]byte("hunter2"))
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	if encrypted == "hunter2" {
+	if bytes.Equal(encrypted, []byte("hunter2")) {
 		t.Fatal("encrypted value should not equal plaintext")
 	}
 
-	decrypted, err := cipher.Decrypt(encrypted)
+	decrypted, err := c.Decrypt(encrypted)
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	if decrypted != "hunter2" {
+	if string(decrypted) != "hunter2" {
 		t.Errorf("Decrypt = %q, want %q", decrypted, "hunter2")
 	}
 }
 
-func TestEmptyString(t *testing.T) {
-	cipher := NewCipher(testKey())
+func TestEmpty(t *testing.T) {
+	c := NewCipher(testKey())
 
-	encrypted, err := cipher.Encrypt("")
+	encrypted, err := c.Encrypt(nil)
 	if err != nil {
 		t.Fatalf("Encrypt: %v", err)
 	}
-	if encrypted != "" {
-		t.Errorf("Encrypt('') = %q, want empty", encrypted)
+	if encrypted != nil {
+		t.Errorf("Encrypt(nil) = %v, want nil", encrypted)
 	}
 
-	decrypted, err := cipher.Decrypt("")
+	decrypted, err := c.Decrypt(nil)
 	if err != nil {
 		t.Fatalf("Decrypt: %v", err)
 	}
-	if decrypted != "" {
-		t.Errorf("Decrypt('') = %q, want empty", decrypted)
+	if decrypted != nil {
+		t.Errorf("Decrypt(nil) = %v, want nil", decrypted)
 	}
 }
 
 func TestUniqueNonces(t *testing.T) {
-	cipher := NewCipher(testKey())
+	c := NewCipher(testKey())
 
-	first, _ := cipher.Encrypt("same")
-	second, _ := cipher.Encrypt("same")
+	first, _ := c.Encrypt([]byte("same"))
+	second, _ := c.Encrypt([]byte("same"))
 
-	if first == second {
+	if bytes.Equal(first, second) {
 		t.Error("two encryptions of the same plaintext should produce different ciphertext")
 	}
 }
 
 func TestWrongKeyFails(t *testing.T) {
 	encryptor := NewCipher(testKey())
-	encrypted, _ := encryptor.Encrypt("secret")
+	encrypted, _ := encryptor.Encrypt([]byte("secret"))
 
 	wrongKey := make([]byte, 32)
 	for i := range wrongKey {
@@ -79,19 +80,10 @@ func TestWrongKeyFails(t *testing.T) {
 	}
 }
 
-func TestInvalidBase64Fails(t *testing.T) {
-	cipher := NewCipher(testKey())
-
-	_, err := cipher.Decrypt("not-valid-base64!!!")
-	if err == nil {
-		t.Error("expected error for invalid base64")
-	}
-}
-
 func TestTruncatedCiphertextFails(t *testing.T) {
-	cipher := NewCipher(testKey())
+	c := NewCipher(testKey())
 
-	_, err := cipher.Decrypt("AQID") // valid base64, but too short
+	_, err := c.Decrypt([]byte{1, 2, 3})
 	if err == nil {
 		t.Error("expected error for truncated ciphertext")
 	}
