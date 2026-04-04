@@ -1,6 +1,6 @@
 # Barb Quickstart
 
-This guide covers connecting Barb to the Mirage quickstart environment so you can run a full phishing campaign end-to-end — from email delivery through session capture — using the bundled target site.
+This guide covers connecting Barb to the Mirage quickstart environment so you can run a full phishing campaign end-to-end using the bundled target site.
 
 ## Prerequisites
 
@@ -14,14 +14,14 @@ Complete the [Mirage Quickstart](https://github.com/travisbale/mirage/blob/maste
 
 ```bash
 make build
-./build/barb serve --debug
+./build/barb serve --addr :4443 --debug
 ```
 
-Open `http://localhost:8080` in your browser. On first login, Barb will prompt you to set a password.
+Port 4443 avoids conflicting with miraged which runs on 443. Open `https://localhost:4443` in your browser. On first login, Barb will prompt you to set a password.
 
 ## 2. Connect to miraged
 
-Navigate to **Connections** and add a new miraged connection:
+Navigate to **Miraged** and add a new miraged connection:
 
 1. Find the enrollment token in the miraged logs:
 
@@ -57,7 +57,7 @@ Mailpit's web UI at `http://localhost:8025` shows all delivered emails.
 
 ## 4. Upload a phishlet
 
-Navigate to **Phishlets** and create a new phishlet. Paste the contents of one of the example phishlet files from the mirage repo (e.g., `examples/phishlets/form-login.yaml`).
+Navigate to **Phishlets** and create a new phishlet. Paste or upload the contents of one of the example phishlet files from the mirage repo (e.g., `examples/phishlets/form-login.yaml`).
 
 ## 5. Create a target list
 
@@ -70,7 +70,7 @@ Navigate to **Templates** and create an email template. The template body suppor
 - `{{.FirstName}}` — target's first name
 - `{{.LastName}}` — target's last name
 - `{{.Email}}` — target's email address
-- `{{.URL}}` — the unique lure URL (generated per-campaign)
+- `{{.URL}}` — the unique lure URL (generated per-target with encrypted tracking parameters)
 
 Include `{{.URL}}` as a link in the body — this is what the target clicks to reach the phishing proxy.
 
@@ -85,6 +85,18 @@ Navigate to **Campaigns** and create a new campaign using the wizard:
 5. Set the redirect URL to `https://login.target.local:8443/demo-complete`
 6. Start the campaign
 
-Barb pushes the phishlet to miraged, creates a lure, and begins sending emails. Check Mailpit at `http://localhost:8025` to see the delivered emails, then click the lure URL to walk through the login flow.
+Barb pushes the phishlet to miraged, creates a lure, and begins sending emails. The campaign detail page updates in real time as emails are sent, links are clicked, and sessions are captured — no need to refresh.
 
-As sessions are captured by miraged, Barb's session monitor picks them up in real time and correlates them to campaign targets.
+Check Mailpit at `http://localhost:8025` to see the delivered emails. Each email contains a unique lure URL with an encrypted tracking parameter. Click the link to walk through the login flow on the proxied target site.
+
+As targets interact with the phishing site, the campaign results progress through the lifecycle: **sent** → **clicked** (target visited the lure) → **captured** (credentials submitted) → **completed** (full session with auth tokens captured).
+
+## 8. View captured sessions
+
+Click a completed result in the campaign detail view to see the captured credentials, auth tokens, and session metadata. Use the **Export Cookies** button to download session cookies for browser import, or **Export CSV** to download campaign results for reporting.
+
+## Next steps
+
+- Try different phishlet configurations for other target applications
+- Test with multiple targets to see per-target click tracking in action
+- Complete the campaign when you're done — this disables the lure and phishlet on miraged

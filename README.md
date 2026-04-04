@@ -40,7 +40,9 @@ Barb is a single Go binary with an embedded Vue frontend. It communicates with `
 - **Phishlet management** — store phishlet YAML configs with a syntax-highlighted editor; automatically pushed to miraged on campaign start
 - **SMTP profiles** — configure mail relay servers with encrypted credential storage (AES-256-GCM)
 - **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment)
+- **Click tracking** — per-target lure URLs with encrypted tracking parameters for deterministic click attribution
 - **Session monitoring** — real-time correlation of miraged session captures to campaign targets via SSE
+- **Live updates** — campaign results stream to the UI in real time via server-sent events (no polling)
 - **Result export** — download campaign results as CSV for reporting
 - **Authentication** — session-based login with mandatory password change on first use
 - **Dark/light theme** — terminal-inspired operations console aesthetic with theme toggle
@@ -65,16 +67,16 @@ make build
 
 ```bash
 ./barb serve --debug
-# Starts on :8080 by default
+# Starts on :443 by default
 ```
 
-Open `http://localhost:8080` in your browser.
+Open `https://localhost` in your browser.
 
 ### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--addr` | `:8080` | Listen address |
+| `--addr` | `:443` | Listen address |
 | `--db` | `barb.db` | SQLite database path |
 | `--debug` | `false` | Enable debug logging |
 
@@ -88,7 +90,7 @@ Start the full development environment (Mailpit, miraged, Go backend, Vite dev s
 make dev
 ```
 
-Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on `:8443`. Mailpit UI is at `http://localhost:8025`.
+Then open `http://localhost:5173`. The Vite dev server proxies `/api` requests to the Go backend on `:4443`. Mailpit UI is at `http://localhost:8025`.
 
 Requires Docker for Mailpit and miraged containers. Stop everything with Ctrl+C, or run `make dev-down` to clean up containers.
 
