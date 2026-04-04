@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
+	"time"
 )
 
 type validatable interface {
@@ -37,8 +38,11 @@ func (c *Client) BaseURL() string {
 func NewClient(baseURL string) *Client {
 	jar, _ := cookiejar.New(nil)
 	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{Jar: jar},
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Jar:     jar,
+			Timeout: 30 * time.Second,
+		},
 	}
 }
 
@@ -205,7 +209,10 @@ func (c *Client) StreamCampaign(id string) (<-chan CampaignEvent, func(), error)
 	}
 	req.Header.Set("Accept", "text/event-stream")
 
-	resp, err := c.httpClient.Do(req)
+	// SSE connections are long-lived — use a client without the request
+	// timeout. Share the cookie jar for authentication.
+	streamClient := &http.Client{Jar: c.httpClient.Jar}
+	resp, err := streamClient.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("stream connect: %w", err)
 	}
