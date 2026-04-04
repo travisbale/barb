@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -130,6 +131,9 @@ func runServe(ctx context.Context, addr, dbPath, tlsCert, tlsKey string, debug b
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: application.Handler(),
+		// Tie request contexts to the application lifecycle so SSE
+		// connections cancel immediately on shutdown.
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 
 	go func() {
