@@ -9,6 +9,8 @@ import (
 type DashboardStats struct {
 	Campaigns       CampaignCounts
 	TotalCaptures   int
+	TotalClicks     int
+	TotalEmailsSent int
 	MiragedCount    int
 	ActiveCampaigns []ActiveCampaign
 	RecentCaptures  []RecentCapture
@@ -76,13 +78,15 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 			return nil, err
 		}
 
-		var sent, failed, captured, completed int
+		var sent, failed, clicked, captured, completed int
 		for _, result := range results {
 			switch result.Status {
 			case ResultSent:
 				sent++
 			case ResultFailed:
 				failed++
+			case ResultClicked:
+				clicked++
 			case ResultCaptured:
 				captured++
 				if result.CapturedAt != nil {
@@ -107,6 +111,8 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 		}
 
 		stats.TotalCaptures += captured + completed
+		stats.TotalClicks += clicked + captured + completed
+		stats.TotalEmailsSent += sent + clicked + captured + completed
 
 		if campaign.Status == CampaignActive {
 			stats.ActiveCampaigns = append(stats.ActiveCampaigns, ActiveCampaign{

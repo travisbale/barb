@@ -368,8 +368,8 @@ const statusColor: Record<string, string> = {
   sent: 'text-muted',
   failed: 'text-danger',
   clicked: 'text-amber',
-  captured: 'text-amber',
-  completed: 'text-teal',
+  captured: 'text-teal',
+  completed: 'text-green',
 }
 
 const sentCount = computed(() => results.value.filter(result => result.status !== 'pending').length)
@@ -449,21 +449,14 @@ onUnmounted(stopStreaming)
       :breadcrumbs="[{ label: 'Campaigns', to: '/campaigns' }, { label: campaign?.name ?? '...' }]"
     >
       <template #subtitle>
-        <div class="flex flex-col gap-1 mt-1">
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-mono uppercase tracking-wider" :class="{
-              'text-dim': campaign?.status === 'draft',
-              'text-teal': campaign?.status === 'active',
-              'text-amber': campaign?.status === 'paused',
-              'text-muted': campaign?.status === 'completed',
-              'text-danger': campaign?.status === 'cancelled',
-            }">{{ campaign?.status }}</span>
-            <span class="text-xs text-dim font-mono">{{ sentCount }}/{{ totalCount }} sent</span>
-            <span v-if="clickedCount > 0" class="text-xs text-amber font-mono">{{ clickedCount }} clicked</span>
-            <span v-if="capturedCount > 0" class="text-xs text-amber font-mono">{{ capturedCount }} captured</span>
-            <span v-if="completedCount > 0" class="text-xs text-teal font-mono">{{ completedCount }} completed</span>
-            <span v-if="captureRate > 0" class="text-xs text-dim font-mono">({{ (captureRate * 100).toFixed(1) }}%)</span>
-          </div>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-xs font-mono uppercase tracking-wider" :class="{
+            'text-dim': campaign?.status === 'draft',
+            'text-teal': campaign?.status === 'active',
+            'text-amber': campaign?.status === 'paused',
+            'text-muted': campaign?.status === 'completed',
+            'text-danger': campaign?.status === 'cancelled',
+          }">{{ campaign?.status }}</span>
           <span v-if="campaign?.lure_url" class="text-xs text-dim font-mono select-all">{{ campaign.lure_url }}</span>
         </div>
       </template>
@@ -498,6 +491,30 @@ onUnmounted(stopStreaming)
         {{ testEmailStatus }}
       </div>
     </Card>
+
+    <!-- Campaign stats -->
+    <div v-if="campaign && campaign.status !== 'draft'" class="grid grid-cols-5 gap-3 mb-6">
+      <div class="bg-surface border border-edge px-4 py-3 text-center">
+        <div class="text-lg font-mono text-primary">{{ sentCount }}<span class="text-dim">/{{ totalCount }}</span></div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Sent</div>
+      </div>
+      <div class="bg-surface border border-edge px-4 py-3 text-center">
+        <div class="text-lg font-mono text-amber">{{ clickedCount }}</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Clicked</div>
+      </div>
+      <div class="bg-surface border border-edge px-4 py-3 text-center">
+        <div class="text-lg font-mono text-teal">{{ capturedCount }}</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Captured</div>
+      </div>
+      <div class="bg-surface border border-edge px-4 py-3 text-center">
+        <div class="text-lg font-mono text-green">{{ completedCount }}</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completed</div>
+      </div>
+      <div class="bg-surface border border-edge px-4 py-3 text-center">
+        <div class="text-lg font-mono text-primary">{{ (captureRate * 100).toFixed(1) }}%</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Rate</div>
+      </div>
+    </div>
 
     <TabBar :tabs="['Results', 'Settings']" :modelValue="activeTab" @update:modelValue="(t: string) => { activeTab = t as any; if (t === 'Settings') loadSettings() }" />
 

@@ -47,32 +47,17 @@ onMounted(load)
 
     <div v-else-if="stats" class="flex flex-col gap-6">
       <!-- Summary cards -->
-      <div class="grid grid-cols-4 gap-4">
+      <div class="grid grid-cols-3 gap-4">
         <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Campaigns</div>
-          <div class="text-2xl font-mono font-bold text-primary mt-1">{{ stats.campaigns.total }}</div>
-          <div class="text-xs font-mono text-dim mt-2 flex gap-3">
-            <template v-if="stats.campaigns.active || stats.campaigns.draft || stats.campaigns.completed">
-              <span v-if="stats.campaigns.active" class="text-teal">{{ stats.campaigns.active }} active</span>
-              <span v-if="stats.campaigns.draft">{{ stats.campaigns.draft }} draft</span>
-              <span v-if="stats.campaigns.completed">{{ stats.campaigns.completed }} done</span>
-            </template>
-            <span v-else>total campaigns</span>
-          </div>
+          <div class="text-xs font-mono text-dim uppercase tracking-wider">Click Rate</div>
+          <div class="text-2xl font-mono font-bold text-amber mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_clicks / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
+          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_clicks }} total clicks</div>
         </Card>
 
         <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Active Now</div>
-          <div class="text-2xl font-mono font-bold" :class="stats.campaigns.active > 0 ? 'text-teal' : 'text-dim'">{{ stats.campaigns.active }}</div>
-          <div class="text-xs font-mono text-dim mt-2">
-            {{ stats.campaigns.active === 1 ? 'campaign running' : 'campaigns running' }}
-          </div>
-        </Card>
-
-        <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Total Captures</div>
-          <div class="text-2xl font-mono font-bold text-teal mt-1">{{ stats.total_captures }}</div>
-          <div class="text-xs font-mono text-dim mt-2">lifetime sessions</div>
+          <div class="text-xs font-mono text-dim uppercase tracking-wider">Capture Rate</div>
+          <div class="text-2xl font-mono font-bold text-green mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_captures / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
+          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_captures }} total captures</div>
         </Card>
 
         <Card class="p-5">
@@ -94,21 +79,22 @@ onMounted(load)
             class="p-5 cursor-pointer hover:border-amber/30 transition-colors"
             @click="router.push(`/campaigns/${campaign.id}`)"
           >
-            <div class="flex items-center justify-between mb-4">
-              <div class="text-sm font-mono font-medium text-primary">{{ campaign.name }}</div>
-              <span class="text-xs font-mono uppercase tracking-wider text-teal">active</span>
-            </div>
+            <div class="text-sm font-mono font-medium text-primary mb-4">{{ campaign.name }}</div>
 
             <!-- Progress bar -->
             <div class="w-full h-1.5 bg-bg rounded-full overflow-hidden mb-3">
               <div class="h-full flex">
+                <div
+                  class="bg-green"
+                  :style="{ width: campaign.total > 0 ? ((campaign.completed / campaign.total) * 100) + '%' : '0%' }"
+                ></div>
                 <div
                   class="bg-teal"
                   :style="{ width: campaign.total > 0 ? ((campaign.captured / campaign.total) * 100) + '%' : '0%' }"
                 ></div>
                 <div
                   class="bg-muted"
-                  :style="{ width: campaign.total > 0 ? ((campaign.sent / campaign.total) * 100) + '%' : '0%' }"
+                  :style="{ width: campaign.total > 0 ? (((campaign.sent - campaign.captured - campaign.completed) / campaign.total) * 100) + '%' : '0%' }"
                 ></div>
                 <div
                   v-if="campaign.failed > 0"
@@ -119,8 +105,9 @@ onMounted(load)
             </div>
 
             <div class="flex items-center gap-4 text-xs font-mono">
-              <span class="text-muted">{{ campaign.sent + campaign.captured + campaign.failed }}/{{ campaign.total }} sent</span>
+              <span class="text-muted">{{ campaign.sent + campaign.captured + campaign.completed + campaign.failed }}/{{ campaign.total }} sent</span>
               <span v-if="campaign.captured > 0" class="text-teal">{{ campaign.captured }} captured</span>
+              <span v-if="campaign.completed > 0" class="text-green">{{ campaign.completed }} completed</span>
               <span v-if="campaign.failed > 0" class="text-danger">{{ campaign.failed }} failed</span>
             </div>
           </Card>
@@ -150,7 +137,7 @@ onMounted(load)
                 :key="i"
                 class="border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
               >
-                <td class="px-4 py-2.5 text-teal">{{ capture.email }}</td>
+                <td class="px-4 py-2.5 text-primary">{{ capture.email }}</td>
                 <td class="px-4 py-2.5 text-muted">{{ capture.campaign_name }}</td>
                 <td class="px-4 py-2.5 text-dim">{{ new Date(capture.captured_at).toLocaleString() }}</td>
               </tr>

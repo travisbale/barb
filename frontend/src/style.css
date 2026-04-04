@@ -17,8 +17,10 @@
   --color-amber-glow: 176 136 37;
   --color-red: 196 77 77;
   --color-red-dim: 196 77 77;
-  --color-teal: 45 138 130;
-  --color-teal-dim: 45 138 130;
+  --color-teal: 42 130 148;
+  --color-teal-dim: 42 130 148;
+  --color-green: 52 148 60;
+  --color-green-dim: 52 148 60;
 }
 
 /* Dark mode */
@@ -36,8 +38,10 @@
   --color-amber-glow: 212 168 67;
   --color-red: 196 77 77;
   --color-red-dim: 196 77 77;
-  --color-teal: 77 168 160;
-  --color-teal-dim: 77 168 160;
+  --color-teal: 68 160 182;
+  --color-teal-dim: 68 160 182;
+  --color-green: 76 175 80;
+  --color-green-dim: 76 175 80;
 }
 
 body {

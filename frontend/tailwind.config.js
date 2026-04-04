@@ -29,6 +29,10 @@ export default {
           DEFAULT: 'rgb(var(--color-teal) / <alpha-value>)',
           dim: 'rgb(var(--color-teal-dim) / 0.06)',
         },
+        green: {
+          DEFAULT: 'rgb(var(--color-green) / <alpha-value>)',
+          dim: 'rgb(var(--color-green-dim) / 0.06)',
+        },
       },
       fontFamily: {
         sans: ['DM Sans', 'sans-serif'],
