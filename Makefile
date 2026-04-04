@@ -41,6 +41,8 @@ fmt:
 lint:
 	@echo "Linting code..."
 	@docker run -t --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:v2.11 golangci-lint run
+	@echo "Type checking frontend..."
+	@cd frontend && npx vue-tsc --noEmit
 
 dev: frontend
 	@docker run -d --name mailpit --rm -p 1025:1025 -p 8025:8025 \

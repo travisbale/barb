@@ -6,7 +6,7 @@ import AppInput from './AppInput.vue'
 import AppSelect from './AppSelect.vue'
 import TargetEditor from './TargetEditor.vue'
 
-const props = defineProps<{
+defineProps<{
   modelValue: string
 }>()
 
