@@ -308,6 +308,7 @@ type CampaignCounts struct {
 
 type RecentCapture struct {
 	Email        string `json:"email"`
+	CampaignID   string `json:"campaign_id"`
 	CampaignName string `json:"campaign_name"`
 	CapturedAt   string `json:"captured_at"`
 	SessionID    string `json:"session_id"`

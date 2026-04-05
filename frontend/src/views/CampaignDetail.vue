@@ -384,12 +384,17 @@ const captureRate = computed(() => {
 
 async function viewSession(result: CampaignResult) {
   if (!result.session_id || !campaign.value?.miraged_id) return
+  openSession(result.session_id)
+}
+
+async function openSession(sessionId: string) {
+  if (!campaign.value?.miraged_id) return
   stopStreaming()
   selectedSession.value = null
   sessionError.value = ''
   sessionLoading.value = true
   try {
-    selectedSession.value = await getMiragedSession(campaign.value.miraged_id, result.session_id)
+    selectedSession.value = await getMiragedSession(campaign.value.miraged_id, sessionId)
   } catch (e: any) {
     sessionError.value = e.message
   } finally {
@@ -437,6 +442,9 @@ function exportCSV() {
 onMounted(async () => {
   await load()
   if (isActive.value) startStreaming()
+
+  const sessionId = route.query.session as string
+  if (sessionId) openSession(sessionId)
 })
 
 onUnmounted(stopStreaming)
@@ -677,11 +685,11 @@ onUnmounted(stopStreaming)
           <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
             <div v-if="selectedSession.username" class="px-3 py-2 bg-bg border border-edge">
               <div class="text-xs text-dim font-mono">Username</div>
-              <div class="text-sm text-teal font-mono select-all">{{ selectedSession.username }}</div>
+              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.username }}</div>
             </div>
             <div v-if="selectedSession.password" class="px-3 py-2 bg-bg border border-edge">
               <div class="text-xs text-dim font-mono">Password</div>
-              <div class="text-sm text-teal font-mono select-all">{{ selectedSession.password }}</div>
+              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.password }}</div>
             </div>
           </div>
         </div>

@@ -105,7 +105,7 @@ onMounted(load)
             </div>
 
             <div class="flex items-center gap-4 text-xs font-mono">
-              <span class="text-muted">{{ campaign.sent + campaign.captured + campaign.completed + campaign.failed }}/{{ campaign.total }} sent</span>
+              <span class="text-muted">{{ campaign.sent + campaign.failed }}/{{ campaign.total }} sent</span>
               <span v-if="campaign.captured > 0" class="text-teal">{{ campaign.captured }} captured</span>
               <span v-if="campaign.completed > 0" class="text-green">{{ campaign.completed }} completed</span>
               <span v-if="campaign.failed > 0" class="text-danger">{{ campaign.failed }} failed</span>
@@ -135,7 +135,8 @@ onMounted(load)
               <tr
                 v-for="(capture, i) in stats.recent_captures"
                 :key="i"
-                class="border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors"
+                class="border-b border-edge/50 last:border-0 hover:bg-surface-hover transition-colors cursor-pointer"
+                @click="router.push(`/campaigns/${capture.campaign_id}?session=${capture.session_id}`)"
               >
                 <td class="px-4 py-2.5 text-primary">{{ capture.email }}</td>
                 <td class="px-4 py-2.5 text-muted">{{ capture.campaign_name }}</td>

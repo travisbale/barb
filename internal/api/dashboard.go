@@ -30,6 +30,7 @@ func (r *Router) getDashboard(w http.ResponseWriter, req *http.Request) {
 	for i, c := range stats.RecentCaptures {
 		captures[i] = sdk.RecentCapture{
 			Email:        c.Email,
+			CampaignID:   c.CampaignID,
 			CampaignName: c.CampaignName,
 			CapturedAt:   c.CapturedAt,
 			SessionID:    c.SessionID,

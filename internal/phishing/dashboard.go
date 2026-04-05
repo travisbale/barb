@@ -36,6 +36,7 @@ type ActiveCampaign struct {
 
 type RecentCapture struct {
 	Email        string
+	CampaignID   string
 	CampaignName string
 	CapturedAt   string
 	SessionID    string
@@ -92,6 +93,7 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 				if result.CapturedAt != nil {
 					allCaptures = append(allCaptures, RecentCapture{
 						Email:        result.Email,
+						CampaignID:   campaign.ID,
 						CampaignName: campaign.Name,
 						CapturedAt:   result.CapturedAt.Format(time.RFC3339),
 						SessionID:    result.SessionID,
@@ -102,6 +104,7 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 				if result.CapturedAt != nil {
 					allCaptures = append(allCaptures, RecentCapture{
 						Email:        result.Email,
+						CampaignID:   campaign.ID,
 						CampaignName: campaign.Name,
 						CapturedAt:   result.CapturedAt.Format(time.RFC3339),
 						SessionID:    result.SessionID,
@@ -118,7 +121,7 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 			stats.ActiveCampaigns = append(stats.ActiveCampaigns, ActiveCampaign{
 				ID:        campaign.ID,
 				Name:      campaign.Name,
-				Sent:      sent,
+				Sent:      sent + clicked + captured + completed,
 				Failed:    failed,
 				Captured:  captured,
 				Completed: completed,

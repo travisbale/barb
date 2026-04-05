@@ -411,7 +411,7 @@ export interface DashboardStats {
   total_emails_sent: number
   miraged_count: number
   active_campaigns: { id: string; name: string; sent: number; failed: number; captured: number; completed: number; total: number }[]
-  recent_captures: { email: string; campaign_name: string; captured_at: string; session_id: string }[]
+  recent_captures: { email: string; campaign_id: string; campaign_name: string; captured_at: string; session_id: string }[]
 }
 
 export function getDashboard(): Promise<DashboardStats> {
