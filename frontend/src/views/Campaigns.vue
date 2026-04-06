@@ -51,11 +51,11 @@ onMounted(load)
       <AddButton @click="router.push('/campaigns/new')">New Campaign</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <EmptyState v-if="campaigns.length === 0" message="No campaigns. Create one to begin an operation." />
 
-    <DataTable v-else :columns="[{ label: 'Status' }, { label: 'Name' }, { label: 'Created' }, { label: '', width: 'w-16' }]">
+    <DataTable v-else :columns="[{ label: 'Name' }, { label: 'Status' }, { label: 'Created' }, { label: '', width: 'w-16' }]">
       <DataTableRow
         v-for="(campaign, i) in campaigns"
         :key="campaign.id"
@@ -63,10 +63,10 @@ onMounted(load)
         clickable
         @click="router.push(`/campaigns/${campaign.id}`)"
       >
+        <td class="px-4 py-2.5 text-primary">{{ campaign.name }}</td>
         <td class="px-4 py-2.5">
           <span class="text-xs uppercase tracking-wider" :class="statusColor[campaign.status] ?? 'text-dim'">{{ campaign.status }}</span>
         </td>
-        <td class="px-4 py-2.5 text-primary">{{ campaign.name }}</td>
         <td class="px-4 py-2.5 text-dim">{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
         <td class="px-4 py-2.5 text-right">
           <DeleteButton @click.stop="remove(campaign.id)" />

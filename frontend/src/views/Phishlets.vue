@@ -6,7 +6,6 @@ import DeleteButton from '../components/DeleteButton.vue'
 import PhishletForm from '../components/PhishletForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
-import Card from '../components/Card.vue'
 import DataTable from '../components/DataTable.vue'
 import DataTableRow from '../components/DataTableRow.vue'
 import AddButton from '../components/AddButton.vue'
@@ -23,12 +22,10 @@ const { items: phishlets, showForm, editingId, error, form: yaml, openCreate, op
       <AddButton @click="openCreate">New Phishlet</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
-    <Card v-if="showForm" class="p-7">
-      <PhishletForm v-model="yaml" :submit-label="editingId ? 'Save' : 'Create'"
-        @submit="submit" @cancel="closeForm" />
-    </Card>
+    <PhishletForm v-if="showForm" v-model="yaml" :submit-label="editingId ? 'Save' : 'Create'"
+      @submit="submit" @cancel="closeForm" />
 
     <EmptyState v-if="phishlets.length === 0 && !showForm" message="No phishlets. Add one to define phishing site configurations." />
 

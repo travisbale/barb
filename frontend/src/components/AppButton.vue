@@ -14,7 +14,7 @@ defineProps<{
         'bg-amber text-bg hover:bg-amber-dim': variant === 'primary' || !variant,
         'border border-edge text-muted hover:text-amber hover:border-amber/30 bg-transparent': variant === 'secondary',
         'text-muted hover:text-amber bg-transparent': variant === 'ghost',
-        'text-dim hover:text-danger bg-transparent': variant === 'danger',
+        'border border-edge text-muted hover:text-danger hover:border-danger/30 bg-transparent': variant === 'danger',
       },
     ]"
   >

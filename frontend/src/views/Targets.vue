@@ -9,6 +9,7 @@ import DeleteButton from '../components/DeleteButton.vue'
 import AppInput from '../components/AppInput.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
+import FormCard from '../components/FormCard.vue'
 import DataTable from '../components/DataTable.vue'
 import DataTableRow from '../components/DataTableRow.vue'
 import AddButton from '../components/AddButton.vue'
@@ -60,15 +61,15 @@ onMounted(load)
       <AddButton @click="showCreate = true">New List</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
-    <Card v-if="showCreate" class="p-7 mb-4">
-      <form @submit.prevent="create" class="flex gap-3 items-center">
-        <AppInput v-model="newName" placeholder="List name" autofocus class="flex-1" />
+    <FormCard v-if="showCreate" @submit="create">
+      <AppInput v-model="newName" placeholder="List name" autofocus />
+      <template #actions>
         <AppButton variant="ghost" @click="showCreate = false">Cancel</AppButton>
         <AppButton type="submit">Create</AppButton>
-      </form>
-    </Card>
+      </template>
+    </FormCard>
 
     <EmptyState v-if="lists.length === 0 && !showCreate" message="No target lists. Create one to begin." />
 

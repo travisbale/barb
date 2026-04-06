@@ -69,7 +69,7 @@ function closeForm() {
       <AddButton @click="openCreate">Add Profile</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <FormCard v-if="showForm" @submit="submit">
       <div class="grid grid-cols-2 gap-7">

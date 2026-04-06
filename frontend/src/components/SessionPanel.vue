@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { getMiragedSession, exportMiragedSessionCookies, type MiragedSession } from '../api/client'
+import { getMiragedSession, exportMiragedSessionCookies, type MiragedSession, type CampaignResult } from '../api/client'
+import { resultStatusColor } from '../utils/results'
 import AppButton from './AppButton.vue'
 import Card from './Card.vue'
 import ErrorBanner from './ErrorBanner.vue'
+import FieldValue from './FieldValue.vue'
 
 const props = defineProps<{ miragedId: string }>()
 const emit = defineEmits<{ close: [] }>()
 
 const session = ref<MiragedSession | null>(null)
+const result = ref<CampaignResult | null>(null)
 const loading = ref(false)
 const error = ref('')
 
-async function open(sessionId: string) {
+async function open(sessionId: string, campaignResult?: CampaignResult) {
   session.value = null
+  result.value = campaignResult ?? null
   error.value = ''
   loading.value = true
   try {
@@ -27,6 +31,7 @@ async function open(sessionId: string) {
 
 function close() {
   session.value = null
+  result.value = null
   error.value = ''
   emit('close')
 }
@@ -41,62 +46,64 @@ defineExpose({ open, close })
 </script>
 
 <template>
-  <Card v-if="session || loading || error" class="p-7 mb-4">
-    <div class="flex items-center justify-between mb-5">
-      <div class="text-xs font-mono text-dim uppercase tracking-wider">Session Details</div>
-      <div class="flex items-center gap-3">
-        <AppButton v-if="session?.cookie_tokens && Object.keys(session.cookie_tokens).length > 0" variant="secondary" @click="downloadCookies">Export Cookies</AppButton>
-        <button @click="close" class="text-xs font-mono text-dim hover:text-primary transition-colors uppercase tracking-wider">Close</button>
-      </div>
-    </div>
+  <Card v-if="session || loading || error" class="p-7 mb-4 relative">
+    <button @click="close" class="absolute top-5 right-5 text-dim hover:text-primary transition-colors text-2xl leading-none">&times;</button>
 
     <div v-if="loading" class="text-sm font-mono text-dim">Loading session...</div>
-    <ErrorBanner v-else-if="error" :message="error" />
+    <ErrorBanner v-else-if="error" v-model="error" />
 
-    <div v-else-if="session" class="bg-bg border border-edge px-5 py-4 flex flex-col divide-y divide-edge">
+    <div v-else-if="session" class="flex flex-col [&>*+*]:border-t [&>*+*]:border-edge [&>*+*]:pt-8 [&>*+*]:mt-8">
+      <!-- Session details -->
+      <div>
+        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">Session Details</div>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-5">
+          <FieldValue v-if="result" label="Target">{{ result.email }}</FieldValue>
+          <FieldValue v-if="result" label="Status" :selectable="false"><span class="uppercase" :class="resultStatusColor(result.status)">{{ result.status }}</span></FieldValue>
+          <FieldValue v-if="session.remote_addr" label="IP Address">{{ session.remote_addr }}</FieldValue>
+          <FieldValue v-if="session.started_at" label="Started" :selectable="false">{{ new Date(session.started_at).toLocaleString() }}</FieldValue>
+          <FieldValue v-if="result?.sent_at" label="Sent" :selectable="false">{{ new Date(result.sent_at).toLocaleString() }}</FieldValue>
+          <FieldValue v-if="result?.clicked_at" label="Clicked" :selectable="false">{{ new Date(result.clicked_at).toLocaleString() }}</FieldValue>
+          <FieldValue v-if="result?.captured_at" label="Captured" :selectable="false">{{ new Date(result.captured_at).toLocaleString() }}</FieldValue>
+          <FieldValue v-if="session.user_agent" label="User Agent" class="col-span-2">{{ session.user_agent }}</FieldValue>
+        </div>
+      </div>
+
       <!-- Credentials and captured fields -->
-      <div v-if="session.username || session.password || (session.custom && Object.keys(session.custom).length > 0)" class="grid grid-cols-2 gap-x-8 gap-y-3 pb-6">
-        <div v-if="session.username">
-          <div class="text-xs text-dim font-mono">Username</div>
-          <div class="text-sm text-primary font-mono select-all">{{ session.username }}</div>
-        </div>
-        <div v-if="session.password">
-          <div class="text-xs text-dim font-mono">Password</div>
-          <div class="text-sm text-primary font-mono select-all">{{ session.password }}</div>
-        </div>
-        <div v-for="(value, key) in session.custom" :key="key">
-          <div class="text-xs text-dim font-mono">{{ key }}</div>
-          <div class="text-sm text-primary font-mono select-all">{{ value }}</div>
+      <div v-if="session.username || session.password || (session.custom && Object.keys(session.custom).length > 0)">
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-5">Credentials</div>
+        <div class="grid grid-cols-2 gap-x-8 gap-y-5">
+          <FieldValue v-if="session.username" label="Username">{{ session.username }}</FieldValue>
+          <FieldValue v-if="session.password" label="Password">{{ session.password }}</FieldValue>
+          <FieldValue v-for="(value, key) in session.custom" :key="key" :label="String(key)">{{ value }}</FieldValue>
         </div>
       </div>
 
       <!-- Cookies -->
-      <div v-if="session.cookie_tokens && Object.keys(session.cookie_tokens).length > 0" class="flex flex-col gap-3 py-6">
-        <template v-for="(cookies, domain) in session.cookie_tokens" :key="domain">
-          <div v-for="(value, name) in cookies" :key="`${domain}-${name}`">
-            <div class="text-xs text-dim font-mono">{{ name }} <span class="text-muted">({{ domain }})</span></div>
-            <div class="text-sm text-primary font-mono select-all break-all">{{ value }}</div>
-          </div>
-        </template>
+      <div v-if="session.cookie_tokens && Object.keys(session.cookie_tokens).length > 0">
+        <div class="flex items-center justify-between mb-3 -mt-2">
+          <div class="text-xs text-dim font-mono uppercase tracking-wider">Cookies</div>
+          <AppButton variant="secondary" @click="downloadCookies">Export</AppButton>
+        </div>
+        <div class="flex flex-col gap-3">
+          <template v-for="(cookies, domain) in session.cookie_tokens" :key="domain">
+            <FieldValue v-for="(value, name) in cookies" :key="`${domain}-${name}`" :label="String(name)">{{ value }}</FieldValue>
+          </template>
+        </div>
       </div>
 
-      <!-- Metadata -->
-      <div class="grid grid-cols-2 gap-x-8 gap-y-3 pt-6">
-        <div v-if="session.remote_addr">
-          <div class="text-xs text-dim font-mono">IP Address</div>
-          <div class="text-sm text-primary font-mono select-all">{{ session.remote_addr }}</div>
+      <!-- HTTP tokens -->
+      <div v-if="session.http_tokens && Object.keys(session.http_tokens).length > 0">
+        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">HTTP Tokens</div>
+        <div class="flex flex-col gap-3">
+          <FieldValue v-for="(value, name) in session.http_tokens" :key="name" :label="String(name)">{{ value }}</FieldValue>
         </div>
-        <div v-if="session.phishlet">
-          <div class="text-xs text-dim font-mono">Phishlet</div>
-          <div class="text-sm text-primary font-mono">{{ session.phishlet }}</div>
-        </div>
-        <div v-if="session.started_at">
-          <div class="text-xs text-dim font-mono">Started</div>
-          <div class="text-sm text-primary font-mono">{{ new Date(session.started_at).toLocaleString() }}</div>
-        </div>
-        <div v-if="session.user_agent" class="col-span-2">
-          <div class="text-xs text-dim font-mono">User Agent</div>
-          <div class="text-sm text-primary font-mono select-all break-all">{{ session.user_agent }}</div>
+      </div>
+
+      <!-- Body tokens -->
+      <div v-if="session.body_tokens && Object.keys(session.body_tokens).length > 0">
+        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">Body Tokens</div>
+        <div class="flex flex-col gap-3">
+          <FieldValue v-for="(value, name) in session.body_tokens" :key="name" :label="String(name)">{{ value }}</FieldValue>
         </div>
       </div>
     </div>

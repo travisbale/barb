@@ -131,7 +131,7 @@ onUnmounted(stopPolling)
       <AddButton @click="showAdd = true">Add Connection</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <FormCard v-if="showAdd" @submit="add">
       <MiragedForm v-model="form" />

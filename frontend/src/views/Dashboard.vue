@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { getDashboard, type DashboardStats } from '../api/client'
 import AppButton from '../components/AppButton.vue'
 import Card from '../components/Card.vue'
+import MetricCard from '../components/MetricCard.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 
 const router = useRouter()
@@ -34,7 +35,7 @@ onMounted(load)
       <p class="text-sm text-dim font-mono mt-1">Operations overview</p>
     </div>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <!-- Empty state onboarding -->
     <Card v-if="isEmpty" class="p-10 text-center">
@@ -48,25 +49,15 @@ onMounted(load)
     <div v-else-if="stats" class="flex flex-col gap-6">
       <!-- Summary cards -->
       <div class="grid grid-cols-3 gap-4">
-        <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Click Rate</div>
-          <div class="text-2xl font-mono font-bold text-amber mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_clicks / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
-          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_clicks }} total clicks</div>
-        </Card>
-
-        <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Completion Rate</div>
-          <div class="text-2xl font-mono font-bold text-green mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_completions / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
-          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_completions }} total completions</div>
-        </Card>
-
-        <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Miraged</div>
-          <div class="text-2xl font-mono font-bold text-primary mt-1">{{ stats.miraged_count }}</div>
-          <div class="text-xs font-mono text-dim mt-2">
-            {{ stats.miraged_count === 1 ? 'connection' : 'connections' }}
-          </div>
-        </Card>
+        <MetricCard label="Click Rate"
+          :value="`${stats.total_emails_sent > 0 ? ((stats.total_clicks / stats.total_emails_sent) * 100).toFixed(1) : '0.0'}%`"
+          :subtitle="`${stats.total_clicks} total clicks`" />
+        <MetricCard label="Completion Rate"
+          :value="`${stats.total_emails_sent > 0 ? ((stats.total_completions / stats.total_emails_sent) * 100).toFixed(1) : '0.0'}%`"
+          :subtitle="`${stats.total_completions} total completions`" />
+        <MetricCard label="Miraged"
+          :value="String(stats.miraged_count)"
+          :subtitle="stats.miraged_count === 1 ? 'connection' : 'connections'" />
       </div>
 
       <!-- Active campaign cards -->

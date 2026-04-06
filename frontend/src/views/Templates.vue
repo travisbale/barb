@@ -74,7 +74,7 @@ function removeTemplate(id: string) {
       <AddButton @click="openCreate">New Template</AddButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <FormCard v-if="showForm" @submit="submit">
       <TemplateForm v-model="form" />

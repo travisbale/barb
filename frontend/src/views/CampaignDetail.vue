@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
-import { countResults, resultsToCSV } from '../utils/results'
+import { countResults, resultsToCSV, resultStatusColor } from '../utils/results'
 import {
   getCampaign, startCampaign, completeCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
   updateCampaign,
@@ -19,6 +19,7 @@ import MiragedForm from '../components/MiragedForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
 import Card from '../components/Card.vue'
+import MetricCard from '../components/MetricCard.vue'
 import DataTable from '../components/DataTable.vue'
 import DataTableRow from '../components/DataTableRow.vue'
 import PageHeader from '../components/PageHeader.vue'
@@ -258,7 +259,7 @@ async function complete() {
 }
 
 async function cancel() {
-  if (!await confirm('Cancel this campaign? The lure and phishlet will be disabled.', { label: 'Cancel', variant: 'danger' })) return
+  if (!await confirm('Cancel this campaign? The lure and phishlet will be disabled.', { label: 'Confirm', variant: 'danger' })) return
   cancelling.value = true
   error.value = ''
   try {
@@ -329,22 +330,14 @@ function stopStreaming() {
   }
 }
 
-const statusColor: Record<string, string> = {
-  pending: 'text-dim',
-  sent: 'text-muted',
-  failed: 'text-danger',
-  clicked: 'text-amber',
-  captured: 'text-teal',
-  completed: 'text-green',
-}
 
-const totalCount = computed(() => results.value.length)
 const counts = computed(() => countResults(results.value))
 const completionRate = computed(() => counts.value.sent > 0 ? counts.value.completed / counts.value.sent : 0)
 
-function openSession(sessionId: string) {
+function openResult(result: CampaignResult) {
+  if (!result.session_id) return
   stopStreaming()
-  sessionPanel.value?.open(sessionId)
+  sessionPanel.value?.open(result.session_id, result)
 }
 
 function onSessionClose() {
@@ -371,7 +364,10 @@ onMounted(async () => {
   if (isActive.value) startStreaming()
 
   const sessionId = route.query.session as string
-  if (sessionId) openSession(sessionId)
+  if (sessionId) {
+    const result = results.value.find(r => r.session_id === sessionId)
+    if (result) openResult(result)
+  }
 })
 
 onUnmounted(stopStreaming)
@@ -400,15 +396,15 @@ onUnmounted(stopStreaming)
       <AppButton v-if="isDraft" :disabled="starting" @click="start">
         {{ starting ? 'Starting...' : 'Start Campaign' }}
       </AppButton>
-      <AppButton v-if="isActive" :disabled="completing" @click="complete">
-        {{ completing ? 'Completing...' : 'Complete Campaign' }}
-      </AppButton>
       <AppButton v-if="isActive" variant="danger" :disabled="cancelling" @click="cancel">
         {{ cancelling ? 'Cancelling...' : 'Cancel Campaign' }}
       </AppButton>
+      <AppButton v-if="isActive" :disabled="completing" @click="complete">
+        {{ completing ? 'Completing...' : 'Complete Campaign' }}
+      </AppButton>
     </PageHeader>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <!-- Test email -->
     <Card v-if="showTestEmail" class="p-5 mb-4">
@@ -428,34 +424,23 @@ onUnmounted(stopStreaming)
     </Card>
 
     <!-- Campaign stats -->
-    <div v-if="campaign && campaign.status !== 'draft'" class="grid grid-cols-5 gap-3 mb-6">
-      <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-primary">{{ counts.sent }}<span class="text-dim">/{{ totalCount }}</span></div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Sent</div>
-      </div>
-      <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-amber">{{ counts.clicked }}</div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Clicked</div>
-      </div>
-      <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-teal">{{ counts.captured }}</div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Captured</div>
-      </div>
-      <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-green">{{ counts.completed }}</div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completed</div>
-      </div>
-      <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-primary">{{ (completionRate * 100).toFixed(1) }}%</div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completion Rate</div>
-      </div>
+    <div v-if="campaign && campaign.status !== 'draft'" class="grid grid-cols-3 gap-4 mb-6">
+      <MetricCard label="Click Rate"
+        :value="`${counts.sent > 0 ? ((counts.clicked / counts.sent) * 100).toFixed(1) : '0.0'}%`"
+        :subtitle="`${counts.clicked} of ${counts.sent} clicked`" />
+      <MetricCard label="Capture Rate"
+        :value="`${counts.sent > 0 ? ((counts.captured / counts.sent) * 100).toFixed(1) : '0.0'}%`"
+        :subtitle="`${counts.captured} of ${counts.sent} captured`" />
+      <MetricCard label="Completion Rate"
+        :value="`${(completionRate * 100).toFixed(1)}%`"
+        :subtitle="`${counts.completed} of ${counts.sent} completed`" />
     </div>
 
     <TabBar :tabs="['Results', 'Settings']" :modelValue="activeTab" @update:modelValue="(t: string) => { activeTab = t as any; if (t === 'Settings') loadSettings() }" />
 
     <!-- Settings tab -->
     <div v-if="activeTab === 'Settings'" class="flex flex-col gap-4">
-      <ErrorBanner :message="settingsError" />
+      <ErrorBanner v-model="settingsError" />
 
       <!-- General: Name, Send Rate -->
       <SettingsSection label="General" :editable="isDraft" :expanded="expandedSection === 'general'" :saving="settingsSaving"
@@ -605,11 +590,11 @@ onUnmounted(stopStreaming)
         :key="result.id"
         :index="i"
         :clickable="!!result.session_id"
-        @click="result.session_id ? openSession(result.session_id) : null"
+        @click="openResult(result)"
       >
         <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
         <td class="px-4 py-2.5">
-          <span :class="statusColor[result.status] ?? 'text-dim'" class="uppercase text-xs tracking-wider">
+          <span :class="resultStatusColor(result.status)" class="uppercase text-xs tracking-wider">
             {{ result.status }}
           </span>
         </td>

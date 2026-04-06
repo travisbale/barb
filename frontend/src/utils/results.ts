@@ -1,3 +1,16 @@
+const resultStatusColors: Record<string, string> = {
+  pending: 'text-dim',
+  sent: 'text-muted',
+  failed: 'text-danger',
+  clicked: 'text-amber',
+  captured: 'text-teal',
+  completed: 'text-green',
+}
+
+export function resultStatusColor(status: string): string {
+  return resultStatusColors[status] ?? 'text-dim'
+}
+
 // Counts campaign results by status in a single pass.
 // Each status implies all prior statuses: completed > captured > clicked > sent.
 export function countResults(results: { status: string }[]) {

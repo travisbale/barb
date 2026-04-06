@@ -277,7 +277,7 @@ async function submit() {
       <h1 class="font-mono text-xl font-bold text-primary tracking-wide">New Campaign</h1>
     </div>
 
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <WizardShell :steps="steps" :currentStep="step" @back="back">
       <!-- Step 0: Infrastructure -->
@@ -305,10 +305,13 @@ async function submit() {
       </Card>
 
       <!-- Step 1: Phishlet (only if miraged selected) -->
-      <Card v-else-if="effectiveStep === 1" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Phishlet Configuration</div>
+      <template v-else-if="effectiveStep === 1">
+        <PhishletForm v-if="showNewPhishlet" v-model="newPhishletYaml" :loading="loading"
+          @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
 
-        <template v-if="!showNewPhishlet">
+        <Card v-else class="p-7">
+          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Phishlet Configuration</div>
+
           <div class="flex flex-col gap-7">
             <AppSelect v-model="selectedPhishletName" label="Select a phishlet">
               <option value="" disabled></option>
@@ -326,11 +329,8 @@ async function submit() {
           <div class="mt-8 pt-6 border-t border-edge">
             <button @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
           </div>
-        </template>
-
-        <PhishletForm v-else v-model="newPhishletYaml" :loading="loading"
-          @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
-      </Card>
+        </Card>
+      </template>
 
       <!-- Step 2: Targets -->
       <Card v-else-if="effectiveStep === 2" class="p-7">

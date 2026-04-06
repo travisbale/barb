@@ -91,7 +91,7 @@ async function remove(targetId: string) {
 
 <template>
   <div>
-    <ErrorBanner :message="error" />
+    <ErrorBanner v-model="error" />
 
     <!-- Actions bar -->
     <div class="flex items-center gap-2 mb-4">

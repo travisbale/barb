@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppButton from './AppButton.vue'
 import CodeEditor from './CodeEditor.vue'
+import FormCard from './FormCard.vue'
 
 defineProps<{
   modelValue: string
@@ -24,17 +25,17 @@ function handleFileUpload(event: Event) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-7">
+  <FormCard @submit="$emit('submit')">
     <CodeEditor :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" label="Phishlet YAML" />
-    <div class="flex justify-between">
+    <template #toolbar>
       <label class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-mono font-medium tracking-wide uppercase border border-edge text-muted hover:text-amber hover:border-amber/30 cursor-pointer transition-all duration-150">
         Upload
         <input type="file" accept=".yaml,.yml" class="hidden" @change="handleFileUpload" />
       </label>
-      <div class="flex gap-2">
-        <AppButton variant="ghost" @click="$emit('cancel')">Cancel</AppButton>
-        <AppButton :disabled="loading" @click="$emit('submit')">{{ submitLabel ?? 'Create' }}</AppButton>
-      </div>
-    </div>
-  </div>
+    </template>
+    <template #actions>
+      <AppButton variant="ghost" @click="$emit('cancel')">Cancel</AppButton>
+      <AppButton type="submit" :disabled="loading">{{ submitLabel ?? 'Create' }}</AppButton>
+    </template>
+  </FormCard>
 </template>
