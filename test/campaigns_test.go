@@ -469,6 +469,22 @@ func TestCampaigns_SendTestEmailRequiresAddress(t *testing.T) {
 	wantError(t, err, http.StatusUnprocessableEntity, "email is required")
 }
 
+func TestCampaigns_DeleteRejectsActive(t *testing.T) {
+	t.Parallel()
+	h, _ := test.NewHarnessWithBlockingMailer(t)
+	listID, tmplID, smtpID := createPrerequisites(t, h)
+
+	created, err := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
+	if err != nil {
+		t.Fatalf("CreateCampaign: %v", err)
+	}
+
+	h.Client.StartCampaign(created.ID)
+
+	err = h.Client.DeleteCampaign(created.ID)
+	wantError(t, err, http.StatusUnprocessableEntity, "Active campaigns cannot be deleted")
+}
+
 func TestCampaigns_DeleteNotFound(t *testing.T) {
 	t.Parallel()
 	h := test.NewHarness(t)

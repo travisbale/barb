@@ -104,6 +104,8 @@ func (r *Router) deleteCampaign(w http.ResponseWriter, req *http.Request) {
 	if err := r.Campaigns.Delete(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
 			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+		} else if errors.Is(err, phishing.ErrCampaignActive) {
+			r.writeError(w, http.StatusUnprocessableEntity, "Active campaigns cannot be deleted. Complete or cancel the campaign first.", err)
 		} else {
 			r.writeError(w, http.StatusInternalServerError, "failed to delete campaign", err)
 		}

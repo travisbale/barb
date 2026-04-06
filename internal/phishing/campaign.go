@@ -564,6 +564,13 @@ func (s *CampaignService) Update(id string, update *CampaignUpdate) (*Campaign, 
 }
 
 func (s *CampaignService) Delete(id string) error {
+	campaign, err := s.Store.GetCampaign(id)
+	if err != nil {
+		return err
+	}
+	if campaign.Status == CampaignActive {
+		return ErrCampaignActive
+	}
 	return s.Store.DeleteCampaign(id)
 }
 

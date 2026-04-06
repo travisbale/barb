@@ -12,6 +12,7 @@ var (
 	ErrTargetListNotFound   = errors.New("target list not found")
 	ErrCampaignNotDraft     = errors.New("campaign can only be started from draft status")
 	ErrCampaignNotRunning   = errors.New("campaign is not running")
+	ErrCampaignActive       = errors.New("active campaigns cannot be deleted")
 	ErrPhishletNotFound     = errors.New("phishlet not found")
 	ErrInvalidCredentials   = errors.New("invalid username or password")
 	ErrPasswordRequired     = errors.New("password is required")
