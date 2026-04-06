@@ -2,7 +2,7 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 LDFLAGS := -ldflags "-X main.Version=$(VERSION)"
 DEV_PORT := 4443
 
-.PHONY: build release frontend clean test unit fmt lint dev
+.PHONY: build release frontend frontend-test clean test unit fmt lint dev
 
 frontend:
 	@echo "Building frontend..."
@@ -20,12 +20,16 @@ release: frontend
 	@GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o build/barb-linux-arm64       ./cmd/barb
 	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o build/barb-windows-amd64.exe ./cmd/barb
 
+frontend-test:
+	@echo "Running frontend tests..."
+	@cd frontend && npm ci --silent && npm run test
+
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf build/
 	@rm -rf cmd/barb/dist/
 
-test:
+test: frontend-test
 	@echo "Running all tests (including integration)..."
 	@go test -race -count=1 -timeout=120s ./...
 
