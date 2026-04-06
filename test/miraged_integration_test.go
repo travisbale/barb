@@ -27,10 +27,7 @@ func startMiraged(t *testing.T) (address, secretHostname, token string) {
 	t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 
 	req := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{
-			Context:    "../../mirage",
-			Dockerfile: "Dockerfile",
-		},
+		Image:        "travisbale/miraged:latest",
 		ExposedPorts: []string{"443/tcp"},
 		Files: []testcontainers.ContainerFile{
 			{
