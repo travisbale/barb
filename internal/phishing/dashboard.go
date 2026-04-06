@@ -7,13 +7,13 @@ import (
 
 // DashboardStats holds aggregate metrics for the dashboard.
 type DashboardStats struct {
-	Campaigns       CampaignCounts
-	TotalCaptures   int
-	TotalClicks     int
-	TotalEmailsSent int
-	MiragedCount    int
-	ActiveCampaigns []ActiveCampaign
-	RecentCaptures  []RecentCapture
+	Campaigns        CampaignCounts
+	TotalCompletions int
+	TotalClicks      int
+	TotalEmailsSent  int
+	MiragedCount     int
+	ActiveCampaigns  []ActiveCampaign
+	RecentCaptures   []RecentCapture
 }
 
 type CampaignCounts struct {
@@ -113,7 +113,7 @@ func (s *DashboardService) Stats() (*DashboardStats, error) {
 			}
 		}
 
-		stats.TotalCaptures += captured + completed
+		stats.TotalCompletions += completed
 		stats.TotalClicks += clicked + captured + completed
 		stats.TotalEmailsSent += sent + clicked + captured + completed
 

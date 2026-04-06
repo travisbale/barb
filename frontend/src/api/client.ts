@@ -406,7 +406,7 @@ export function exportMiragedSessionCookies(connectionId: string, sessionId: str
 
 export interface DashboardStats {
   campaigns: { draft: number; active: number; completed: number; cancelled: number; total: number }
-  total_captures: number
+  total_completions: number
   total_clicks: number
   total_emails_sent: number
   miraged_count: number

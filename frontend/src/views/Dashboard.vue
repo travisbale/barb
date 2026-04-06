@@ -55,9 +55,9 @@ onMounted(load)
         </Card>
 
         <Card class="p-5">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Capture Rate</div>
-          <div class="text-2xl font-mono font-bold text-green mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_captures / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
-          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_captures }} total captures</div>
+          <div class="text-xs font-mono text-dim uppercase tracking-wider">Completion Rate</div>
+          <div class="text-2xl font-mono font-bold text-green mt-1">{{ stats.total_emails_sent > 0 ? ((stats.total_completions / stats.total_emails_sent) * 100).toFixed(1) : '0.0' }}%</div>
+          <div class="text-xs font-mono text-dim mt-2">{{ stats.total_completions }} total completions</div>
         </Card>
 
         <Card class="p-5">

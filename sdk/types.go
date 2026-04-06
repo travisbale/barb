@@ -289,13 +289,13 @@ type MiragedSessionResponse struct {
 // --- Dashboard ---
 
 type DashboardResponse struct {
-	Campaigns       CampaignCounts       `json:"campaigns"`
-	TotalCaptures   int                  `json:"total_captures"`
-	TotalClicks     int                  `json:"total_clicks"`
-	TotalEmailsSent int                  `json:"total_emails_sent"`
-	MiragedCount    int                  `json:"miraged_count"`
-	ActiveCampaigns []ActiveCampaignInfo `json:"active_campaigns"`
-	RecentCaptures  []RecentCapture      `json:"recent_captures"`
+	Campaigns        CampaignCounts       `json:"campaigns"`
+	TotalCompletions int                  `json:"total_completions"`
+	TotalClicks      int                  `json:"total_clicks"`
+	TotalEmailsSent  int                  `json:"total_emails_sent"`
+	MiragedCount     int                  `json:"miraged_count"`
+	ActiveCampaigns  []ActiveCampaignInfo `json:"active_campaigns"`
+	RecentCaptures   []RecentCapture      `json:"recent_captures"`
 }
 
 type CampaignCounts struct {

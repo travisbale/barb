@@ -377,7 +377,7 @@ const totalCount = computed(() => results.value.length)
 const clickedCount = computed(() => results.value.filter(result => ['clicked', 'captured', 'completed'].includes(result.status)).length)
 const capturedCount = computed(() => results.value.filter(result => result.status === 'captured' || result.status === 'completed').length)
 const completedCount = computed(() => results.value.filter(result => result.status === 'completed').length)
-const captureRate = computed(() => {
+const completionRate = computed(() => {
   const delivered = sentCount.value
   return delivered > 0 ? completedCount.value / delivered : 0
 })
@@ -519,8 +519,8 @@ onUnmounted(stopStreaming)
         <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completed</div>
       </div>
       <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-primary">{{ (captureRate * 100).toFixed(1) }}%</div>
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Rate</div>
+        <div class="text-lg font-mono text-primary">{{ (completionRate * 100).toFixed(1) }}%</div>
+        <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completion Rate</div>
       </div>
     </div>
 

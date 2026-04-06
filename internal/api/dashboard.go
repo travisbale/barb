@@ -45,11 +45,11 @@ func (r *Router) getDashboard(w http.ResponseWriter, req *http.Request) {
 			Cancelled: stats.Campaigns.Cancelled,
 			Total:     stats.Campaigns.Total,
 		},
-		TotalCaptures:   stats.TotalCaptures,
-		TotalClicks:     stats.TotalClicks,
-		TotalEmailsSent: stats.TotalEmailsSent,
-		MiragedCount:    stats.MiragedCount,
-		ActiveCampaigns: active,
-		RecentCaptures:  captures,
+		TotalCompletions: stats.TotalCompletions,
+		TotalClicks:      stats.TotalClicks,
+		TotalEmailsSent:  stats.TotalEmailsSent,
+		MiragedCount:     stats.MiragedCount,
+		ActiveCampaigns:  active,
+		RecentCaptures:   captures,
 	})
 }

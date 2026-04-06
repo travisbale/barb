@@ -19,8 +19,8 @@ func TestDashboard_Empty(t *testing.T) {
 	if dashboard.Campaigns.Total != 0 {
 		t.Errorf("Campaigns.Total = %d, want 0", dashboard.Campaigns.Total)
 	}
-	if dashboard.TotalCaptures != 0 {
-		t.Errorf("TotalCaptures = %d, want 0", dashboard.TotalCaptures)
+	if dashboard.TotalCompletions != 0 {
+		t.Errorf("TotalCompletions = %d, want 0", dashboard.TotalCompletions)
 	}
 	if dashboard.MiragedCount != 0 {
 		t.Errorf("MiragedCount = %d, want 0", dashboard.MiragedCount)
