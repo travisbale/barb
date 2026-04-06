@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useConfirm } from '../composables/useConfirm'
+import { ref } from 'vue'
+import { useCrudList } from '../composables/useCrudList'
 import { listSMTPProfiles, createSMTPProfile, updateSMTPProfile, deleteSMTPProfile, type SMTPProfile } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -13,53 +13,10 @@ import DataTableRow from '../components/DataTableRow.vue'
 import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
-const { confirm } = useConfirm()
-const profiles = ref<SMTPProfile[]>([])
-const showForm = ref(false)
-const editingId = ref<string | null>(null)
-const error = ref('')
+type FormData = { name: string; host: string; port: string; username: string; password: string; from_addr: string; from_name: string }
 
-const emptyForm = { name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' }
-const form = ref({ ...emptyForm })
+const emptyForm = (): FormData => ({ name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' })
 const headers = ref<{ key: string; value: string }[]>([])
-
-async function load() {
-  try {
-    profiles.value = await listSMTPProfiles() ?? []
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-function openCreate() {
-  editingId.value = null
-  form.value = { ...emptyForm }
-  headers.value = []
-  showForm.value = true
-}
-
-function openEdit(profile: SMTPProfile) {
-  editingId.value = profile.id
-  form.value = {
-    name: profile.name,
-    host: profile.host,
-    port: String(profile.port),
-    username: profile.username,
-    password: '',
-    from_addr: profile.from_addr,
-    from_name: profile.from_name,
-  }
-  headers.value = Object.entries(profile.custom_headers ?? {}).map(([key, value]) => ({ key, value }))
-  showForm.value = true
-}
-
-function addHeader() {
-  headers.value.push({ key: '', value: '' })
-}
-
-function removeHeader(index: number) {
-  headers.value.splice(index, 1)
-}
 
 function headersToMap(): Record<string, string> {
   const map: Record<string, string> = {}
@@ -69,51 +26,41 @@ function headersToMap(): Record<string, string> {
   return map
 }
 
+function toPayload(form: FormData) {
+  return { ...form, port: parseInt(form.port) || 587, custom_headers: headersToMap() }
+}
+
+const { items: profiles, showForm, editingId, error, form, openCreate: rawOpenCreate, openEdit: rawOpenEdit, closeForm: rawCloseForm, submit, remove } = useCrudList<SMTPProfile, FormData>(
+  {
+    list: listSMTPProfiles,
+    create: (f) => createSMTPProfile(toPayload(f)),
+    update: (id, f) => updateSMTPProfile(id, toPayload(f)),
+    remove: deleteSMTPProfile,
+  },
+  {
+    emptyForm,
+    toForm: (p) => ({ name: p.name, host: p.host, port: String(p.port), username: p.username, password: '', from_addr: p.from_addr, from_name: p.from_name }),
+    confirmMessage: 'Delete this SMTP profile?',
+  },
+)
+
+function addHeader() { headers.value.push({ key: '', value: '' }) }
+function removeHeader(i: number) { headers.value.splice(i, 1) }
+
+function openCreate() {
+  headers.value = []
+  rawOpenCreate()
+}
+
+function openEdit(profile: SMTPProfile) {
+  headers.value = Object.entries(profile.custom_headers ?? {}).map(([key, value]) => ({ key, value }))
+  rawOpenEdit(profile)
+}
+
 function closeForm() {
-  showForm.value = false
-  editingId.value = null
-  form.value = { ...emptyForm }
-  error.value = ''
+  headers.value = []
+  rawCloseForm()
 }
-
-async function submit() {
-  try {
-    const payload = {
-      name: form.value.name,
-      host: form.value.host,
-      port: parseInt(form.value.port) || 587,
-      username: form.value.username,
-      password: form.value.password,
-      from_addr: form.value.from_addr,
-      from_name: form.value.from_name,
-      custom_headers: headersToMap(),
-    }
-
-    if (editingId.value) {
-      const updated = await updateSMTPProfile(editingId.value, payload)
-      const idx = profiles.value.findIndex(p => p.id === editingId.value)
-      if (idx !== -1) profiles.value[idx] = updated
-    } else {
-      const created = await createSMTPProfile(payload)
-      profiles.value.unshift(created)
-    }
-    closeForm()
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-async function remove(id: string) {
-  if (!await confirm('Delete this SMTP profile?')) return
-  try {
-    await deleteSMTPProfile(id)
-    profiles.value = profiles.value.filter(p => p.id !== id)
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-onMounted(load)
 </script>
 
 <template>

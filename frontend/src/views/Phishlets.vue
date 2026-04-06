@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useConfirm } from '../composables/useConfirm'
+import { useCrudList } from '../composables/useCrudList'
 import { listPhishlets, createPhishlet, updatePhishlet, deletePhishlet, type Phishlet } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import DeleteButton from '../components/DeleteButton.vue'
@@ -12,67 +11,10 @@ import DataTable from '../components/DataTable.vue'
 import DataTableRow from '../components/DataTableRow.vue'
 import AddButton from '../components/AddButton.vue'
 
-const { confirm } = useConfirm()
-const phishlets = ref<Phishlet[]>([])
-const showForm = ref(false)
-const editingId = ref<string | null>(null)
-const error = ref('')
-
-const yaml = ref('')
-
-async function load() {
-  try {
-    phishlets.value = await listPhishlets() ?? []
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-function openCreate() {
-  editingId.value = null
-  yaml.value = ''
-  showForm.value = true
-}
-
-function openEdit(phishlet: Phishlet) {
-  editingId.value = phishlet.id
-  yaml.value = phishlet.yaml
-  showForm.value = true
-}
-
-function closeForm() {
-  showForm.value = false
-  editingId.value = null
-  yaml.value = ''
-}
-
-async function submit() {
-  try {
-    if (editingId.value) {
-      const updated = await updatePhishlet(editingId.value, yaml.value)
-      const idx = phishlets.value.findIndex(p => p.id === editingId.value)
-      if (idx !== -1) phishlets.value[idx] = updated
-    } else {
-      const created = await createPhishlet(yaml.value)
-      phishlets.value.unshift(created)
-    }
-    closeForm()
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-async function remove(id: string) {
-  if (!await confirm('Delete this phishlet?')) return
-  try {
-    await deletePhishlet(id)
-    phishlets.value = phishlets.value.filter(p => p.id !== id)
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-onMounted(load)
+const { items: phishlets, showForm, editingId, error, form: yaml, openCreate, openEdit, closeForm, submit, remove } = useCrudList<Phishlet, string>(
+  { list: listPhishlets, create: createPhishlet, update: updatePhishlet, remove: deletePhishlet },
+  { emptyForm: () => '', toForm: (p) => p.yaml, confirmMessage: 'Delete this phishlet?' },
+)
 </script>
 
 <template>

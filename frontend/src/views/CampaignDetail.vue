@@ -2,13 +2,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
+import { countResults, resultsToCSV } from '../utils/results'
 import {
   getCampaign, startCampaign, completeCampaign, cancelCampaign, sendTestEmail, listCampaignResults,
-  getMiragedSession, exportMiragedSessionCookies, updateCampaign,
+  updateCampaign,
   getTemplate, getSMTPProfile, getTargetList, listTargets,
   listTemplates, listSMTPProfiles, listMiraged, enrollMiraged,
   createTemplate, createSMTPProfile, listPhishlets, createPhishlet,
-  type Campaign, type CampaignResult, type MiragedSession,
+  type Campaign, type CampaignResult,
   type EmailTemplate, type SMTPProfile, type TargetList, type MiragedConnection, type Phishlet,
 } from '../api/client'
 import AppButton from '../components/AppButton.vue'
@@ -27,6 +28,7 @@ import SMTPForm from '../components/SMTPForm.vue'
 import TargetListPicker from '../components/TargetListPicker.vue'
 import SettingsSection from '../components/SettingsSection.vue'
 import PhishletForm from '../components/PhishletForm.vue'
+import SessionPanel from '../components/SessionPanel.vue'
 
 const route = useRoute()
 const { confirm } = useConfirm()
@@ -43,9 +45,7 @@ const testEmailAddress = ref('')
 const testEmailSending = ref(false)
 const testEmailStatus = ref('')
 
-const selectedSession = ref<MiragedSession | null>(null)
-const sessionLoading = ref(false)
-const sessionError = ref('')
+const sessionPanel = ref<InstanceType<typeof SessionPanel> | null>(null)
 
 const activeTab = ref('Results')
 
@@ -59,6 +59,7 @@ type SettingsSection = 'template' | 'smtp' | 'targets' | 'miraged' | 'phishlet' 
 const expandedSection = ref<SettingsSection>(null)
 const settingsSaving = ref(false)
 const settingsError = ref('')
+const settingsLoaded = ref(false)
 
 const allTemplates = ref<EmailTemplate[]>([])
 const allSmtpProfiles = ref<SMTPProfile[]>([])
@@ -98,7 +99,7 @@ async function load() {
 }
 
 async function loadSettings() {
-  if (!campaign.value) return
+  if (!campaign.value || settingsLoaded.value) return
   try {
     const [tmpl, smtp, list, targets, conns] = await Promise.all([
       getTemplate(campaign.value.template_id),
@@ -113,6 +114,7 @@ async function loadSettings() {
     settingsTargetCount.value = targets?.length ?? 0
     if (conns.length > 0) allMiraged.value = conns
     settingsMiraged.value = conns.find(c => c.id === campaign.value!.miraged_id) ?? null
+    settingsLoaded.value = true
   } catch { /* ignore — settings are supplementary */ }
 }
 
@@ -130,7 +132,6 @@ function expandSection(section: SettingsSection) {
 
   if (!campaign.value) return
 
-  // Pre-select current values and load options for the section (cached after first load).
   if (section === 'template') {
     editTemplateId.value = campaign.value.template_id
     if (allTemplates.value.length === 0) listTemplates().then(t => allTemplates.value = t)
@@ -177,12 +178,12 @@ async function saveSection(section: SettingsSection) {
     campaign.value = await updateCampaign(id, updates)
     expandedSection.value = null
 
-    // Update summaries from cached dropdown data instead of re-fetching everything.
     if (section === 'template') {
       settingsTemplate.value = allTemplates.value.find(t => t.id === campaign.value!.template_id) ?? settingsTemplate.value
     } else if (section === 'smtp') {
       settingsSmtp.value = allSmtpProfiles.value.find(s => s.id === campaign.value!.smtp_profile_id) ?? settingsSmtp.value
     } else if (section === 'targets') {
+      settingsLoaded.value = false
       await loadSettings()
     } else if (section === 'miraged') {
       settingsMiraged.value = allMiraged.value.find(m => m.id === campaign.value!.miraged_id) ?? settingsMiraged.value
@@ -194,15 +195,11 @@ async function saveSection(section: SettingsSection) {
   }
 }
 
-async function createNewPhishlet() {
+async function createInline(apiCall: () => Promise<any>, onSuccess: (item: any) => void) {
   createLoading.value = true
   settingsError.value = ''
   try {
-    const phishlet = await createPhishlet(newPhishletYaml.value)
-    allPhishlets.value.unshift(phishlet)
-    editPhishlet.value = phishlet.name
-    showNewPhishlet.value = false
-    newPhishletYaml.value = ''
+    onSuccess(await apiCall())
   } catch (e: any) {
     settingsError.value = e.message
   } finally {
@@ -210,56 +207,25 @@ async function createNewPhishlet() {
   }
 }
 
-async function createNewTemplate() {
-  createLoading.value = true
-  settingsError.value = ''
-  try {
-    const tmpl = await createTemplate(newTemplate.value)
-    allTemplates.value.unshift(tmpl)
-    editTemplateId.value = tmpl.id
-    showNewTemplate.value = false
-    newTemplate.value = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
-  } catch (e: any) {
-    settingsError.value = e.message
-  } finally {
-    createLoading.value = false
-  }
-}
+const createNewPhishlet = () => createInline(
+  () => createPhishlet(newPhishletYaml.value),
+  (p) => { allPhishlets.value.unshift(p); editPhishlet.value = p.name; showNewPhishlet.value = false; newPhishletYaml.value = '' },
+)
 
-async function createNewMiraged() {
-  createLoading.value = true
-  settingsError.value = ''
-  try {
-    const conn = await enrollMiraged(newMiraged.value)
-    allMiraged.value.unshift(conn)
-    editMiragedId.value = conn.id
-    showNewMiraged.value = false
-    newMiraged.value = { name: '', address: '', secret_hostname: '', token: '' }
-  } catch (e: any) {
-    settingsError.value = e.message
-  } finally {
-    createLoading.value = false
-  }
-}
+const createNewTemplate = () => createInline(
+  () => createTemplate(newTemplate.value),
+  (t) => { allTemplates.value.unshift(t); editTemplateId.value = t.id; showNewTemplate.value = false; newTemplate.value = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' } },
+)
 
-async function createNewSmtp() {
-  createLoading.value = true
-  settingsError.value = ''
-  try {
-    const profile = await createSMTPProfile({
-      ...newSmtp.value,
-      port: parseInt(newSmtp.value.port) || 587,
-    })
-    allSmtpProfiles.value.unshift(profile)
-    editSmtpId.value = profile.id
-    showNewSmtp.value = false
-    newSmtp.value = { name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' }
-  } catch (e: any) {
-    settingsError.value = e.message
-  } finally {
-    createLoading.value = false
-  }
-}
+const createNewMiraged = () => createInline(
+  () => enrollMiraged(newMiraged.value),
+  (c) => { allMiraged.value.unshift(c); editMiragedId.value = c.id; showNewMiraged.value = false; newMiraged.value = { name: '', address: '', secret_hostname: '', token: '' } },
+)
+
+const createNewSmtp = () => createInline(
+  () => createSMTPProfile({ ...newSmtp.value, port: parseInt(newSmtp.value.port) || 587 }),
+  (s) => { allSmtpProfiles.value.unshift(s); editSmtpId.value = s.id; showNewSmtp.value = false; newSmtp.value = { name: '', host: '', port: '587', username: '', password: '', from_addr: '', from_name: '' } },
+)
 
 async function start() {
   if (!await confirm('Start this campaign? Emails will begin sending immediately.', { label: 'Start', variant: 'primary' })) return
@@ -372,62 +338,23 @@ const statusColor: Record<string, string> = {
   completed: 'text-green',
 }
 
-const sentCount = computed(() => results.value.filter(result => result.status !== 'pending').length)
 const totalCount = computed(() => results.value.length)
-const clickedCount = computed(() => results.value.filter(result => ['clicked', 'captured', 'completed'].includes(result.status)).length)
-const capturedCount = computed(() => results.value.filter(result => result.status === 'captured' || result.status === 'completed').length)
-const completedCount = computed(() => results.value.filter(result => result.status === 'completed').length)
-const completionRate = computed(() => {
-  const delivered = sentCount.value
-  return delivered > 0 ? completedCount.value / delivered : 0
-})
+const counts = computed(() => countResults(results.value))
+const completionRate = computed(() => counts.value.sent > 0 ? counts.value.completed / counts.value.sent : 0)
 
-async function viewSession(result: CampaignResult) {
-  if (!result.session_id || !campaign.value?.miraged_id) return
-  openSession(result.session_id)
-}
-
-async function openSession(sessionId: string) {
-  if (!campaign.value?.miraged_id) return
+function openSession(sessionId: string) {
   stopStreaming()
-  selectedSession.value = null
-  sessionError.value = ''
-  sessionLoading.value = true
-  try {
-    selectedSession.value = await getMiragedSession(campaign.value.miraged_id, sessionId)
-  } catch (e: any) {
-    sessionError.value = e.message
-  } finally {
-    sessionLoading.value = false
-  }
+  sessionPanel.value?.open(sessionId)
 }
 
-function closeSession() {
-  selectedSession.value = null
-  sessionError.value = ''
+function onSessionClose() {
   if (isActive.value) startStreaming()
-}
-
-function downloadCookies() {
-  if (!selectedSession.value || !campaign.value?.miraged_id) return
-  const url = exportMiragedSessionCookies(campaign.value.miraged_id, selectedSession.value.id)
-  window.open(url, '_blank')
 }
 
 function exportCSV() {
   if (results.value.length === 0) return
 
-  const headers = ['email', 'status', 'sent_at', 'clicked_at', 'captured_at', 'session_id']
-  const rows = results.value.map(result => [
-    result.email,
-    result.status,
-    result.sent_at ?? '',
-    result.clicked_at ?? '',
-    result.captured_at ?? '',
-    result.session_id,
-  ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-
-  const csv = [headers.join(','), ...rows].join('\n')
+  const csv = resultsToCSV(results.value)
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
 
@@ -503,19 +430,19 @@ onUnmounted(stopStreaming)
     <!-- Campaign stats -->
     <div v-if="campaign && campaign.status !== 'draft'" class="grid grid-cols-5 gap-3 mb-6">
       <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-primary">{{ sentCount }}<span class="text-dim">/{{ totalCount }}</span></div>
+        <div class="text-lg font-mono text-primary">{{ counts.sent }}<span class="text-dim">/{{ totalCount }}</span></div>
         <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Sent</div>
       </div>
       <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-amber">{{ clickedCount }}</div>
+        <div class="text-lg font-mono text-amber">{{ counts.clicked }}</div>
         <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Clicked</div>
       </div>
       <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-teal">{{ capturedCount }}</div>
+        <div class="text-lg font-mono text-teal">{{ counts.captured }}</div>
         <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Captured</div>
       </div>
       <div class="bg-surface border border-edge px-4 py-3 text-center">
-        <div class="text-lg font-mono text-green">{{ completedCount }}</div>
+        <div class="text-lg font-mono text-green">{{ counts.completed }}</div>
         <div class="text-xs font-mono text-dim uppercase tracking-wider mt-1">Completed</div>
       </div>
       <div class="bg-surface border border-edge px-4 py-3 text-center">
@@ -668,67 +595,7 @@ onUnmounted(stopStreaming)
     <!-- Results tab -->
     <template v-if="activeTab === 'Results'">
 
-    <!-- Session detail panel -->
-    <Card v-if="selectedSession || sessionLoading || sessionError" class="p-7 mb-4">
-      <div class="flex items-center justify-between mb-5">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider">Session Details</div>
-        <div class="flex items-center gap-3">
-          <AppButton v-if="selectedSession?.cookie_tokens && Object.keys(selectedSession.cookie_tokens).length > 0" variant="secondary" @click="downloadCookies">Export Cookies</AppButton>
-          <button @click="closeSession" class="text-xs font-mono text-dim hover:text-primary transition-colors uppercase tracking-wider">Close</button>
-        </div>
-      </div>
-
-      <div v-if="sessionLoading" class="text-sm font-mono text-dim">Loading session...</div>
-      <ErrorBanner v-else-if="sessionError" :message="sessionError" />
-
-      <div v-else-if="selectedSession" class="flex flex-col gap-5">
-        <!-- Credentials and captured fields -->
-        <div v-if="selectedSession.username || selectedSession.password || (selectedSession.custom && Object.keys(selectedSession.custom).length > 0)" class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-          <div v-if="selectedSession.username" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">Username</div>
-            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.username }}</div>
-          </div>
-          <div v-if="selectedSession.password" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">Password</div>
-            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.password }}</div>
-          </div>
-          <div v-for="(value, key) in selectedSession.custom" :key="key" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">{{ key }}</div>
-            <div class="text-sm text-primary font-mono select-all">{{ value }}</div>
-          </div>
-        </div>
-
-        <!-- Cookies -->
-        <div v-if="selectedSession.cookie_tokens && Object.keys(selectedSession.cookie_tokens).length > 0" class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-          <template v-for="(cookies, domain) in selectedSession.cookie_tokens" :key="domain">
-            <div v-for="(value, name) in cookies" :key="`${domain}-${name}`" class="px-3 py-2 bg-bg border border-edge">
-              <div class="text-xs text-dim font-mono">{{ name }} <span class="text-muted">({{ domain }})</span></div>
-              <div class="text-sm text-primary font-mono select-all break-all">{{ value }}</div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Metadata -->
-        <div class="grid grid-cols-2 gap-3 [&>*:only-child]:col-span-2">
-          <div v-if="selectedSession.remote_addr" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">IP Address</div>
-            <div class="text-sm text-primary font-mono select-all">{{ selectedSession.remote_addr }}</div>
-          </div>
-          <div v-if="selectedSession.phishlet" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">Phishlet</div>
-            <div class="text-sm text-primary font-mono">{{ selectedSession.phishlet }}</div>
-          </div>
-          <div v-if="selectedSession.started_at" class="px-3 py-2 bg-bg border border-edge">
-            <div class="text-xs text-dim font-mono">Started</div>
-            <div class="text-sm text-primary font-mono">{{ new Date(selectedSession.started_at).toLocaleString() }}</div>
-          </div>
-          <div v-if="selectedSession.user_agent" class="px-3 py-2 bg-bg border border-edge col-span-2">
-            <div class="text-xs text-dim font-mono">User Agent</div>
-            <div class="text-sm text-primary font-mono select-all break-all">{{ selectedSession.user_agent }}</div>
-          </div>
-        </div>
-      </div>
-    </Card>
+    <SessionPanel v-if="campaign?.miraged_id" ref="sessionPanel" :miraged-id="campaign.miraged_id" @close="onSessionClose" />
 
     <EmptyState v-if="results.length === 0" message="No results yet." />
 
@@ -738,7 +605,7 @@ onUnmounted(stopStreaming)
         :key="result.id"
         :index="i"
         :clickable="!!result.session_id"
-        @click="result.session_id ? viewSession(result) : null"
+        @click="result.session_id ? openSession(result.session_id) : null"
       >
         <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
         <td class="px-4 py-2.5">

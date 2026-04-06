@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useConfirm } from '../composables/useConfirm'
+import { ref } from 'vue'
+import { useCrudList } from '../composables/useCrudList'
 import { listTemplates, createTemplate, updateTemplate, previewTemplate, deleteTemplate, type EmailTemplate, type PreviewResult } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
@@ -15,14 +15,13 @@ import DataTableRow from '../components/DataTableRow.vue'
 import FormCard from '../components/FormCard.vue'
 import AddButton from '../components/AddButton.vue'
 
-const { confirm } = useConfirm()
-const templates = ref<EmailTemplate[]>([])
-const showForm = ref(false)
-const editingId = ref<string | null>(null)
-const error = ref('')
+type TemplateForm = { name: string; subject: string; html_body: string; text_body: string; envelope_sender: string }
+const emptyForm = (): TemplateForm => ({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 
-const emptyForm = { name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' }
-const form = ref({ ...emptyForm })
+const { items: templates, showForm, editingId, error, form, openCreate: rawOpenCreate, openEdit: rawOpenEdit, closeForm, submit, remove } = useCrudList<EmailTemplate, TemplateForm>(
+  { list: listTemplates, create: createTemplate, update: updateTemplate, remove: deleteTemplate },
+  { emptyForm, toForm: (t) => ({ name: t.name, subject: t.subject, html_body: t.html_body, text_body: t.text_body, envelope_sender: t.envelope_sender ?? '' }), confirmMessage: 'Delete this template?' },
+)
 
 // Preview state.
 const previewId = ref<string | null>(null)
@@ -30,48 +29,14 @@ const previewData = ref({ first_name: 'Jane', last_name: 'Doe', email: 'jane.doe
 const previewResult = ref<PreviewResult | null>(null)
 const previewing = ref(false)
 
-async function load() {
-  try {
-    templates.value = await listTemplates() ?? []
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
 function openCreate() {
-  editingId.value = null
-  form.value = { ...emptyForm }
-  showForm.value = true
+  rawOpenCreate()
   closePreview()
 }
 
 function openEdit(tmpl: EmailTemplate) {
-  editingId.value = tmpl.id
-  form.value = { name: tmpl.name, subject: tmpl.subject, html_body: tmpl.html_body, text_body: tmpl.text_body, envelope_sender: tmpl.envelope_sender ?? '' }
-  showForm.value = true
+  rawOpenEdit(tmpl)
   closePreview()
-}
-
-function closeForm() {
-  showForm.value = false
-  editingId.value = null
-  form.value = { ...emptyForm }
-}
-
-async function submit() {
-  try {
-    if (editingId.value) {
-      const updated = await updateTemplate(editingId.value, form.value)
-      const idx = templates.value.findIndex(t => t.id === editingId.value)
-      if (idx !== -1) templates.value[idx] = updated
-    } else {
-      const created = await createTemplate(form.value)
-      templates.value.unshift(created)
-    }
-    closeForm()
-  } catch (e: any) {
-    error.value = e.message
-  }
 }
 
 function openPreview(tmpl: EmailTemplate) {
@@ -97,18 +62,10 @@ async function runPreview() {
   }
 }
 
-async function remove(id: string) {
-  if (!await confirm('Delete this template?')) return
-  try {
-    await deleteTemplate(id)
-    templates.value = templates.value.filter(t => t.id !== id)
-    if (previewId.value === id) closePreview()
-  } catch (e: any) {
-    error.value = e.message
-  }
+function removeTemplate(id: string) {
+  if (previewId.value === id) closePreview()
+  remove(id)
 }
-
-onMounted(load)
 </script>
 
 <template>
@@ -179,7 +136,7 @@ onMounted(load)
         <td class="px-4 py-2.5 text-right">
           <div class="flex items-center gap-4 justify-end">
             <button @click.stop="openPreview(tmpl)" class="text-xs font-mono text-dim hover:text-amber transition-colors uppercase tracking-wider">Preview</button>
-            <DeleteButton @click.stop="remove(tmpl.id)" />
+            <DeleteButton @click.stop="removeTemplate(tmpl.id)" />
           </div>
         </td>
       </DataTableRow>
