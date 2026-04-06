@@ -12,7 +12,7 @@ import (
 func (r *Router) listTemplates(w http.ResponseWriter, req *http.Request) {
 	templates, err := r.Templates.List()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list templates", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list templates.", err)
 		return
 	}
 	items := make([]sdk.TemplateResponse, len(templates))
@@ -36,7 +36,7 @@ func (r *Router) createTemplate(w http.ResponseWriter, req *http.Request) {
 		EnvelopeSender: body.EnvelopeSender,
 	})
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to create template", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to create template.", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, templateToResponse(created))
@@ -47,9 +47,9 @@ func (r *Router) getTemplate(w http.ResponseWriter, req *http.Request) {
 	template, err := r.Templates.Get(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "template not found", err)
+			r.writeError(w, http.StatusNotFound, "Template not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get template", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get template.", err)
 		}
 		return
 	}
@@ -73,9 +73,9 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "template not found", err)
+			r.writeError(w, http.StatusNotFound, "Template not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to update template", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to update template.", err)
 		}
 		return
 	}
@@ -87,7 +87,7 @@ func (r *Router) previewTemplate(w http.ResponseWriter, req *http.Request) {
 
 	var body sdk.PreviewTemplateRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		r.writeError(w, http.StatusBadRequest, "Invalid request body.", nil)
 		return
 	}
 
@@ -99,9 +99,9 @@ func (r *Router) previewTemplate(w http.ResponseWriter, req *http.Request) {
 	})
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "template not found", err)
+			r.writeError(w, http.StatusNotFound, "Template not found.", err)
 		} else {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Failed to render template preview.", err)
 		}
 		return
 	}
@@ -117,9 +117,9 @@ func (r *Router) deleteTemplate(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Templates.Delete(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "template not found", err)
+			r.writeError(w, http.StatusNotFound, "Template not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete template", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete template.", err)
 		}
 		return
 	}

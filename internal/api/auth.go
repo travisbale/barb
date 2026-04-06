@@ -13,13 +13,13 @@ import (
 func (r *Router) loginHandler(w http.ResponseWriter, req *http.Request) {
 	var body sdk.LoginRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		r.writeError(w, http.StatusBadRequest, "Invalid request body.", nil)
 		return
 	}
 
 	token, err := r.Auth.Login(body.Username, body.Password)
 	if err != nil {
-		r.writeError(w, http.StatusUnauthorized, "invalid username or password", nil)
+		r.writeError(w, http.StatusUnauthorized, "Invalid username or password.", nil)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (r *Router) logoutHandler(w http.ResponseWriter, req *http.Request) {
 func (r *Router) meHandler(w http.ResponseWriter, req *http.Request) {
 	user := userFromContext(req.Context())
 	if user == nil {
-		r.writeError(w, http.StatusUnauthorized, "not authenticated", nil)
+		r.writeError(w, http.StatusUnauthorized, "Not authenticated.", nil)
 		return
 	}
 
@@ -73,13 +73,13 @@ func (r *Router) meHandler(w http.ResponseWriter, req *http.Request) {
 func (r *Router) changePasswordHandler(w http.ResponseWriter, req *http.Request) {
 	user := userFromContext(req.Context())
 	if user == nil {
-		r.writeError(w, http.StatusUnauthorized, "not authenticated", nil)
+		r.writeError(w, http.StatusUnauthorized, "Not authenticated.", nil)
 		return
 	}
 
 	var body sdk.ChangePasswordRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		r.writeError(w, http.StatusBadRequest, "Invalid request body.", nil)
 		return
 	}
 
@@ -87,9 +87,11 @@ func (r *Router) changePasswordHandler(w http.ResponseWriter, req *http.Request)
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrInvalidCredentials):
-			r.writeError(w, http.StatusUnauthorized, "current password is incorrect", nil)
-		case errors.Is(err, phishing.ErrPasswordRequired), errors.Is(err, phishing.ErrPasswordTooShort):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnauthorized, "Current password is incorrect.", nil)
+		case errors.Is(err, phishing.ErrPasswordRequired):
+			r.writeError(w, http.StatusUnprocessableEntity, "Password is required.", nil)
+		case errors.Is(err, phishing.ErrPasswordTooShort):
+			r.writeError(w, http.StatusUnprocessableEntity, "Password must be at least 8 characters.", nil)
 		default:
 			r.writeError(w, http.StatusInternalServerError, "failed to change password", err)
 		}

@@ -98,19 +98,19 @@ func TestCampaigns_RejectsInvalidReferences(t *testing.T) {
 	req := validCampaignRequest(listID, tmplID, smtpID)
 	req.TemplateID = "nonexistent"
 	_, err := h.Client.CreateCampaign(req)
-	wantError(t, err, http.StatusUnprocessableEntity, "template not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected template no longer exists")
 
 	// Invalid SMTP profile.
 	req = validCampaignRequest(listID, tmplID, smtpID)
 	req.SMTPProfileID = "nonexistent"
 	_, err = h.Client.CreateCampaign(req)
-	wantError(t, err, http.StatusUnprocessableEntity, "SMTP profile not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected SMTP profile no longer exists")
 
 	// Invalid target list.
 	req = validCampaignRequest(listID, tmplID, smtpID)
 	req.TargetListID = "nonexistent"
 	_, err = h.Client.CreateCampaign(req)
-	wantError(t, err, http.StatusUnprocessableEntity, "target list not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected target list no longer exists")
 }
 
 func TestCampaigns_Start(t *testing.T) {
@@ -182,7 +182,7 @@ func TestCampaigns_StartRequiresDraft(t *testing.T) {
 
 	// Starting again should fail — it's now active, not draft.
 	err := h.Client.StartCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign can only be started from draft status")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign can only be")
 }
 
 func TestCampaigns_ResultStatusesAfterCompletion(t *testing.T) {
@@ -271,7 +271,7 @@ func TestCampaigns_CancelNotRunning(t *testing.T) {
 
 	// Cancel a draft campaign — should fail.
 	err := h.Client.CancelCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign is not currently running")
 }
 
 func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
@@ -291,7 +291,7 @@ func TestCampaigns_CancelAlreadyCompleted(t *testing.T) {
 
 	// Cancelling a completed campaign should fail.
 	err := h.Client.CancelCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign is not currently running")
 }
 
 func TestCampaigns_Update(t *testing.T) {
@@ -387,17 +387,17 @@ func TestCampaigns_UpdateRejectsInvalidReferences(t *testing.T) {
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		TemplateID: strPtr("nonexistent"),
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "template not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected template no longer exists")
 
 	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		SMTPProfileID: strPtr("nonexistent"),
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "SMTP profile not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected SMTP profile no longer exists")
 
 	_, err = h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		TargetListID: strPtr("nonexistent"),
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "target list not found")
+	wantError(t, err, http.StatusUnprocessableEntity, "selected target list no longer exists")
 }
 
 func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
@@ -417,7 +417,7 @@ func TestCampaigns_UpdateRejectsNonDraft(t *testing.T) {
 	_, err := h.Client.UpdateCampaign(created.ID, sdk.UpdateCampaignRequest{
 		Name: strPtr("Should Fail"),
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign can only be started from draft status")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign can only be")
 }
 
 func TestCampaigns_UpdateNotFound(t *testing.T) {
@@ -466,7 +466,7 @@ func TestCampaigns_SendTestEmailRequiresAddress(t *testing.T) {
 	created, _ := h.Client.CreateCampaign(validCampaignRequest(listID, tmplID, smtpID))
 
 	err := h.Client.SendTestEmail(created.ID, sdk.SendTestEmailRequest{Email: ""})
-	wantError(t, err, http.StatusUnprocessableEntity, "email is required")
+	wantError(t, err, http.StatusUnprocessableEntity, "Email address is required")
 }
 
 func TestCampaigns_DeleteRejectsActive(t *testing.T) {
@@ -506,7 +506,7 @@ func TestCampaigns_InvalidTemplateSyntax(t *testing.T) {
 	_, err := h.Client.PreviewTemplate(tmpl.ID, sdk.PreviewTemplateRequest{
 		FirstName: "Alice",
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "rendering HTML body")
+	wantError(t, err, http.StatusUnprocessableEntity, "Failed to render template preview")
 }
 
 func TestCampaigns_EmptyTargetList(t *testing.T) {
@@ -599,7 +599,7 @@ func TestCampaigns_ConcurrentCompleteAndCancel(t *testing.T) {
 
 	// Cancel after complete — should fail, but must not panic.
 	err := h.Client.CancelCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign is not currently running")
 
 	got, _ := h.Client.GetCampaign(created.ID)
 	if got.Status != "completed" {
@@ -694,7 +694,7 @@ func TestCampaigns_CompleteRequiresRunning(t *testing.T) {
 
 	// Completing a draft campaign should fail.
 	err := h.Client.CompleteCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign is not currently running")
 }
 
 func TestCampaigns_CompleteAlreadyCompleted(t *testing.T) {
@@ -712,7 +712,7 @@ func TestCampaigns_CompleteAlreadyCompleted(t *testing.T) {
 
 	// Completing again should fail.
 	err := h.Client.CompleteCampaign(created.ID)
-	wantError(t, err, http.StatusUnprocessableEntity, "campaign is not running")
+	wantError(t, err, http.StatusUnprocessableEntity, "Campaign is not currently running")
 }
 
 func TestCampaigns_SendTestEmailNotFound(t *testing.T) {

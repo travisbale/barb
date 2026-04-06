@@ -9,7 +9,7 @@ import (
 func (r *Router) getDashboard(w http.ResponseWriter, req *http.Request) {
 	stats, err := r.Dashboard.Stats()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to load dashboard", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to load dashboard.", err)
 		return
 	}
 

@@ -14,13 +14,13 @@ func (r *Router) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		cookie, err := req.Cookie("session")
 		if err != nil {
-			r.writeError(w, http.StatusUnauthorized, "authentication required", nil)
+			r.writeError(w, http.StatusUnauthorized, "Authentication required.", nil)
 			return
 		}
 
 		user, err := r.Auth.CurrentUser(cookie.Value)
 		if err != nil {
-			r.writeError(w, http.StatusUnauthorized, "session expired", nil)
+			r.writeError(w, http.StatusUnauthorized, "Session expired.", nil)
 			return
 		}
 

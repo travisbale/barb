@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/travisbale/barb/internal/phishing"
@@ -11,7 +12,7 @@ import (
 func (r *Router) listTargetLists(w http.ResponseWriter, req *http.Request) {
 	lists, err := r.Targets.ListLists()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list target lists", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list target lists.", err)
 		return
 	}
 
@@ -31,7 +32,7 @@ func (r *Router) createTargetList(w http.ResponseWriter, req *http.Request) {
 
 	list, err := r.Targets.CreateList(body.Name)
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to create target list", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to create target list.", err)
 		return
 	}
 
@@ -43,9 +44,9 @@ func (r *Router) getTargetList(w http.ResponseWriter, req *http.Request) {
 	list, err := r.Targets.GetList(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "target list not found", err)
+			r.writeError(w, http.StatusNotFound, "Target list not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get target list", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get target list.", err)
 		}
 		return
 	}
@@ -57,9 +58,9 @@ func (r *Router) deleteTargetList(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Targets.DeleteList(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "target list not found", err)
+			r.writeError(w, http.StatusNotFound, "Target list not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete target list", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete target list.", err)
 		}
 		return
 	}
@@ -71,7 +72,7 @@ func (r *Router) listTargets(w http.ResponseWriter, req *http.Request) {
 	listID := req.PathValue("id")
 	targets, err := r.Targets.ListTargets(listID)
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list targets", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list targets.", err)
 		return
 	}
 
@@ -100,7 +101,7 @@ func (r *Router) addTarget(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := r.Targets.AddTarget(listID, target); err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to add target", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to add target.", err)
 		return
 	}
 
@@ -112,14 +113,14 @@ func (r *Router) importTargets(w http.ResponseWriter, req *http.Request) {
 
 	file, _, err := req.FormFile("file")
 	if err != nil {
-		r.writeError(w, http.StatusBadRequest, "missing CSV file", nil)
+		r.writeError(w, http.StatusBadRequest, "Missing CSV file.", nil)
 		return
 	}
 	defer file.Close()
 
 	count, err := r.Targets.ImportCSV(listID, file)
 	if err != nil {
-		r.writeError(w, http.StatusUnprocessableEntity, err.Error(), err)
+		r.writeError(w, http.StatusUnprocessableEntity, fmt.Sprintf("Failed to import CSV: %v", err), nil)
 		return
 	}
 
@@ -130,9 +131,9 @@ func (r *Router) deleteTarget(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Targets.DeleteTarget(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "target not found", err)
+			r.writeError(w, http.StatusNotFound, "Target not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete target", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete target.", err)
 		}
 		return
 	}

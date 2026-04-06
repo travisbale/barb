@@ -16,7 +16,7 @@ type validatable interface {
 func decodeAndValidate[T validatable](w http.ResponseWriter, req *http.Request) (T, bool) {
 	var body T
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		writeJSON(w, http.StatusBadRequest, sdk.ErrorResponse{Error: "invalid request body"})
+		writeJSON(w, http.StatusBadRequest, sdk.ErrorResponse{Error: "Invalid request body."})
 		return body, false
 	}
 	if err := body.Validate(); err != nil {

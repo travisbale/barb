@@ -13,7 +13,7 @@ import (
 func (r *Router) listCampaigns(w http.ResponseWriter, req *http.Request) {
 	campaigns, err := r.Campaigns.List()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list campaigns", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list campaigns.", err)
 		return
 	}
 	items := make([]sdk.CampaignResponse, len(campaigns))
@@ -44,9 +44,9 @@ func (r *Router) createCampaign(w http.ResponseWriter, req *http.Request) {
 	created, err := r.Campaigns.Create(campaign)
 	if err != nil {
 		if isReferenceError(err) {
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, referenceErrorMessage(err), nil)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to create campaign.", err)
 		}
 		return
 	}
@@ -58,9 +58,9 @@ func (r *Router) getCampaign(w http.ResponseWriter, req *http.Request) {
 	campaign, err := r.Campaigns.Get(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get campaign.", err)
 		}
 		return
 	}
@@ -86,13 +86,13 @@ func (r *Router) updateCampaign(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		case errors.Is(err, phishing.ErrCampaignNotDraft):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Campaign can only be edited while in draft status.", nil)
 		case isReferenceError(err):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, referenceErrorMessage(err), nil)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to update campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to update campaign.", err)
 		}
 		return
 	}
@@ -102,12 +102,13 @@ func (r *Router) updateCampaign(w http.ResponseWriter, req *http.Request) {
 func (r *Router) deleteCampaign(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Campaigns.Delete(id); err != nil {
-		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
-		} else if errors.Is(err, phishing.ErrCampaignActive) {
+		switch {
+		case errors.Is(err, phishing.ErrNotFound):
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
+		case errors.Is(err, phishing.ErrCampaignActive):
 			r.writeError(w, http.StatusUnprocessableEntity, "Active campaigns cannot be deleted. Complete or cancel the campaign first.", err)
-		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete campaign", err)
+		default:
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete campaign.", err)
 		}
 		return
 	}
@@ -118,7 +119,7 @@ func (r *Router) listCampaignResults(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	results, err := r.Campaigns.Results(id)
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list results", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list results.", err)
 		return
 	}
 	items := make([]sdk.CampaignResultResponse, len(results))
@@ -135,15 +136,15 @@ func (r *Router) startCampaign(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		case errors.Is(err, phishing.ErrCampaignNotDraft):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Campaign can only be started from draft status.", nil)
 		case isReferenceError(err):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, referenceErrorMessage(err), nil)
 		case errors.Is(err, phishing.ErrSMTPConnectionFailed):
 			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to start campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to start campaign.", err)
 		}
 		return
 	}
@@ -157,11 +158,11 @@ func (r *Router) completeCampaign(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrCampaignNotRunning):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Campaign is not currently running.", nil)
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to complete campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to complete campaign.", err)
 		}
 		return
 	}
@@ -174,11 +175,11 @@ func (r *Router) cancelCampaign(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrCampaignNotRunning):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Campaign is not currently running.", nil)
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to cancel campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to cancel campaign.", err)
 		}
 		return
 	}
@@ -223,7 +224,7 @@ func (r *Router) sendTestEmail(w http.ResponseWriter, req *http.Request) {
 
 	var body sdk.SendTestEmailRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "invalid request body", nil)
+		r.writeError(w, http.StatusBadRequest, "Invalid request body.", nil)
 		return
 	}
 
@@ -231,11 +232,11 @@ func (r *Router) sendTestEmail(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		case errors.Is(err, phishing.ErrEmailRequired):
-			r.writeError(w, http.StatusUnprocessableEntity, err.Error(), nil)
+			r.writeError(w, http.StatusUnprocessableEntity, "Email address is required.", nil)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to send test email", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to send test email.", err)
 		}
 		return
 	}
@@ -249,16 +250,16 @@ func (r *Router) streamCampaign(w http.ResponseWriter, req *http.Request) {
 	// Verify the campaign exists.
 	if _, err := r.Campaigns.Get(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "campaign not found", err)
+			r.writeError(w, http.StatusNotFound, "Campaign not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get campaign", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get campaign.", err)
 		}
 		return
 	}
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		r.writeError(w, http.StatusInternalServerError, "streaming not supported", nil)
+		r.writeError(w, http.StatusInternalServerError, "Streaming not supported.", nil)
 		return
 	}
 
@@ -327,4 +328,17 @@ func isReferenceError(err error) bool {
 	return errors.Is(err, phishing.ErrTemplateNotFound) ||
 		errors.Is(err, phishing.ErrSMTPProfileNotFound) ||
 		errors.Is(err, phishing.ErrTargetListNotFound)
+}
+
+func referenceErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, phishing.ErrTemplateNotFound):
+		return "The selected template no longer exists."
+	case errors.Is(err, phishing.ErrSMTPProfileNotFound):
+		return "The selected SMTP profile no longer exists."
+	case errors.Is(err, phishing.ErrTargetListNotFound):
+		return "The selected target list no longer exists."
+	default:
+		return "A referenced resource no longer exists."
+	}
 }

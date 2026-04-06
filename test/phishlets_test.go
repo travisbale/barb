@@ -105,7 +105,7 @@ func TestPhishlets_RequiresNameInYAML(t *testing.T) {
 	_, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
 		YAML: "author: test\nversion: '1.0'\n",
 	})
-	wantError(t, err, http.StatusInternalServerError, "failed to create phishlet")
+	wantError(t, err, http.StatusInternalServerError, "Failed to create phishlet")
 }
 
 func TestPhishlets_InvalidYAML(t *testing.T) {
@@ -115,7 +115,7 @@ func TestPhishlets_InvalidYAML(t *testing.T) {
 	_, err := h.Client.CreatePhishlet(sdk.CreatePhishletRequest{
 		YAML: "{{invalid yaml",
 	})
-	wantError(t, err, http.StatusInternalServerError, "failed to create phishlet")
+	wantError(t, err, http.StatusInternalServerError, "Failed to create phishlet")
 }
 
 func TestPhishlets_UpdateInvalidYAML(t *testing.T) {
@@ -128,7 +128,7 @@ func TestPhishlets_UpdateInvalidYAML(t *testing.T) {
 	}
 
 	_, err = h.Client.UpdatePhishlet(created.ID, sdk.UpdatePhishletRequest{YAML: "{{invalid"})
-	wantError(t, err, http.StatusInternalServerError, "failed to update phishlet")
+	wantError(t, err, http.StatusInternalServerError, "Failed to update phishlet")
 
 	// Verify the original is unchanged.
 	got, err := h.Client.GetPhishlet(created.ID)

@@ -11,7 +11,7 @@ import (
 func (r *Router) listPhishlets(w http.ResponseWriter, req *http.Request) {
 	phishlets, err := r.Phishlets.List()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list phishlets", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list phishlets.", err)
 		return
 	}
 	items := make([]sdk.PhishletResponse, len(phishlets))
@@ -29,7 +29,7 @@ func (r *Router) createPhishlet(w http.ResponseWriter, req *http.Request) {
 
 	created, err := r.Phishlets.Create(body.YAML)
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to create phishlet", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to create phishlet.", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, phishletToResponse(created))
@@ -40,9 +40,9 @@ func (r *Router) getPhishlet(w http.ResponseWriter, req *http.Request) {
 	p, err := r.Phishlets.Get(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "phishlet not found", err)
+			r.writeError(w, http.StatusNotFound, "Phishlet not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get phishlet", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get phishlet.", err)
 		}
 		return
 	}
@@ -60,9 +60,9 @@ func (r *Router) updatePhishlet(w http.ResponseWriter, req *http.Request) {
 	updated, err := r.Phishlets.Update(id, body.YAML)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "phishlet not found", err)
+			r.writeError(w, http.StatusNotFound, "Phishlet not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to update phishlet", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to update phishlet.", err)
 		}
 		return
 	}
@@ -73,9 +73,9 @@ func (r *Router) deletePhishlet(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Phishlets.Delete(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "phishlet not found", err)
+			r.writeError(w, http.StatusNotFound, "Phishlet not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete phishlet", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete phishlet.", err)
 		}
 		return
 	}

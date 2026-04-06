@@ -11,7 +11,7 @@ import (
 func (r *Router) listSMTPProfiles(w http.ResponseWriter, req *http.Request) {
 	profiles, err := r.SMTP.ListProfiles()
 	if err != nil {
-		r.writeError(w, http.StatusInternalServerError, "failed to list SMTP profiles", err)
+		r.writeError(w, http.StatusInternalServerError, "Failed to list SMTP profiles.", err)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (r *Router) createSMTPProfile(w http.ResponseWriter, req *http.Request) {
 		if errors.Is(err, phishing.ErrSMTPConnectionFailed) {
 			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to create SMTP profile", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to create SMTP profile.", err)
 		}
 		return
 	}
@@ -56,9 +56,9 @@ func (r *Router) getSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	profile, err := r.SMTP.GetProfile(id)
 	if err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
+			r.writeError(w, http.StatusNotFound, "SMTP profile not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to get SMTP profile", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to get SMTP profile.", err)
 		}
 		return
 	}
@@ -87,11 +87,11 @@ func (r *Router) updateSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
-			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
+			r.writeError(w, http.StatusNotFound, "SMTP profile not found.", err)
 		case errors.Is(err, phishing.ErrSMTPConnectionFailed):
 			r.writeError(w, http.StatusUnprocessableEntity, "Could not connect to the SMTP server. Please check the host, port, and credentials.", err)
 		default:
-			r.writeError(w, http.StatusInternalServerError, "failed to update SMTP profile", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to update SMTP profile.", err)
 		}
 		return
 	}
@@ -102,9 +102,9 @@ func (r *Router) deleteSMTPProfile(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.SMTP.DeleteProfile(id); err != nil {
 		if errors.Is(err, phishing.ErrNotFound) {
-			r.writeError(w, http.StatusNotFound, "SMTP profile not found", err)
+			r.writeError(w, http.StatusNotFound, "SMTP profile not found.", err)
 		} else {
-			r.writeError(w, http.StatusInternalServerError, "failed to delete SMTP profile", err)
+			r.writeError(w, http.StatusInternalServerError, "Failed to delete SMTP profile.", err)
 		}
 		return
 	}

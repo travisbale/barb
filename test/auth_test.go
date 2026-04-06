@@ -16,7 +16,7 @@ func TestAuth_UnauthenticatedRequestReturns401(t *testing.T) {
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 
 	_, err := unauthenticated.ListCampaigns()
-	wantError(t, err, http.StatusUnauthorized, "authentication required")
+	wantError(t, err, http.StatusUnauthorized, "Authentication required")
 }
 
 func TestAuth_LoginWithBadPassword(t *testing.T) {
@@ -25,7 +25,7 @@ func TestAuth_LoginWithBadPassword(t *testing.T) {
 
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 	err := unauthenticated.Login(sdk.LoginRequest{Username: "admin", Password: "wrong"})
-	wantError(t, err, http.StatusUnauthorized, "invalid username or password")
+	wantError(t, err, http.StatusUnauthorized, "Invalid username or password")
 }
 
 func TestAuth_LoginWithBadUsername(t *testing.T) {
@@ -34,7 +34,7 @@ func TestAuth_LoginWithBadUsername(t *testing.T) {
 
 	unauthenticated := sdk.NewClient("http://" + h.Addr)
 	err := unauthenticated.Login(sdk.LoginRequest{Username: "nobody", Password: "whatever"})
-	wantError(t, err, http.StatusUnauthorized, "invalid username or password")
+	wantError(t, err, http.StatusUnauthorized, "Invalid username or password")
 }
 
 func TestAuth_MeReturnsCurrentUser(t *testing.T) {
@@ -62,14 +62,14 @@ func TestAuth_ChangePasswordValidation(t *testing.T) {
 		CurrentPassword: "wrong",
 		NewPassword:     "new-password-123",
 	})
-	wantError(t, err, http.StatusUnauthorized, "current password is incorrect")
+	wantError(t, err, http.StatusUnauthorized, "Current password is incorrect")
 
 	// Too short new password.
 	err = h.Client.ChangePassword(sdk.ChangePasswordRequest{
 		CurrentPassword: "test-password-12345",
 		NewPassword:     "short",
 	})
-	wantError(t, err, http.StatusUnprocessableEntity, "password must be at least 8 characters")
+	wantError(t, err, http.StatusUnprocessableEntity, "Password must be at least 8 characters")
 }
 
 func TestAuth_StatusEndpointIsPublic(t *testing.T) {

@@ -70,7 +70,7 @@ func TestMalformedJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			status, msg := rawRequest(t, h, tt.method, tt.path, "{invalid json")
-			wantRawError(t, status, msg, http.StatusBadRequest, "invalid request body")
+			wantRawError(t, status, msg, http.StatusBadRequest, "Invalid request body")
 		})
 	}
 }
