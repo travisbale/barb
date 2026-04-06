@@ -143,6 +143,8 @@ func TestIntegration_Miraged(t *testing.T) {
 	})
 
 	t.Run("CreateLure", func(t *testing.T) {
+		smtpHost, smtpPort, _ := requireMailpit(t)
+
 		// Re-enable the phishlet so we can create a lure.
 		_, err := h.Client.EnableMiragedPhishlet(conn.ID, "example", sdk.EnableMiragedPhishletRequest{
 			Hostname: "login.phish.local",
@@ -151,19 +153,14 @@ func TestIntegration_Miraged(t *testing.T) {
 			t.Fatalf("EnableMiragedPhishlet: %v", err)
 		}
 
-		// Insert SMTP profile directly — bypasses the connectivity check
-		// since we're testing lure creation, not email sending.
-		smtpStore := sqlite.NewSMTPStore(h.DB, h.Cipher)
-		if err := smtpStore.CreateProfile(&phishing.SMTPProfile{
-			ID: "smtp-lure-test", Name: "Test SMTP", Host: "localhost",
-			Port: 1025, FromAddr: "test@example.com", CreatedAt: time.Now(),
-		}); err != nil {
-			t.Fatalf("CreateProfile: %v", err)
-		}
+		smtp := createTestSMTP(t, h, func(r *sdk.CreateSMTPProfileRequest) {
+			r.Host = smtpHost
+			r.Port = smtpPort
+		})
 		tmpl := createTestTemplate(t, h)
 		list := createTestTargetList(t, h, sdk.AddTargetRequest{Email: "target@example.com"})
 
-		req := validCampaignRequest(list.ID, tmpl.ID, "smtp-lure-test")
+		req := validCampaignRequest(list.ID, tmpl.ID, smtp.ID)
 		req.MiragedID = conn.ID
 		req.Phishlet = "example"
 		req.SendRate = 600
