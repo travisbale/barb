@@ -46,7 +46,7 @@ defineExpose({ open, close })
 </script>
 
 <template>
-  <Card v-if="session || loading || error" class="p-7 mb-4 relative">
+  <Card v-if="session || loading || error" class="p-7 mb-4 relative animate-in">
     <button @click="close" class="absolute top-5 right-5 text-dim hover:text-primary transition-colors text-2xl leading-none">&times;</button>
 
     <div v-if="loading" class="text-sm font-mono text-dim">Loading session...</div>
