@@ -63,12 +63,12 @@ onMounted(load)
         clickable
         @click="router.push(`/campaigns/${campaign.id}`)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ campaign.name }}</td>
-        <td class="px-4 py-2.5">
+        <td class="text-primary">{{ campaign.name }}</td>
+        <td>
           <span class="text-xs uppercase tracking-wider" :class="statusColor[campaign.status] ?? 'text-dim'">{{ campaign.status }}</span>
         </td>
-        <td class="px-4 py-2.5 text-dim">{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
-        <td class="px-4 py-2.5 text-right">
+        <td class="text-dim">{{ new Date(campaign.created_at).toLocaleDateString() }}</td>
+        <td class="text-right">
           <DeleteButton @click.stop="remove(campaign.id)" />
         </td>
       </DataTableRow>

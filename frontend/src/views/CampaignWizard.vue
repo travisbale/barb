@@ -13,6 +13,7 @@ import {
   type PreviewResult,
 } from '../api/client'
 import WizardShell from '../components/WizardShell.vue'
+import AddButton from '../components/AddButton.vue'
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -274,7 +275,7 @@ async function submit() {
 <template>
   <div>
     <div class="mb-6">
-      <h1 class="font-mono text-xl font-bold text-primary tracking-wide">New Campaign</h1>
+      <h1>New Campaign</h1>
     </div>
 
     <ErrorBanner v-model="error" />
@@ -282,7 +283,7 @@ async function submit() {
     <WizardShell :steps="steps" :currentStep="step" @back="back">
       <!-- Step 0: Infrastructure -->
       <Card v-if="effectiveStep === 0" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Miraged Server</div>
+        <h6 class="mb-7">Miraged Server</h6>
 
         <template v-if="!showNewConnection">
           <AppSelect v-model="selectedConnectionId" label="Select a connection">
@@ -291,7 +292,7 @@ async function submit() {
           </AppSelect>
 
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="showNewConnection = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Enroll new server</button>
+            <AddButton variant="link" @click="showNewConnection = true">Enroll new server</AddButton>
           </div>
         </template>
 
@@ -310,7 +311,7 @@ async function submit() {
           @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
 
         <Card v-else class="p-7">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Phishlet Configuration</div>
+          <h6 class="mb-7">Phishlet Configuration</h6>
 
           <div class="flex flex-col gap-7">
             <AppSelect v-model="selectedPhishletName" label="Select a phishlet">
@@ -327,24 +328,24 @@ async function submit() {
           </div>
 
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
+            <AddButton variant="link" @click="showNewPhishlet = true">Create new phishlet</AddButton>
           </div>
         </Card>
       </template>
 
       <!-- Step 2: Targets -->
       <Card v-else-if="effectiveStep === 2" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Target List</div>
+        <h6 class="mb-7">Target List</h6>
         <TargetListPicker ref="targetListPicker" v-model="selectedTargetListId" @update:targetCount="targetCount = $event">
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="targetListPicker?.startCreateNew()" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
+            <AddButton variant="link" @click="targetListPicker?.startCreateNew()">Create new list</AddButton>
           </div>
         </TargetListPicker>
       </Card>
 
       <!-- Step 3: Template -->
       <Card v-else-if="effectiveStep === 3" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Email Template</div>
+        <h6 class="mb-7">Email Template</h6>
 
         <template v-if="!showNewTemplate">
           <AppSelect v-model="selectedTemplateId" label="Select a template">
@@ -357,16 +358,16 @@ async function submit() {
           </div>
 
           <div v-if="previewResult" class="mt-4 border-t border-edge pt-4">
-            <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">Subject</div>
+            <h6 class="mb-2">Subject</h6>
             <div class="text-sm text-primary font-mono px-3 py-2 bg-bg border border-edge mb-3">{{ previewResult.subject }}</div>
             <div v-if="previewResult.html_body">
-              <div class="text-xs font-mono text-dim uppercase tracking-wider mb-2">HTML</div>
+              <h6 class="mb-2">HTML</h6>
               <iframe :srcdoc="previewResult.html_body" class="w-full border border-edge bg-white" style="min-height: 150px;" sandbox="" />
             </div>
           </div>
 
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="showNewTemplate = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new template</button>
+            <AddButton variant="link" @click="showNewTemplate = true">Create new template</AddButton>
           </div>
         </template>
 
@@ -381,7 +382,7 @@ async function submit() {
 
       <!-- Step 4: SMTP -->
       <Card v-else-if="effectiveStep === 4" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">SMTP Profile</div>
+        <h6 class="mb-7">SMTP Profile</h6>
 
         <template v-if="!showNewSmtp">
           <AppSelect v-model="selectedSmtpId" label="Select an SMTP profile">
@@ -390,7 +391,7 @@ async function submit() {
           </AppSelect>
 
           <div class="mt-8 pt-6 border-t border-edge">
-            <button @click="showNewSmtp = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new profile</button>
+            <AddButton variant="link" @click="showNewSmtp = true">Create new profile</AddButton>
           </div>
         </template>
 
@@ -405,7 +406,7 @@ async function submit() {
 
       <!-- Step 5: Review -->
       <Card v-else-if="effectiveStep === 5" class="p-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-7">Campaign Settings</div>
+        <h6 class="mb-7">Campaign Settings</h6>
 
         <div class="flex flex-col gap-7">
           <AppInput v-model="campaignName" placeholder="Campaign name" required />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, shallowRef } from 'vue'
+import { ref, onMounted, onUnmounted, watch, shallowRef } from 'vue'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { yaml } from '@codemirror/lang-yaml'
@@ -63,8 +63,8 @@ const theme = EditorView.theme({
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
   '.cm-gutters': {
-    backgroundColor: 'rgb(var(--color-surface))',
-    color: 'rgb(var(--color-text-dim))',
+    backgroundColor: 'rgb(var(--color-bg))',
+    color: 'rgb(var(--color-text-dim) / 0.5)',
     border: 'none',
     borderRight: '1px solid rgb(var(--color-border))',
   },
@@ -115,6 +115,10 @@ onMounted(() => {
   })
 })
 
+onUnmounted(() => {
+  view.value?.destroy()
+})
+
 // Sync external changes (e.g. file upload) into the editor.
 watch(() => props.modelValue, (newVal) => {
   if (!view.value) return
@@ -139,5 +143,11 @@ watch(() => props.modelValue, (newVal) => {
   min-height: inherit;
   max-height: 600px;
   overflow: auto;
+}
+</style>
+
+<style>
+.borderless .cm-editor {
+  border: none;
 }
 </style>

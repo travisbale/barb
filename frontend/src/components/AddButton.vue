@@ -3,10 +3,14 @@ import AppButton from './AppButton.vue'
 import IconPlus from './IconPlus.vue'
 
 defineProps<{
+  variant?: 'primary' | 'link'
   disabled?: boolean
 }>()
 </script>
 
 <template>
-  <AppButton :disabled="disabled"><IconPlus /> <slot /></AppButton>
+  <AppButton :variant="variant" :disabled="disabled">
+    <IconPlus :size="variant === 'link' ? 11 : 14" /> 
+    <slot />
+  </AppButton>
 </template>

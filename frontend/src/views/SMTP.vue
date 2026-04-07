@@ -85,8 +85,8 @@ function closeForm() {
       <!-- Custom headers -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <div class="text-xs font-mono text-dim uppercase tracking-wider">Custom Headers</div>
-          <button type="button" @click="addHeader" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Add Header</button>
+          <h6>Custom Headers</h6>
+          <AddButton variant="link" @click="addHeader">Add Header</AddButton>
         </div>
         <div v-for="(header, i) in headers" :key="i" class="flex gap-2 mb-2 items-center">
           <AppInput v-model="header.key" placeholder="Header name" class="flex-1" />
@@ -111,12 +111,12 @@ function closeForm() {
         clickable
         @click="openEdit(profile)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ profile.name }}</td>
-        <td class="px-4 py-2.5 text-muted">{{ profile.host }}:{{ profile.port }}</td>
-        <td class="px-4 py-2.5 text-muted">
+        <td class="text-primary">{{ profile.name }}</td>
+        <td class="text-muted">{{ profile.host }}:{{ profile.port }}</td>
+        <td class="text-muted">
           {{ profile.from_name ? `${profile.from_name} <${profile.from_addr}>` : profile.from_addr }}
         </td>
-        <td class="px-4 py-2.5 text-right">
+        <td class="text-right">
           <DeleteButton @click.stop="remove(profile.id)" />
         </td>
       </DataTableRow>

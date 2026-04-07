@@ -31,7 +31,7 @@ onMounted(load)
 <template>
   <div>
     <div class="mb-8">
-      <h1 class="font-mono text-xl font-bold text-primary tracking-wide">Dashboard</h1>
+      <h1>Dashboard</h1>
       <p class="text-sm text-dim font-mono mt-1">Operations overview</p>
     </div>
 
@@ -62,7 +62,7 @@ onMounted(load)
 
       <!-- Active campaign cards -->
       <div v-if="stats.active_campaigns.length > 0">
-        <h2 class="text-xs font-mono text-dim uppercase tracking-wider mb-3">Active Campaigns</h2>
+        <h6 class="mb-3">Active Campaigns</h6>
         <div class="grid grid-cols-2 gap-4">
           <Card
             v-for="campaign in stats.active_campaigns"
@@ -112,7 +112,7 @@ onMounted(load)
 
       <!-- Recent captures -->
       <div v-if="stats.recent_captures.length > 0">
-        <h2 class="text-xs font-mono text-dim uppercase tracking-wider mb-3">Recent Captures</h2>
+        <h6 class="mb-3">Recent Captures</h6>
         <Card class="overflow-hidden">
           <table class="w-full text-sm font-mono">
             <thead>

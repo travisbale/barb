@@ -160,9 +160,9 @@ onUnmounted(stopPolling)
         clickable
         @click="startEdit(conn)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ conn.name }}</td>
-        <td class="px-4 py-2.5 text-muted">{{ conn.address }}</td>
-        <td class="px-4 py-2.5">
+        <td class="text-primary">{{ conn.name }}</td>
+        <td class="text-muted">{{ conn.address }}</td>
+        <td>
           <span v-if="!statuses[conn.id]" class="text-dim text-xs">Checking...</span>
           <span v-else-if="statuses[conn.id].connected" class="text-teal">
             <span class="inline-block w-1.5 h-1.5 bg-teal rounded-full mr-1.5 align-middle"></span>
@@ -170,7 +170,7 @@ onUnmounted(stopPolling)
           </span>
           <span v-else class="text-danger text-xs">{{ statuses[conn.id].error }}</span>
         </td>
-        <td class="px-4 py-2.5 text-right" @click.stop>
+        <td class="text-right" @click.stop>
           <DeleteButton @click="remove(conn.id)" />
         </td>
       </DataTableRow>

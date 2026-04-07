@@ -12,6 +12,7 @@ import {
   type Campaign, type CampaignResult,
   type EmailTemplate, type SMTPProfile, type TargetList, type MiragedConnection, type Phishlet,
 } from '../api/client'
+import AddButton from '../components/AddButton.vue'
 import AppButton from '../components/AppButton.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -409,7 +410,7 @@ onUnmounted(stopStreaming)
     <!-- Test email -->
     <Card v-if="showTestEmail" class="p-5 mb-4">
       <form @submit.prevent="sendTest" class="flex flex-col gap-7">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider">Send Test Email</div>
+        <h6>Send Test Email</h6>
         <AppInput v-model="testEmailAddress" type="email" placeholder="Recipient email" required />
         <div class="flex gap-2 justify-end">
           <AppButton variant="ghost" @click="showTestEmail = false">Cancel</AppButton>
@@ -478,7 +479,7 @@ onUnmounted(stopStreaming)
           </div>
         </template>
         <template #create-new>
-          <button v-if="!showNewTemplate" @click="showNewTemplate = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new template</button>
+          <AddButton v-if="!showNewTemplate" variant="link" @click="showNewTemplate = true">Create new template</AddButton>
         </template>
         <template #summary>
           <div class="text-primary">{{ settingsTemplate?.name || campaign?.template_id }}</div>
@@ -505,7 +506,7 @@ onUnmounted(stopStreaming)
           </div>
         </template>
         <template #create-new>
-          <button v-if="!showNewSmtp" @click="showNewSmtp = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new profile</button>
+          <AddButton v-if="!showNewSmtp" variant="link" @click="showNewSmtp = true">Create new profile</AddButton>
         </template>
         <template #summary>
           <div class="text-primary">{{ settingsSmtp?.name || campaign?.smtp_profile_id }}</div>
@@ -520,7 +521,7 @@ onUnmounted(stopStreaming)
           <TargetListPicker ref="targetListPicker" v-model="editTargetListId" />
         </template>
         <template #create-new>
-          <button @click="targetListPicker?.startCreateNew()" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new list</button>
+          <AddButton variant="link" @click="targetListPicker?.startCreateNew()">Create new list</AddButton>
         </template>
         <template #summary>
           <div class="text-primary">{{ settingsTargetList?.name || campaign?.target_list_id }}</div>
@@ -542,7 +543,7 @@ onUnmounted(stopStreaming)
             @submit="createNewPhishlet" @cancel="showNewPhishlet = false" />
         </template>
         <template #create-new>
-          <button v-if="!showNewPhishlet" @click="showNewPhishlet = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Create new phishlet</button>
+          <AddButton v-if="!showNewPhishlet" variant="link" @click="showNewPhishlet = true">Create new phishlet</AddButton>
         </template>
         <template #summary>
           <div class="text-primary">{{ campaign.phishlet }}</div>
@@ -568,7 +569,7 @@ onUnmounted(stopStreaming)
           </div>
         </template>
         <template #create-new>
-          <button v-if="!showNewMiraged" @click="showNewMiraged = true" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">+ Enroll new server</button>
+          <AddButton v-if="!showNewMiraged" variant="link" @click="showNewMiraged = true">Enroll new server</AddButton>
         </template>
         <template #summary>
           <div class="text-primary">{{ settingsMiraged?.name || campaign?.miraged_id }}</div>
@@ -592,15 +593,15 @@ onUnmounted(stopStreaming)
         :clickable="!!result.session_id"
         @click="openResult(result)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ result.email }}</td>
-        <td class="px-4 py-2.5">
+        <td class="text-primary">{{ result.email }}</td>
+        <td>
           <span :class="resultStatusColor(result.status)" class="uppercase text-xs tracking-wider">
             {{ result.status }}
           </span>
         </td>
-        <td class="px-4 py-2.5 text-dim">{{ result.sent_at ? new Date(result.sent_at).toLocaleString() : '—' }}</td>
-        <td class="px-4 py-2.5 text-dim">{{ result.clicked_at ? new Date(result.clicked_at).toLocaleString() : '—' }}</td>
-        <td class="px-4 py-2.5 text-dim">{{ result.captured_at ? new Date(result.captured_at).toLocaleString() : '—' }}</td>
+        <td class="text-dim">{{ result.sent_at ? new Date(result.sent_at).toLocaleString() : '—' }}</td>
+        <td class="text-dim">{{ result.clicked_at ? new Date(result.clicked_at).toLocaleString() : '—' }}</td>
+        <td class="text-dim">{{ result.captured_at ? new Date(result.captured_at).toLocaleString() : '—' }}</td>
       </DataTableRow>
     </DataTable>
 

@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
   <Card class="p-5">
-    <div class="text-xs font-mono text-dim uppercase tracking-wider">{{ label }}</div>
+    <h6>{{ label }}</h6>
     <div class="text-2xl font-mono font-bold text-primary mt-1">{{ value }}</div>
     <div class="text-xs font-mono text-dim mt-2">{{ subtitle }}</div>
   </Card>

@@ -55,7 +55,7 @@ defineExpose({ open, close })
     <div v-else-if="session" class="flex flex-col [&>*+*]:border-t [&>*+*]:border-edge [&>*+*]:pt-8 [&>*+*]:mt-8">
       <!-- Session details -->
       <div>
-        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">Session Details</div>
+        <h6 class="mb-5">Session Details</h6>
         <div class="grid grid-cols-2 gap-x-8 gap-y-5">
           <FieldValue v-if="result" label="Target">{{ result.email }}</FieldValue>
           <FieldValue v-if="result" label="Status" :selectable="false"><span class="uppercase" :class="resultStatusColor(result.status)">{{ result.status }}</span></FieldValue>
@@ -70,7 +70,7 @@ defineExpose({ open, close })
 
       <!-- Credentials and captured fields -->
       <div v-if="session.username || session.password || (session.custom && Object.keys(session.custom).length > 0)">
-        <div class="text-xs font-mono text-dim uppercase tracking-wider mb-5">Credentials</div>
+        <h6 class="mb-5">Credentials</h6>
         <div class="grid grid-cols-2 gap-x-8 gap-y-5">
           <FieldValue v-if="session.username" label="Username">{{ session.username }}</FieldValue>
           <FieldValue v-if="session.password" label="Password">{{ session.password }}</FieldValue>
@@ -81,7 +81,7 @@ defineExpose({ open, close })
       <!-- Cookies -->
       <div v-if="session.cookie_tokens && Object.keys(session.cookie_tokens).length > 0">
         <div class="flex items-center justify-between mb-3 -mt-2">
-          <div class="text-xs text-dim font-mono uppercase tracking-wider">Cookies</div>
+          <h6>Cookies</h6>
           <AppButton variant="secondary" @click="downloadCookies">Export</AppButton>
         </div>
         <div class="flex flex-col gap-3">
@@ -93,7 +93,7 @@ defineExpose({ open, close })
 
       <!-- HTTP tokens -->
       <div v-if="session.http_tokens && Object.keys(session.http_tokens).length > 0">
-        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">HTTP Tokens</div>
+        <h6 class="mb-5">HTTP Tokens</h6>
         <div class="flex flex-col gap-3">
           <FieldValue v-for="(value, name) in session.http_tokens" :key="name" :label="String(name)">{{ value }}</FieldValue>
         </div>
@@ -101,7 +101,7 @@ defineExpose({ open, close })
 
       <!-- Body tokens -->
       <div v-if="session.body_tokens && Object.keys(session.body_tokens).length > 0">
-        <div class="text-xs text-dim font-mono uppercase tracking-wider mb-5">Body Tokens</div>
+        <h6 class="mb-5">Body Tokens</h6>
         <div class="flex flex-col gap-3">
           <FieldValue v-for="(value, name) in session.body_tokens" :key="name" :label="String(name)">{{ value }}</FieldValue>
         </div>

@@ -6,7 +6,7 @@ defineProps<{
 
 <template>
   <div class="bg-surface border border-edge overflow-hidden">
-    <table class="w-full text-sm font-mono">
+    <table class="w-full text-sm font-mono [&_td]:px-4 [&_td]:py-2.5">
       <thead>
         <tr class="border-b border-edge text-dim text-left uppercase tracking-wider">
           <th

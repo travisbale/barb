@@ -37,9 +37,9 @@ const { items: phishlets, showForm, editingId, error, form: yaml, openCreate, op
         clickable
         @click="openEdit(phishlet)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ phishlet.name }}</td>
-        <td class="px-4 py-2.5 text-dim">{{ new Date(phishlet.created_at).toLocaleDateString() }}</td>
-        <td class="px-4 py-2.5 text-right">
+        <td class="text-primary">{{ phishlet.name }}</td>
+        <td class="text-dim">{{ new Date(phishlet.created_at).toLocaleDateString() }}</td>
+        <td class="text-right">
           <DeleteButton @click.stop="remove(phishlet.id)" />
         </td>
       </DataTableRow>

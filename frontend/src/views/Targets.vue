@@ -81,9 +81,9 @@ onMounted(load)
         clickable
         @click="router.push(`/targets/${list.id}`)"
       >
-        <td class="px-4 py-2.5 text-primary">{{ list.name }}</td>
-        <td class="px-4 py-2.5 text-dim">{{ new Date(list.created_at).toLocaleDateString() }}</td>
-        <td class="px-4 py-2.5 text-right">
+        <td class="text-primary">{{ list.name }}</td>
+        <td class="text-dim">{{ new Date(list.created_at).toLocaleDateString() }}</td>
+        <td class="text-right">
           <DeleteButton @click.stop="remove(list.id)" />
         </td>
       </DataTableRow>

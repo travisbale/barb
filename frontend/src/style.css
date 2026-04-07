@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  h1 { @apply text-3xl font-mono font-semibold tracking-tight text-primary; }
+  h2 { @apply text-2xl font-mono font-semibold tracking-tight text-primary; }
+  h3 { @apply text-xl font-mono font-semibold tracking-tight text-primary; }
+  h4 { @apply text-lg font-mono font-semibold tracking-tight text-primary; }
+  h5 { @apply text-sm font-mono font-semibold tracking-tight text-primary; }
+  h6 { @apply text-xs font-mono text-dim uppercase tracking-wider; }
+}
+
 /* Light mode (default) */
 :root {
   --color-bg: 243 244 246;

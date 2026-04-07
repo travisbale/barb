@@ -19,8 +19,8 @@ defineEmits<{
 <template>
   <Card class="p-5">
     <div class="flex items-center justify-between mb-1">
-      <div class="text-xs font-mono text-dim uppercase tracking-wider">{{ label }}</div>
-      <button v-if="editable && !expanded" @click="$emit('change')" class="text-xs font-mono text-amber hover:text-amber-dim transition-colors uppercase tracking-wider">Change</button>
+      <h6>{{ label }}</h6>
+      <AppButton v-if="editable && !expanded" variant="link" @click="$emit('change')">Change</AppButton>
     </div>
 
     <div v-if="expanded" class="mt-7">

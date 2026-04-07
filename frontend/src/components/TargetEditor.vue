@@ -130,13 +130,13 @@ async function remove(targetId: string) {
         :key="target.id"
         :index="i"
       >
-        <td class="px-4 py-2.5 text-primary">{{ target.email }}</td>
-        <td class="px-4 py-2.5 text-muted">{{ [target.first_name, target.last_name].filter(Boolean).join(' ') || '—' }}</td>
+        <td class="text-primary">{{ target.email }}</td>
+        <td class="text-muted">{{ [target.first_name, target.last_name].filter(Boolean).join(' ') || '—' }}</td>
         <template v-if="!compact">
-          <td class="px-4 py-2.5 text-dim">{{ target.department || '—' }}</td>
-          <td class="px-4 py-2.5 text-dim">{{ target.position || '—' }}</td>
+          <td class="text-dim">{{ target.department || '—' }}</td>
+          <td class="text-dim">{{ target.position || '—' }}</td>
         </template>
-        <td class="px-4 py-2.5 text-right" @click.stop>
+        <td class="text-right" @click.stop>
           <DeleteButton @click="remove(target.id)" />
         </td>
       </DataTableRow>
