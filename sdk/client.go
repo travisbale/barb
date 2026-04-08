@@ -279,6 +279,10 @@ func (c *Client) PreviewTemplate(id string, req PreviewTemplateRequest) (*Previe
 	return send[PreviewTemplateResponse](c, http.MethodPost, ResolveRoute(RouteTemplatePreview, "id", id), req)
 }
 
+func (c *Client) RenderTemplateHTML(req RenderHTMLRequest) (*RenderHTMLResponse, error) {
+	return send[RenderHTMLResponse](c, http.MethodPost, RouteTemplateRenderHTML, req)
+}
+
 func (c *Client) DeleteTemplate(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTemplate, "id", id))
 }

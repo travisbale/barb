@@ -34,6 +34,13 @@ describe('AppButton', () => {
     expect(wrapper.attributes('disabled')).toBeDefined()
   })
 
+  it('applies link variant classes', () => {
+    const wrapper = mount(AppButton, { props: { variant: 'link' } })
+    expect(wrapper.classes()).toContain('text-amber')
+    expect(wrapper.classes()).toContain('text-xs')
+    expect(wrapper.classes()).not.toContain('px-3')
+  })
+
   it('emits click event', async () => {
     const wrapper = mount(AppButton)
     await wrapper.trigger('click')

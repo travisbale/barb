@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -235,6 +236,11 @@ func checkValidation(t *testing.T, err error, wantErr string) {
 	}
 	if err == nil {
 		t.Errorf("expected error containing %q, got nil", wantErr)
+		return
+	}
+	var ve *ValidationError
+	if !errors.As(err, &ve) {
+		t.Errorf("expected *ValidationError, got %T", err)
 		return
 	}
 	if got := err.Error(); got != wantErr && !contains(got, wantErr) {

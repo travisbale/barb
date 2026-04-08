@@ -1,6 +1,7 @@
 package test_test
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 
@@ -126,6 +127,55 @@ func TestTemplates_UpdateNotFound(t *testing.T) {
 		Subject: strPtr("Test"),
 	})
 	wantError(t, err, http.StatusNotFound, "not found")
+}
+
+func TestTemplates_RenderHTML(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	result, err := h.Client.RenderTemplateHTML(sdk.RenderHTMLRequest{
+		HTMLBody: "<p>Hello {{.FirstName}} {{.LastName}}, click <a href=\"{{.URL}}\">here</a>.</p>",
+		PreviewTemplateRequest: sdk.PreviewTemplateRequest{
+			FirstName: "Alice",
+			LastName:  "Smith",
+			Email:     "alice@acme.com",
+			URL:       "https://phish.example.com/abc",
+		},
+	})
+	if err != nil {
+		t.Fatalf("RenderTemplateHTML: %v", err)
+	}
+	want := `<p>Hello Alice Smith, click <a href="https://phish.example.com/abc">here</a>.</p>`
+	if result.HTMLBody != want {
+		t.Errorf("HTMLBody = %q, want %q", result.HTMLBody, want)
+	}
+}
+
+func TestTemplates_RenderHTML_EmptyBody(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	_, err := h.Client.RenderTemplateHTML(sdk.RenderHTMLRequest{})
+	if err == nil {
+		t.Fatal("expected error for empty body")
+	}
+	var ve *sdk.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *ValidationError, got %T: %v", err, err)
+	}
+	if ve.Message != "HTML body is required." {
+		t.Errorf("Message = %q, want %q", ve.Message, "HTML body is required.")
+	}
+}
+
+func TestTemplates_RenderHTML_InvalidTemplate(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	_, err := h.Client.RenderTemplateHTML(sdk.RenderHTMLRequest{
+		HTMLBody: "<p>{{.Unclosed</p>",
+	})
+	wantError(t, err, http.StatusUnprocessableEntity, "Failed to render template.")
 }
 
 func TestTemplates_PartialUpdate(t *testing.T) {
