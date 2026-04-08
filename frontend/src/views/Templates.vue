@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useCrudList } from '../composables/useCrudList'
-import { listTemplates, createTemplate, updateTemplate, previewTemplate, deleteTemplate, type EmailTemplate, type PreviewResult } from '../api/client'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, type EmailTemplate } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
 import DeleteButton from '../components/DeleteButton.vue'
@@ -16,47 +15,11 @@ import AddButton from '../components/AddButton.vue'
 type TemplateForm = { name: string; subject: string; html_body: string; text_body: string; envelope_sender: string }
 const emptyForm = (): TemplateForm => ({ name: '', subject: '', html_body: '', text_body: '', envelope_sender: '' })
 
-const { items: templates, showForm, editingId, error, form, openCreate: rawOpenCreate, openEdit: rawOpenEdit, closeForm, submit, remove } = useCrudList<EmailTemplate, TemplateForm>(
+const { items: templates, showForm, editingId, error, form, openCreate, openEdit, closeForm, submit, remove } = useCrudList<EmailTemplate, TemplateForm>(
   { list: listTemplates, create: createTemplate, update: updateTemplate, remove: deleteTemplate },
   { emptyForm, toForm: (t) => ({ name: t.name, subject: t.subject, html_body: t.html_body, text_body: t.text_body, envelope_sender: t.envelope_sender ?? '' }), confirmMessage: 'Delete this template?' },
 )
 
-// Preview state.
-const previewData = { first_name: 'Jane', last_name: 'Doe', email: 'jane.doe@example.com', url: 'https://phish.example.com/lure123' }
-const previewResult = ref<PreviewResult | null>(null)
-const previewing = ref(false)
-
-function resetPreview() {
-  previewResult.value = null
-}
-
-function openCreate() {
-  rawOpenCreate()
-  resetPreview()
-}
-
-function openEdit(tmpl: EmailTemplate) {
-  rawOpenEdit(tmpl)
-  resetPreview()
-}
-
-async function runPreview() {
-  if (!editingId.value || previewing.value) return
-  previewing.value = true
-  error.value = ''
-  try {
-    previewResult.value = await previewTemplate(editingId.value, previewData)
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    previewing.value = false
-  }
-}
-
-function removeTemplate(id: string) {
-  if (editingId.value === id) resetPreview()
-  remove(id)
-}
 </script>
 
 <template>
@@ -68,7 +31,7 @@ function removeTemplate(id: string) {
     <ErrorBanner v-model="error" />
 
     <FormCard v-if="showForm" @submit="submit">
-      <TemplateForm v-model="form" :preview-html="previewResult?.html_body" :previewing="previewing" @preview="runPreview" />
+      <TemplateForm v-model="form" />
       <template #actions>
         <AppButton variant="ghost" @click="closeForm">Cancel</AppButton>
         <AppButton type="submit">{{ editingId ? 'Save' : 'Create' }}</AppButton>
@@ -89,7 +52,7 @@ function removeTemplate(id: string) {
         <td class="text-muted">{{ tmpl.subject }}</td>
         <td class="text-dim">{{ new Date(tmpl.created_at).toLocaleDateString() }}</td>
         <td class="text-right">
-          <DeleteButton @click.stop="removeTemplate(tmpl.id)" />
+          <DeleteButton @click.stop="remove(tmpl.id)" />
         </td>
       </DataTableRow>
     </DataTable>

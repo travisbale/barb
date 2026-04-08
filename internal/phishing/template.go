@@ -113,7 +113,7 @@ func (s *TemplateService) Preview(id string, data PreviewData) (*RenderedTemplat
 		return nil, fmt.Errorf("rendering subject: %w", err)
 	}
 	if tmpl.HTMLBody != "" {
-		if rendered.HTMLBody, err = renderHTML(tmpl.HTMLBody, data); err != nil {
+		if rendered.HTMLBody, err = s.RenderHTML(tmpl.HTMLBody, data); err != nil {
 			return nil, fmt.Errorf("rendering HTML body: %w", err)
 		}
 	}
@@ -126,7 +126,7 @@ func (s *TemplateService) Preview(id string, data PreviewData) (*RenderedTemplat
 	return rendered, nil
 }
 
-func renderHTML(body string, data PreviewData) (string, error) {
+func (s *TemplateService) RenderHTML(body string, data PreviewData) (string, error) {
 	tmpl, err := template.New("html").Parse(body)
 	if err != nil {
 		return "", err

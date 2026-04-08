@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { renderTemplateHTML } from '../api/client'
 import AppInput from './AppInput.vue'
 import CodeEditor from './CodeEditor.vue'
 
-const props = defineProps<{
+defineProps<{
   modelValue: {
     name: string
     subject: string
@@ -12,21 +13,32 @@ const props = defineProps<{
     envelope_sender: string
   }
   minEditorHeight?: string
-  previewHtml?: string
-  previewing?: boolean
 }>()
 
 defineEmits<{
   'update:modelValue': [value: any]
-  'preview': []
 }>()
 
 const tab = ref<'edit' | 'preview'>('edit')
+const previewHtml = ref<string>()
+const previewing = ref(false)
+const lastRenderedBody = ref<string>()
 
-// Reset to edit tab when preview result clears (e.g. switching templates)
-watch(() => props.previewHtml, (val) => {
-  if (!val && tab.value === 'preview') tab.value = 'edit'
-})
+async function preview(htmlBody: string) {
+  tab.value = 'preview'
+  if (!htmlBody || previewing.value) return
+  if (htmlBody === lastRenderedBody.value) return
+  previewing.value = true
+  try {
+    const result = await renderTemplateHTML(htmlBody)
+    previewHtml.value = result.html_body
+    lastRenderedBody.value = htmlBody
+  } catch {
+    tab.value = 'edit'
+  } finally {
+    previewing.value = false
+  }
+}
 </script>
 
 <template>
@@ -40,14 +52,14 @@ watch(() => props.previewHtml, (val) => {
       <div class="border border-edge overflow-hidden">
       <div class="flex items-center gap-4 px-3 py-3 border-b border-edge bg-surface">
         <button type="button" class="text-xs font-mono uppercase tracking-wider transition-colors" :class="tab === 'edit' ? 'text-primary' : 'text-dim hover:text-muted'" @click="tab = 'edit'">Edit</button>
-        <button type="button" class="text-xs font-mono uppercase tracking-wider transition-colors" :class="tab === 'preview' ? 'text-primary' : 'text-dim hover:text-muted'" @click="tab = 'preview'; $emit('preview')">Preview</button>
+        <button type="button" class="text-xs font-mono uppercase tracking-wider transition-colors" :class="tab === 'preview' ? 'text-primary' : 'text-dim hover:text-muted'" @click="preview(modelValue.html_body)">Preview</button>
       </div>
       <div style="min-height: 300px;">
         <CodeEditor v-show="tab === 'edit'" class="borderless" :modelValue="modelValue.html_body" @update:modelValue="$emit('update:modelValue', { ...modelValue, html_body: $event })" language="html" min-height="300px" />
         <template v-if="tab === 'preview'">
           <div v-if="previewing" class="flex items-center justify-center bg-bg text-sm text-dim font-mono h-full" style="min-height: 300px;">Rendering...</div>
           <iframe v-else-if="previewHtml" :srcdoc="previewHtml" class="w-full bg-white h-full" style="min-height: 300px;" sandbox="" />
-          <div v-else class="flex items-center justify-center bg-bg text-sm text-dim font-mono h-full" style="min-height: 300px;">Save the template first to preview</div>
+          <div v-else class="flex items-center justify-center bg-bg text-sm text-dim font-mono h-full" style="min-height: 300px;">No HTML body to preview.</div>
         </template>
       </div>
       </div>

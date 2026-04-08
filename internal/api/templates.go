@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -58,7 +57,6 @@ func (r *Router) getTemplate(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
-
 	body, ok := decodeAndValidate[sdk.UpdateTemplateRequest](w, req)
 	if !ok {
 		return
@@ -84,10 +82,8 @@ func (r *Router) updateTemplate(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) previewTemplate(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
-
-	var body sdk.PreviewTemplateRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		r.writeError(w, http.StatusBadRequest, "Invalid request body.", nil)
+	body, ok := decodeAndValidate[sdk.PreviewTemplateRequest](w, req)
+	if !ok {
 		return
 	}
 
@@ -110,6 +106,28 @@ func (r *Router) previewTemplate(w http.ResponseWriter, req *http.Request) {
 		Subject:  rendered.Subject,
 		HTMLBody: rendered.HTMLBody,
 		TextBody: rendered.TextBody,
+	})
+}
+
+func (r *Router) renderTemplateHTML(w http.ResponseWriter, req *http.Request) {
+	body, ok := decodeAndValidate[sdk.RenderHTMLRequest](w, req)
+	if !ok {
+		return
+	}
+
+	rendered, err := r.Templates.RenderHTML(body.HTMLBody, phishing.PreviewData{
+		FirstName: body.FirstName,
+		LastName:  body.LastName,
+		Email:     body.Email,
+		URL:       body.URL,
+	})
+	if err != nil {
+		r.writeError(w, http.StatusUnprocessableEntity, "Failed to render template.", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sdk.RenderHTMLResponse{
+		HTMLBody: rendered,
 	})
 }
 

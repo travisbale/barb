@@ -155,6 +155,13 @@ export function previewTemplate(id: string, data: { first_name: string; last_nam
   return request('POST', `/templates/${id}/preview`, data)
 }
 
+export function renderTemplateHTML(html_body: string): Promise<{ html_body: string }> {
+  return request('POST', '/templates/render', {
+    html_body,
+    first_name: 'Jane', last_name: 'Doe', email: 'jane.doe@example.com', url: 'https://phish.example.com/lure123',
+  })
+}
+
 export function deleteTemplate(id: string): Promise<void> {
   return request('DELETE', `/templates/${id}`)
 }

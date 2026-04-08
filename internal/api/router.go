@@ -69,6 +69,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	// Email Templates
 	auth("GET", sdk.RouteTemplates, r.listTemplates)
 	auth("POST", sdk.RouteTemplates, r.createTemplate)
+	auth("POST", sdk.RouteTemplateRenderHTML, r.renderTemplateHTML)
 	auth("POST", sdk.RouteTemplatePreview, r.previewTemplate)
 	auth("GET", sdk.RouteTemplate, r.getTemplate)
 	auth("PATCH", sdk.RouteTemplate, r.updateTemplate)

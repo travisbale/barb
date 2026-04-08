@@ -21,9 +21,10 @@ const (
 	RouteCampaignStream    = "/api/campaigns/{id}/stream"
 
 	// Email Templates
-	RouteTemplates       = "/api/templates"
-	RouteTemplate        = "/api/templates/{id}"
-	RouteTemplatePreview = "/api/templates/{id}/preview"
+	RouteTemplates          = "/api/templates"
+	RouteTemplate           = "/api/templates/{id}"
+	RouteTemplatePreview    = "/api/templates/{id}/preview"
+	RouteTemplateRenderHTML = "/api/templates/render"
 
 	// Phishlets
 	RoutePhishlets = "/api/phishlets"

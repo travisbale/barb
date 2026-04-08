@@ -81,7 +81,14 @@ func (r UpdateTemplateRequest) Validate() error {
 		return fmt.Errorf("name: cannot be empty")
 	}
 	if r.Subject != nil && *r.Subject == "" {
-		return fmt.Errorf("subject: cannot be empty")
+		return fmt.Errorf("Subject cannot be empty.")
+	}
+	return nil
+}
+
+func (r RenderHTMLRequest) Validate() error {
+	if r.HTMLBody == "" {
+		return fmt.Errorf("HTML body is required.")
 	}
 	return nil
 }

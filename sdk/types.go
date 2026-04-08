@@ -113,6 +113,15 @@ type PreviewTemplateResponse struct {
 	TextBody string `json:"text_body"`
 }
 
+type RenderHTMLRequest struct {
+	HTMLBody string `json:"html_body"`
+	PreviewTemplateRequest
+}
+
+type RenderHTMLResponse struct {
+	HTMLBody string `json:"html_body"`
+}
+
 type SendTestEmailRequest struct {
 	Email string `json:"email"`
 }
