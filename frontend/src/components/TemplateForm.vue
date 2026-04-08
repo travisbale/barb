@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { renderTemplateHTML } from '../api/client'
 import AppInput from './AppInput.vue'
 import CodeEditor from './CodeEditor.vue'
+import HTMLPreview from './HTMLPreview.vue'
 
 defineProps<{
   modelValue: {
@@ -58,7 +59,7 @@ async function preview(htmlBody: string) {
         <CodeEditor v-show="tab === 'edit'" class="borderless" :modelValue="modelValue.html_body" @update:modelValue="$emit('update:modelValue', { ...modelValue, html_body: $event })" language="html" min-height="300px" />
         <template v-if="tab === 'preview'">
           <div v-if="previewing" class="flex items-center justify-center bg-bg text-sm text-dim font-mono h-full" style="min-height: 300px;">Rendering...</div>
-          <iframe v-else-if="previewHtml" :srcdoc="previewHtml" class="w-full bg-white h-full" style="min-height: 300px;" sandbox="" />
+          <HTMLPreview v-else-if="previewHtml" :srcdoc="previewHtml" />
           <div v-else class="flex items-center justify-center bg-bg text-sm text-dim font-mono h-full" style="min-height: 300px;">No HTML body to preview.</div>
         </template>
       </div>

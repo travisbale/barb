@@ -15,6 +15,7 @@ import {
 import WizardShell from '../components/WizardShell.vue'
 import AddButton from '../components/AddButton.vue'
 import AppButton from '../components/AppButton.vue'
+import HTMLPreview from '../components/HTMLPreview.vue'
 import AppInput from '../components/AppInput.vue'
 import AppSelect from '../components/AppSelect.vue'
 import MiragedForm from '../components/MiragedForm.vue'
@@ -218,16 +219,17 @@ async function createNewTemplate() {
   }
 }
 
-async function previewSelectedTemplate() {
-  if (!selectedTemplateId.value) return
+watch(selectedTemplateId, async (id) => {
+  previewResult.value = null
+  if (!id) return
   try {
-    previewResult.value = await previewTemplate(selectedTemplateId.value, {
+    previewResult.value = await previewTemplate(id, {
       first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', url: 'https://phish.example.com/lure',
     })
   } catch (e: any) {
     error.value = e.message
   }
-}
+})
 
 async function createNewSmtp() {
   loading.value = true
@@ -353,17 +355,9 @@ async function submit() {
             <option v-for="tmpl in templates" :key="tmpl.id" :value="tmpl.id">{{ tmpl.name }} — {{ tmpl.subject }}</option>
           </AppSelect>
 
-          <div v-if="selectedTemplateId" class="mt-4">
-            <AppButton variant="secondary" @click="previewSelectedTemplate">Preview</AppButton>
-          </div>
-
-          <div v-if="previewResult" class="mt-4 border-t border-edge pt-4">
-            <h6 class="mb-2">Subject</h6>
-            <div class="text-sm text-primary font-mono px-3 py-2 bg-bg border border-edge mb-3">{{ previewResult.subject }}</div>
-            <div v-if="previewResult.html_body">
-              <h6 class="mb-2">HTML</h6>
-              <iframe :srcdoc="previewResult.html_body" class="w-full border border-edge bg-white" style="min-height: 150px;" sandbox="" />
-            </div>
+          <div v-if="previewResult?.html_body" class="mt-7 border-t border-edge pt-6">
+            <h6 class="mb-2">Preview</h6>
+            <HTMLPreview :srcdoc="previewResult.html_body" />
           </div>
 
           <div class="mt-8 pt-6 border-t border-edge">
