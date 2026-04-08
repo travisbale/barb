@@ -88,12 +88,12 @@ func TestServerValidation_CreateCampaign(t *testing.T) {
 		body    string
 		wantMsg string
 	}{
-		{"missing name", `{"template_id":"t","smtp_profile_id":"s","target_list_id":"l","redirect_url":"https://x.com"}`, "name: required"},
-		{"missing template_id", `{"name":"C","smtp_profile_id":"s","target_list_id":"l","redirect_url":"https://x.com"}`, "template_id: required"},
-		{"missing smtp_profile_id", `{"name":"C","template_id":"t","target_list_id":"l","redirect_url":"https://x.com"}`, "smtp_profile_id: required"},
-		{"missing target_list_id", `{"name":"C","template_id":"t","smtp_profile_id":"s","redirect_url":"https://x.com"}`, "target_list_id: required"},
-		{"missing redirect_url", `{"name":"C","template_id":"t","smtp_profile_id":"s","target_list_id":"l"}`, "redirect_url: required"},
-		{"empty body", `{}`, "name: required"},
+		{"missing name", `{"template_id":"t","smtp_profile_id":"s","target_list_id":"l","redirect_url":"https://x.com"}`, "Name is required."},
+		{"missing template_id", `{"name":"C","smtp_profile_id":"s","target_list_id":"l","redirect_url":"https://x.com"}`, "Template is required."},
+		{"missing smtp_profile_id", `{"name":"C","template_id":"t","target_list_id":"l","redirect_url":"https://x.com"}`, "SMTP profile is required."},
+		{"missing target_list_id", `{"name":"C","template_id":"t","smtp_profile_id":"s","redirect_url":"https://x.com"}`, "Target list is required."},
+		{"missing redirect_url", `{"name":"C","template_id":"t","smtp_profile_id":"s","target_list_id":"l"}`, "Redirect URL is required."},
+		{"empty body", `{}`, "Name is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -112,9 +112,9 @@ func TestServerValidation_CreateSMTPProfile(t *testing.T) {
 		body    string
 		wantMsg string
 	}{
-		{"missing name", `{"host":"h","from_addr":"f"}`, "name: required"},
-		{"missing host", `{"name":"n","from_addr":"f"}`, "host: required"},
-		{"missing from_addr", `{"name":"n","host":"h"}`, "from_addr: required"},
+		{"missing name", `{"host":"h","from_addr":"f"}`, "Name is required."},
+		{"missing host", `{"name":"n","from_addr":"f"}`, "Host is required."},
+		{"missing from_addr", `{"name":"n","host":"h"}`, "From address is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -133,9 +133,9 @@ func TestServerValidation_CreateTemplate(t *testing.T) {
 		body    string
 		wantMsg string
 	}{
-		{"missing name", `{"subject":"S","html_body":"b"}`, "name: required"},
-		{"missing subject", `{"name":"T","html_body":"b"}`, "subject: required"},
-		{"missing body", `{"name":"T","subject":"S"}`, "body: HTML or text body is required"},
+		{"missing name", `{"subject":"S","html_body":"b"}`, "Name is required."},
+		{"missing subject", `{"name":"T","html_body":"b"}`, "Subject is required."},
+		{"missing body", `{"name":"T","subject":"S"}`, "HTML or text body is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,11 +154,11 @@ func TestServerValidation_EnrollMiraged(t *testing.T) {
 		body    string
 		wantMsg string
 	}{
-		{"missing name", `{"address":"127.0.0.1:443","secret_hostname":"h","token":"t"}`, "name: required"},
-		{"missing address", `{"name":"M","secret_hostname":"h","token":"t"}`, "address: required"},
+		{"missing name", `{"address":"127.0.0.1:443","secret_hostname":"h","token":"t"}`, "Name is required."},
+		{"missing address", `{"name":"M","secret_hostname":"h","token":"t"}`, "Address is required."},
 		{"bad address format", `{"name":"M","address":"no-port","secret_hostname":"h","token":"t"}`, "host:port format"},
-		{"missing secret_hostname", `{"name":"M","address":"127.0.0.1:443","token":"t"}`, "secret_hostname: required"},
-		{"missing token", `{"name":"M","address":"127.0.0.1:443","secret_hostname":"h"}`, "token: required"},
+		{"missing secret_hostname", `{"name":"M","address":"127.0.0.1:443","token":"t"}`, "Secret hostname is required."},
+		{"missing token", `{"name":"M","address":"127.0.0.1:443","secret_hostname":"h"}`, "Token is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestServerValidation_UpdateMiraged(t *testing.T) {
 	h := test.NewHarness(t)
 
 	status, msg := rawRequest(t, h, "PATCH", "/api/miraged/some-id", `{"name":""}`)
-	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "name: cannot be empty")
+	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "Name cannot be empty.")
 }
 
 func TestServerValidation_AddTarget(t *testing.T) {
@@ -183,7 +183,7 @@ func TestServerValidation_AddTarget(t *testing.T) {
 	list, _ := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Test"})
 
 	status, msg := rawRequest(t, h, "POST", "/api/target-lists/"+list.ID+"/targets", `{"first_name":"Bob"}`)
-	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "email: required")
+	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "Email is required.")
 }
 
 func TestServerValidation_CreateTargetList(t *testing.T) {
@@ -191,5 +191,5 @@ func TestServerValidation_CreateTargetList(t *testing.T) {
 	h := test.NewHarness(t)
 
 	status, msg := rawRequest(t, h, "POST", "/api/target-lists", `{}`)
-	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "name: required")
+	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "Name is required.")
 }

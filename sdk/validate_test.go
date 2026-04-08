@@ -12,7 +12,7 @@ func TestCreateTargetListRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", CreateTargetListRequest{Name: "Targets"}, ""},
-		{"missing name", CreateTargetListRequest{}, "name: required"},
+		{"missing name", CreateTargetListRequest{}, "Name is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -30,7 +30,7 @@ func TestAddTargetRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", AddTargetRequest{Email: "alice@example.com"}, ""},
-		{"missing email", AddTargetRequest{FirstName: "Alice"}, "email: required"},
+		{"missing email", AddTargetRequest{FirstName: "Alice"}, "Email is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -49,9 +49,9 @@ func TestCreateSMTPProfileRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", valid, ""},
-		{"missing name", CreateSMTPProfileRequest{Host: "h", FromAddr: "f"}, "name: required"},
-		{"missing host", CreateSMTPProfileRequest{Name: "n", FromAddr: "f"}, "host: required"},
-		{"missing from_addr", CreateSMTPProfileRequest{Name: "n", Host: "h"}, "from_addr: required"},
+		{"missing name", CreateSMTPProfileRequest{Host: "h", FromAddr: "f"}, "Name is required."},
+		{"missing host", CreateSMTPProfileRequest{Name: "n", FromAddr: "f"}, "Host is required."},
+		{"missing from_addr", CreateSMTPProfileRequest{Name: "n", Host: "h"}, "From address is required."},
 		{"reserved header", CreateSMTPProfileRequest{Name: "n", Host: "h", FromAddr: "f", CustomHeaders: map[string]string{"From": "x"}}, "conflicts with a standard email header"},
 	}
 	for _, tt := range tests {
@@ -72,9 +72,9 @@ func TestUpdateSMTPProfileRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", UpdateSMTPProfileRequest{Name: &valid}, ""},
-		{"empty name", UpdateSMTPProfileRequest{Name: &empty}, "name: cannot be empty"},
-		{"empty host", UpdateSMTPProfileRequest{Host: &empty}, "host: cannot be empty"},
-		{"empty from_addr", UpdateSMTPProfileRequest{FromAddr: &empty}, "from_addr: cannot be empty"},
+		{"empty name", UpdateSMTPProfileRequest{Name: &empty}, "Name cannot be empty."},
+		{"empty host", UpdateSMTPProfileRequest{Host: &empty}, "Host cannot be empty."},
+		{"empty from_addr", UpdateSMTPProfileRequest{FromAddr: &empty}, "From address cannot be empty."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,9 +93,9 @@ func TestCreateTemplateRequest_Validate(t *testing.T) {
 	}{
 		{"valid html", CreateTemplateRequest{Name: "T", Subject: "S", HTMLBody: "<p>hi</p>"}, ""},
 		{"valid text", CreateTemplateRequest{Name: "T", Subject: "S", TextBody: "hi"}, ""},
-		{"missing name", CreateTemplateRequest{Subject: "S", HTMLBody: "b"}, "name: required"},
-		{"missing subject", CreateTemplateRequest{Name: "T", HTMLBody: "b"}, "subject: required"},
-		{"missing body", CreateTemplateRequest{Name: "T", Subject: "S"}, "body: HTML or text body is required"},
+		{"missing name", CreateTemplateRequest{Subject: "S", HTMLBody: "b"}, "Name is required."},
+		{"missing subject", CreateTemplateRequest{Name: "T", HTMLBody: "b"}, "Subject is required."},
+		{"missing body", CreateTemplateRequest{Name: "T", Subject: "S"}, "HTML or text body is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,8 +115,8 @@ func TestUpdateTemplateRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", UpdateTemplateRequest{Name: &valid}, ""},
-		{"empty name", UpdateTemplateRequest{Name: &empty}, "name: cannot be empty"},
-		{"empty subject", UpdateTemplateRequest{Subject: &empty}, "subject: cannot be empty"},
+		{"empty name", UpdateTemplateRequest{Name: &empty}, "Name cannot be empty."},
+		{"empty subject", UpdateTemplateRequest{Subject: &empty}, "Subject cannot be empty."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestCreatePhishletRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", CreatePhishletRequest{YAML: "name: test"}, ""},
-		{"missing yaml", CreatePhishletRequest{}, "yaml: required"},
+		{"missing yaml", CreatePhishletRequest{}, "YAML is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,11 +155,11 @@ func TestCreateCampaignRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", nil, ""},
-		{"missing name", func(r *CreateCampaignRequest) { r.Name = "" }, "name: required"},
-		{"missing template_id", func(r *CreateCampaignRequest) { r.TemplateID = "" }, "template_id: required"},
-		{"missing smtp_profile_id", func(r *CreateCampaignRequest) { r.SMTPProfileID = "" }, "smtp_profile_id: required"},
-		{"missing target_list_id", func(r *CreateCampaignRequest) { r.TargetListID = "" }, "target_list_id: required"},
-		{"missing redirect_url", func(r *CreateCampaignRequest) { r.RedirectURL = "" }, "redirect_url: required"},
+		{"missing name", func(r *CreateCampaignRequest) { r.Name = "" }, "Name is required."},
+		{"missing template_id", func(r *CreateCampaignRequest) { r.TemplateID = "" }, "Template is required."},
+		{"missing smtp_profile_id", func(r *CreateCampaignRequest) { r.SMTPProfileID = "" }, "SMTP profile is required."},
+		{"missing target_list_id", func(r *CreateCampaignRequest) { r.TargetListID = "" }, "Target list is required."},
+		{"missing redirect_url", func(r *CreateCampaignRequest) { r.RedirectURL = "" }, "Redirect URL is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -184,11 +184,11 @@ func TestEnrollMiragedRequest_Validate(t *testing.T) {
 		wantErr string
 	}{
 		{"valid", nil, ""},
-		{"missing name", func(r *EnrollMiragedRequest) { r.Name = "" }, "name: required"},
-		{"missing address", func(r *EnrollMiragedRequest) { r.Address = "" }, "address: required"},
+		{"missing name", func(r *EnrollMiragedRequest) { r.Name = "" }, "Name is required."},
+		{"missing address", func(r *EnrollMiragedRequest) { r.Address = "" }, "Address is required."},
 		{"bad address format", func(r *EnrollMiragedRequest) { r.Address = "no-port" }, "host:port format"},
-		{"missing secret_hostname", func(r *EnrollMiragedRequest) { r.SecretHostname = "" }, "secret_hostname: required"},
-		{"missing token", func(r *EnrollMiragedRequest) { r.Token = "" }, "token: required"},
+		{"missing secret_hostname", func(r *EnrollMiragedRequest) { r.SecretHostname = "" }, "Secret hostname is required."},
+		{"missing token", func(r *EnrollMiragedRequest) { r.Token = "" }, "Token is required."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -213,7 +213,7 @@ func TestUpdateMiragedRequest_Validate(t *testing.T) {
 	}{
 		{"valid", UpdateMiragedRequest{Name: &valid}, ""},
 		{"nil name", UpdateMiragedRequest{}, ""},
-		{"empty name", UpdateMiragedRequest{Name: &empty}, "name: cannot be empty"},
+		{"empty name", UpdateMiragedRequest{Name: &empty}, "Name cannot be empty."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -19,9 +19,11 @@ func decodeAndValidate[T validatable](w http.ResponseWriter, req *http.Request) 
 		writeJSON(w, http.StatusBadRequest, sdk.ErrorResponse{Error: "Invalid request body."})
 		return body, false
 	}
+
 	if err := body.Validate(); err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, sdk.ErrorResponse{Error: err.Error()})
 		return body, false
 	}
+
 	return body, true
 }

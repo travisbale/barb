@@ -6,18 +6,31 @@ import (
 	"strings"
 )
 
+// ValidationError represents a user-facing validation message.
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+func invalid(msg string) error {
+	return &ValidationError{Message: msg}
+}
+
 // --- Target Lists ---
 
 func (r CreateTargetListRequest) Validate() error {
 	if r.Name == "" {
-		return fmt.Errorf("name: required")
+		return invalid("Name is required.")
 	}
 	return nil
 }
 
 func (r AddTargetRequest) Validate() error {
 	if r.Email == "" {
-		return fmt.Errorf("email: required")
+		return invalid("Email is required.")
 	}
 	return nil
 }
@@ -34,26 +47,26 @@ var reservedHeaders = map[string]bool{
 
 func (r CreateSMTPProfileRequest) Validate() error {
 	if r.Name == "" {
-		return fmt.Errorf("name: required")
+		return invalid("Name is required.")
 	}
 	if r.Host == "" {
-		return fmt.Errorf("host: required")
+		return invalid("Host is required.")
 	}
 	if r.FromAddr == "" {
-		return fmt.Errorf("from_addr: required")
+		return invalid("From address is required.")
 	}
 	return validateHeaders(r.CustomHeaders)
 }
 
 func (r UpdateSMTPProfileRequest) Validate() error {
 	if r.Name != nil && *r.Name == "" {
-		return fmt.Errorf("name: cannot be empty")
+		return invalid("Name cannot be empty.")
 	}
 	if r.Host != nil && *r.Host == "" {
-		return fmt.Errorf("host: cannot be empty")
+		return invalid("Host cannot be empty.")
 	}
 	if r.FromAddr != nil && *r.FromAddr == "" {
-		return fmt.Errorf("from_addr: cannot be empty")
+		return invalid("From address cannot be empty.")
 	}
 	if r.CustomHeaders != nil {
 		return validateHeaders(*r.CustomHeaders)
@@ -65,30 +78,30 @@ func (r UpdateSMTPProfileRequest) Validate() error {
 
 func (r CreateTemplateRequest) Validate() error {
 	if r.Name == "" {
-		return fmt.Errorf("name: required")
+		return invalid("Name is required.")
 	}
 	if r.Subject == "" {
-		return fmt.Errorf("subject: required")
+		return invalid("Subject is required.")
 	}
 	if r.HTMLBody == "" && r.TextBody == "" {
-		return fmt.Errorf("body: HTML or text body is required")
+		return invalid("HTML or text body is required.")
 	}
 	return nil
 }
 
 func (r UpdateTemplateRequest) Validate() error {
 	if r.Name != nil && *r.Name == "" {
-		return fmt.Errorf("name: cannot be empty")
+		return invalid("Name cannot be empty.")
 	}
 	if r.Subject != nil && *r.Subject == "" {
-		return fmt.Errorf("Subject cannot be empty.")
+		return invalid("Subject cannot be empty.")
 	}
 	return nil
 }
 
 func (r RenderHTMLRequest) Validate() error {
 	if r.HTMLBody == "" {
-		return fmt.Errorf("HTML body is required.")
+		return invalid("HTML body is required.")
 	}
 	return nil
 }
@@ -97,14 +110,14 @@ func (r RenderHTMLRequest) Validate() error {
 
 func (r CreatePhishletRequest) Validate() error {
 	if r.YAML == "" {
-		return fmt.Errorf("yaml: required")
+		return invalid("YAML is required.")
 	}
 	return nil
 }
 
 func (r UpdatePhishletRequest) Validate() error {
 	if r.YAML == "" {
-		return fmt.Errorf("yaml: required")
+		return invalid("YAML is required.")
 	}
 	return nil
 }
@@ -113,26 +126,26 @@ func (r UpdatePhishletRequest) Validate() error {
 
 func (r CreateCampaignRequest) Validate() error {
 	if r.Name == "" {
-		return fmt.Errorf("name: required")
+		return invalid("Name is required.")
 	}
 	if r.TemplateID == "" {
-		return fmt.Errorf("template_id: required")
+		return invalid("Template is required.")
 	}
 	if r.SMTPProfileID == "" {
-		return fmt.Errorf("smtp_profile_id: required")
+		return invalid("SMTP profile is required.")
 	}
 	if r.TargetListID == "" {
-		return fmt.Errorf("target_list_id: required")
+		return invalid("Target list is required.")
 	}
 	if r.RedirectURL == "" {
-		return fmt.Errorf("redirect_url: required")
+		return invalid("Redirect URL is required.")
 	}
 	return nil
 }
 
 func (r UpdateCampaignRequest) Validate() error {
 	if r.Name != nil && *r.Name == "" {
-		return fmt.Errorf("name: cannot be empty")
+		return invalid("Name cannot be empty.")
 	}
 	return nil
 }
@@ -141,33 +154,33 @@ func (r UpdateCampaignRequest) Validate() error {
 
 func (r EnrollMiragedRequest) Validate() error {
 	if r.Name == "" {
-		return fmt.Errorf("name: required")
+		return invalid("Name is required.")
 	}
 	if r.Address == "" {
-		return fmt.Errorf("address: required")
+		return invalid("Address is required.")
 	}
 	if _, _, err := net.SplitHostPort(r.Address); err != nil {
-		return fmt.Errorf("address: must be in host:port format")
+		return invalid("Address must be in host:port format.")
 	}
 	if r.SecretHostname == "" {
-		return fmt.Errorf("secret_hostname: required")
+		return invalid("Secret hostname is required.")
 	}
 	if r.Token == "" {
-		return fmt.Errorf("token: required")
+		return invalid("Token is required.")
 	}
 	return nil
 }
 
 func (r UpdateMiragedRequest) Validate() error {
 	if r.Name != nil && *r.Name == "" {
-		return fmt.Errorf("name: cannot be empty")
+		return invalid("Name cannot be empty.")
 	}
 	return nil
 }
 
 func (r PushMiragedPhishletRequest) Validate() error {
 	if r.YAML == "" {
-		return fmt.Errorf("yaml: required")
+		return invalid("YAML is required.")
 	}
 	return nil
 }
@@ -180,7 +193,7 @@ func (r EnableMiragedPhishletRequest) Validate() error { return nil }
 func validateHeaders(headers map[string]string) error {
 	for key := range headers {
 		if reservedHeaders[strings.ToLower(key)] {
-			return fmt.Errorf("custom_headers: %q conflicts with a standard email header", key)
+			return invalid(fmt.Sprintf("%q conflicts with a standard email header.", key))
 		}
 	}
 	return nil
