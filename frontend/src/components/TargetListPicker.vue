@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
+import { ref, watch } from 'vue'
 import { listTargetLists, createTargetList, type TargetList } from '../api/client'
 import AppButton from './AppButton.vue'
 import AppInput from './AppInput.vue'
 import AppSelect from './AppSelect.vue'
 import TargetEditor from './TargetEditor.vue'
 
-defineProps<{
+const props = defineProps<{
   modelValue: string
 }>()
 
@@ -25,12 +25,15 @@ const error = ref('')
 async function loadLists() {
   try {
     targetLists.value = await listTargetLists() ?? []
+    if (targetLists.value.length && !props.modelValue) {
+      emit('update:modelValue', targetLists.value[0].id)
+    }
   } catch { /* ignore */ }
 }
 
 loadLists()
 
-watchEffect(() => emit('update:targetCount', targetCount.value))
+watch(targetCount, (val) => emit('update:targetCount', val))
 
 async function createNewList() {
   loading.value = true
@@ -60,14 +63,16 @@ defineExpose({ startCreateNew, targetCount })
     <div v-if="error" class="text-xs font-mono text-danger mb-3">{{ error }}</div>
 
     <template v-if="!creatingList">
-      <AppSelect :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" label="Select a target list">
-        <option value="" disabled></option>
-        <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
-      </AppSelect>
+      <template v-if="targetLists.length > 0">
+        <AppSelect :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" label="Select a target list">
+          <option v-for="list in targetLists" :key="list.id" :value="list.id">{{ list.name }}</option>
+        </AppSelect>
 
-      <div v-if="modelValue" class="mt-7">
-        <TargetEditor :list-id="modelValue" compact @update:count="targetCount = $event" />
-      </div>
+        <div v-if="modelValue" class="mt-7">
+          <TargetEditor :list-id="modelValue" compact @update:count="targetCount = $event" />
+        </div>
+      </template>
+      <p v-else class="text-sm text-dim font-mono">No target lists available.</p>
 
       <slot />
     </template>
