@@ -11,6 +11,14 @@ type CampaignEvent struct {
 	Status     string                `json:"status,omitempty"`
 }
 
+// Subscription is the handle returned by eventBus.Subscribe. Callers read
+// events from Events and release resources by invoking Unsubscribe.
+// Unsubscribe is safe to call multiple times.
+type Subscription struct {
+	Events      <-chan CampaignEvent
+	Unsubscribe func()
+}
+
 // eventBus is the publish/subscribe port for campaign events. Concrete
 // implementations live in internal/events and are injected into services
 // that need to emit or observe campaign events.
@@ -19,6 +27,5 @@ type CampaignEvent struct {
 // dropped for that subscriber.
 type eventBus interface {
 	Publish(event CampaignEvent)
-	Subscribe(campaignID string) <-chan CampaignEvent
-	Unsubscribe(campaignID string, ch <-chan CampaignEvent)
+	Subscribe(campaignID string) *Subscription
 }

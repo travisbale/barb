@@ -61,8 +61,8 @@ func TestPublishUnsubscribeRace(t *testing.T) {
 		wg.Add(1)
 		go work(&wg, func() {
 			for time.Now().Before(deadline) {
-				ch := bus.Subscribe(campaignID)
-				bus.Unsubscribe(campaignID, ch)
+				sub := bus.Subscribe(campaignID)
+				sub.Unsubscribe()
 			}
 		})
 	}

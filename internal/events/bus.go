@@ -13,9 +13,9 @@ import (
 // DefaultBufferSize is the channel buffer size used for new subscriptions.
 const DefaultBufferSize = 16
 
-// Bus is a goroutine-safe publish/subscribe bus for campaign events
-// keyed by campaign ID. It implements the eventBus port declared in the
-// phishing package.
+// Bus is a goroutine-safe publish/subscribe bus for campaign events keyed
+// by campaign ID. It implements the eventBus port declared in the phishing
+// package.
 //
 // Delivery guarantee: best-effort, in-process only. Events are never
 // persisted. If a subscriber's channel is full when Publish is called, the
@@ -23,20 +23,17 @@ const DefaultBufferSize = 16
 type Bus struct {
 	bufSize int
 	mu      sync.RWMutex
-	subs    map[string][]subEntry
+	subs    map[string][]*subEntry
 }
 
-// subEntry pairs a bidirectional channel with a closed flag so Unsubscribe
-// is idempotent and double-close is prevented.
 type subEntry struct {
-	ch     chan phishing.CampaignEvent
-	closed bool
+	ch chan phishing.CampaignEvent
 }
 
 func NewBus() *Bus {
 	return &Bus{
 		bufSize: DefaultBufferSize,
-		subs:    make(map[string][]subEntry),
+		subs:    make(map[string][]*subEntry),
 	}
 }
 
@@ -48,7 +45,7 @@ func NewBus() *Bus {
 // closing a subscriber's channel between iteration and send (which would
 // panic). Sends are non-blocking (select + default), so the critical section
 // stays short: concurrent publishers still run in parallel under RLock, and
-// Unsubscribe only waits for in-flight publishes to return before closing.
+// an Unsubscribe call only waits for in-flight publishes to return.
 func (b *Bus) Publish(event phishing.CampaignEvent) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -65,32 +62,35 @@ func (b *Bus) Publish(event phishing.CampaignEvent) {
 	}
 }
 
-// Subscribe returns a buffered receive-only channel for events tagged with
-// campaignID. The caller must invoke Unsubscribe to release resources.
-func (b *Bus) Subscribe(campaignID string) <-chan phishing.CampaignEvent {
+// Subscribe registers a subscriber for events tagged with campaignID and
+// returns a Subscription handle. The caller releases resources by calling
+// Subscription.Unsubscribe; it is safe to invoke multiple times.
+func (b *Bus) Subscribe(campaignID string) *phishing.Subscription {
 	ch := make(chan phishing.CampaignEvent, b.bufSize)
+	entry := &subEntry{ch: ch}
+
 	b.mu.Lock()
-	b.subs[campaignID] = append(b.subs[campaignID], subEntry{ch: ch})
+	b.subs[campaignID] = append(b.subs[campaignID], entry)
 	b.mu.Unlock()
-	return ch
+
+	return &phishing.Subscription{
+		Events:      ch,
+		Unsubscribe: func() { b.unsubscribe(campaignID, entry) },
+	}
 }
 
-// Unsubscribe removes ch from the subscriber list for campaignID and closes
-// it. Safe to call multiple times — subsequent calls for the same channel
-// are no-ops.
-func (b *Bus) Unsubscribe(campaignID string, ch <-chan phishing.CampaignEvent) {
+// unsubscribe removes entry from the subscriber list for campaignID and
+// closes its channel. Idempotent: after the first call the entry is no
+// longer in the slice and subsequent calls are no-ops, so
+// Subscription.Unsubscribe is safe to invoke multiple times.
+func (b *Bus) unsubscribe(campaignID string, entry *subEntry) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	entries := b.subs[campaignID]
-	for i, entry := range entries {
-		if (<-chan phishing.CampaignEvent)(entry.ch) == ch {
-			if entry.closed {
-				return
-			}
-			entries[i].closed = true
-			close(entry.ch)
-
+	for i, e := range entries {
+		if e == entry {
+			close(e.ch)
 			last := len(entries) - 1
 			entries[i] = entries[last]
 			b.subs[campaignID] = entries[:last]
