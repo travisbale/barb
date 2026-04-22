@@ -111,7 +111,6 @@ type CampaignService struct {
 }
 
 func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
-	// Verify references exist.
 	if _, err := s.Templates.GetTemplate(campaign.TemplateID); err != nil {
 		return nil, ErrTemplateNotFound
 	}
@@ -133,7 +132,6 @@ func (s *CampaignService) Create(campaign *Campaign) (*Campaign, error) {
 		return nil, err
 	}
 
-	// Pre-populate results from target list.
 	targets, err := s.Targets.ListTargets(campaign.TargetListID)
 	if err != nil {
 		return nil, err
