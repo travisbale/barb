@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/travisbale/barb/internal/phishing"
@@ -257,31 +256,25 @@ func (r *Router) streamCampaign(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	flusher, ok := w.(http.Flusher)
+	sse, ok := newSSEWriter(w)
 	if !ok {
 		r.writeError(w, http.StatusInternalServerError, "Streaming not supported.", nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
-
 	for event := range stream {
-		if err := r.writeCampaignSSE(w, flusher, event); err != nil {
+		if err := r.sendCampaignEvent(sse, event); err != nil {
 			return
 		}
 	}
 }
 
-// writeCampaignSSE converts a domain CampaignEvent into the SDK wire format
+// sendCampaignEvent converts a domain CampaignEvent into the SDK wire format
 // and writes it as a single SSE message. Marshal errors are logged and
 // skipped (returning nil) so one bad event doesn't tear down the stream.
 // A write error is returned so the caller can exit the loop — typically
 // signals that the client has disconnected.
-func (r *Router) writeCampaignSSE(w http.ResponseWriter, flusher http.Flusher, event phishing.CampaignEvent) error {
+func (r *Router) sendCampaignEvent(sse *sseWriter, event phishing.CampaignEvent) error {
 	sseEvent := sdk.CampaignEvent{
 		Type:       event.Type,
 		CampaignID: event.CampaignID,
@@ -296,11 +289,7 @@ func (r *Router) writeCampaignSSE(w http.ResponseWriter, flusher http.Flusher, e
 		r.Logger.Error("failed to marshal SSE event", "error", err)
 		return nil
 	}
-	if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, data); err != nil {
-		return err
-	}
-	flusher.Flush()
-	return nil
+	return sse.WriteEvent(string(event.Type), data)
 }
 
 func isReferenceError(err error) bool {
