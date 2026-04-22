@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/travisbale/barb/sdk"
 	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
@@ -226,11 +225,7 @@ func (s *CampaignService) endCampaign(id string, status CampaignStatus) error {
 	if err := s.Store.UpdateCampaign(campaign); err != nil {
 		return err
 	}
-	s.Bus.Publish(CampaignEvent{
-		Type:       sdk.EventCampaignStatus,
-		CampaignID: campaign.ID,
-		Status:     string(campaign.Status),
-	})
+	s.Bus.Publish(newStatusEvent(campaign))
 
 	// Clean up miraged resources only on explicit complete/cancel.
 	s.cleanup(campaign)
@@ -371,11 +366,7 @@ func (s *CampaignService) activate(campaign *Campaign) error {
 		s.Logger.Error("failed to activate campaign", "error", err)
 		return err
 	}
-	s.Bus.Publish(CampaignEvent{
-		Type:       sdk.EventCampaignStatus,
-		CampaignID: campaign.ID,
-		Status:     string(campaign.Status),
-	})
+	s.Bus.Publish(newStatusEvent(campaign))
 	return nil
 }
 
@@ -476,11 +467,7 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		if err := s.Store.UpdateResult(result); err != nil {
 			s.Logger.Error("failed to update result", "error", err)
 		}
-		s.Bus.Publish(CampaignEvent{
-			Type:       sdk.EventResultUpdated,
-			CampaignID: campaign.ID,
-			Result:     result,
-		})
+		s.Bus.Publish(newResultEvent(result))
 	}
 }
 
@@ -637,11 +624,7 @@ func (s *CampaignService) Stream(ctx context.Context, campaignID string) (<-chan
 // the EventResultUpdated fired on their first transition will deliver them
 // to subscribers via the live stream.
 func (s *CampaignService) emitSnapshot(ctx context.Context, campaign *Campaign, out chan<- CampaignEvent) {
-	if !sendOrCancel(ctx, out, CampaignEvent{
-		Type:       sdk.EventCampaignStatus,
-		CampaignID: campaign.ID,
-		Status:     string(campaign.Status),
-	}) {
+	if !sendOrCancel(ctx, out, newStatusEvent(campaign)) {
 		return
 	}
 
@@ -654,11 +637,7 @@ func (s *CampaignService) emitSnapshot(ctx context.Context, campaign *Campaign, 
 		if result.Status == ResultPending {
 			continue
 		}
-		if !sendOrCancel(ctx, out, CampaignEvent{
-			Type:       sdk.EventResultUpdated,
-			CampaignID: campaign.ID,
-			Result:     result,
-		}) {
+		if !sendOrCancel(ctx, out, newResultEvent(result)) {
 			return
 		}
 	}

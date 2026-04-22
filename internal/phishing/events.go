@@ -11,6 +11,26 @@ type CampaignEvent struct {
 	Status     string                `json:"status,omitempty"`
 }
 
+// newStatusEvent constructs a CampaignEvent describing the campaign's
+// current status.
+func newStatusEvent(campaign *Campaign) CampaignEvent {
+	return CampaignEvent{
+		Type:       sdk.EventCampaignStatus,
+		CampaignID: campaign.ID,
+		Status:     string(campaign.Status),
+	}
+}
+
+// newResultEvent constructs a CampaignEvent describing a change to a
+// campaign result.
+func newResultEvent(result *CampaignResult) CampaignEvent {
+	return CampaignEvent{
+		Type:       sdk.EventResultUpdated,
+		CampaignID: result.CampaignID,
+		Result:     result,
+	}
+}
+
 // Subscription is the handle returned by eventBus.Subscribe. Callers read
 // events from Events and release resources by invoking Unsubscribe.
 // Unsubscribe is safe to call multiple times.
