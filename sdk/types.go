@@ -203,18 +203,21 @@ type CampaignResultResponse struct {
 
 // --- Campaign Events (SSE) ---
 
+// CampaignEventType enumerates the campaign event types
+type CampaignEventType string
+
+const (
+	EventResultUpdated  CampaignEventType = "result.updated"
+	EventCampaignStatus CampaignEventType = "campaign.status"
+)
+
 // CampaignEvent is delivered by StreamCampaign for result updates and status changes.
 type CampaignEvent struct {
-	Type       string                  `json:"type"`
+	Type       CampaignEventType       `json:"type"`
 	CampaignID string                  `json:"campaign_id"`
 	Result     *CampaignResultResponse `json:"result,omitempty"`
 	Status     string                  `json:"status,omitempty"`
 }
-
-const (
-	EventResultUpdated  = "result.updated"
-	EventCampaignStatus = "campaign.status"
-)
 
 // --- Miraged Connections ---
 

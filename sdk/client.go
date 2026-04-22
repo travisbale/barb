@@ -241,7 +241,7 @@ func (c *Client) StreamCampaign(id string) (<-chan CampaignEvent, func(), error)
 			} else if line == "" && dataLine != "" {
 				var event CampaignEvent
 				if json.Unmarshal([]byte(dataLine), &event) == nil {
-					event.Type = eventType
+					event.Type = CampaignEventType(eventType)
 					ch <- event
 				}
 				eventType = ""

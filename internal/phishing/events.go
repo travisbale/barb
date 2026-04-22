@@ -1,12 +1,14 @@
 package phishing
 
+import "github.com/travisbale/barb/sdk"
+
 // CampaignEvent is a domain event describing a state change to a campaign
 // or one of its results.
 type CampaignEvent struct {
-	Type       string          `json:"type"`
-	CampaignID string          `json:"campaign_id"`
-	Result     *CampaignResult `json:"result,omitempty"`
-	Status     string          `json:"status,omitempty"`
+	Type       sdk.CampaignEventType `json:"type"`
+	CampaignID string                `json:"campaign_id"`
+	Result     *CampaignResult       `json:"result,omitempty"`
+	Status     string                `json:"status,omitempty"`
 }
 
 // eventBus is the publish/subscribe port for campaign events. Concrete
