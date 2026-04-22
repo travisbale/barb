@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/travisbale/barb/sdk"
 	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
@@ -102,7 +103,7 @@ type CampaignService struct {
 	Miraged   *MiragedService
 	Monitor   *SessionMonitor
 	Mailer    Mailer
-	Bus       *CampaignBus
+	Bus       eventBus
 	Logger    *slog.Logger
 
 	running   map[string]context.CancelFunc
@@ -227,7 +228,11 @@ func (s *CampaignService) endCampaign(id string, status CampaignStatus) error {
 	if err := s.Store.UpdateCampaign(campaign); err != nil {
 		return err
 	}
-	s.Bus.PublishStatusChange(campaign.ID, campaign.Status)
+	s.Bus.Publish(CampaignEvent{
+		Type:       sdk.EventCampaignStatus,
+		CampaignID: campaign.ID,
+		Status:     string(campaign.Status),
+	})
 
 	// Clean up miraged resources only on explicit complete/cancel.
 	s.cleanup(campaign)
@@ -368,7 +373,11 @@ func (s *CampaignService) activate(campaign *Campaign) error {
 		s.Logger.Error("failed to activate campaign", "error", err)
 		return err
 	}
-	s.Bus.PublishStatusChange(campaign.ID, campaign.Status)
+	s.Bus.Publish(CampaignEvent{
+		Type:       sdk.EventCampaignStatus,
+		CampaignID: campaign.ID,
+		Status:     string(campaign.Status),
+	})
 	return nil
 }
 
@@ -469,7 +478,11 @@ func (s *CampaignService) sendEmails(ctx context.Context, campaign *Campaign) {
 		if err := s.Store.UpdateResult(result); err != nil {
 			s.Logger.Error("failed to update result", "error", err)
 		}
-		s.Bus.PublishResultUpdate(campaign.ID, result)
+		s.Bus.Publish(CampaignEvent{
+			Type:       sdk.EventResultUpdated,
+			CampaignID: campaign.ID,
+			Result:     result,
+		})
 	}
 }
 
@@ -580,6 +593,88 @@ func (s *CampaignService) List() ([]*Campaign, error) {
 
 func (s *CampaignService) Results(campaignID string) ([]*CampaignResult, error) {
 	return s.Store.ListResults(campaignID)
+}
+
+// Stream returns a channel that delivers the campaign's current state
+// (status + results that have moved past pending) followed by every
+// subsequent CampaignEvent published for the campaign. The channel is
+// closed and the bus subscription released when ctx is cancelled.
+//
+// Returns ErrNotFound if the campaign does not exist, without starting
+// the stream.
+func (s *CampaignService) Stream(ctx context.Context, campaignID string) (<-chan CampaignEvent, error) {
+	campaign, err := s.Store.GetCampaign(campaignID)
+	if err != nil {
+		return nil, err
+	}
+
+	chEvents := make(chan CampaignEvent, 64)
+	go func() {
+		defer close(chEvents)
+
+		// Subscribe before taking the snapshot so events that fire mid-snapshot
+		// queue in the bus channel rather than being lost.
+		ch := s.Bus.Subscribe(campaignID)
+		defer s.Bus.Unsubscribe(campaignID, ch)
+
+		s.emitSnapshot(ctx, campaign, chEvents)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event := <-ch:
+				if !sendOrCancel(ctx, chEvents, event) {
+					return
+				}
+			}
+		}
+	}()
+	return chEvents, nil
+}
+
+// emitSnapshot sends the campaign's current state to out: the current status
+// and every result whose delivery has progressed past pending. Pending
+// results are skipped because they have no state worth broadcasting yet —
+// the EventResultUpdated fired on their first transition will deliver them
+// to subscribers via the live stream.
+func (s *CampaignService) emitSnapshot(ctx context.Context, campaign *Campaign, out chan<- CampaignEvent) {
+	if !sendOrCancel(ctx, out, CampaignEvent{
+		Type:       sdk.EventCampaignStatus,
+		CampaignID: campaign.ID,
+		Status:     string(campaign.Status),
+	}) {
+		return
+	}
+
+	results, err := s.Store.ListResults(campaign.ID)
+	if err != nil {
+		s.Logger.Warn("stream: list results failed", "campaign_id", campaign.ID, "error", err)
+		return
+	}
+	for _, result := range results {
+		if result.Status == ResultPending {
+			continue
+		}
+		if !sendOrCancel(ctx, out, CampaignEvent{
+			Type:       sdk.EventResultUpdated,
+			CampaignID: campaign.ID,
+			Result:     result,
+		}) {
+			return
+		}
+	}
+}
+
+// sendOrCancel attempts to send event on out, returning false if ctx is
+// cancelled before the send succeeds.
+func sendOrCancel(ctx context.Context, out chan<- CampaignEvent, event CampaignEvent) bool {
+	select {
+	case out <- event:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // SendTestEmail sends a single test email using a campaign's configuration.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/travisbale/barb/internal/api"
 	"github.com/travisbale/barb/internal/crypto/aes"
+	"github.com/travisbale/barb/internal/events"
 	"github.com/travisbale/barb/internal/phishing"
 	"github.com/travisbale/barb/internal/store/sqlite"
 )
@@ -49,7 +50,7 @@ func New(cfg Config) (*App, error) {
 	miragedSvc := &phishing.MiragedService{Store: miragedStore}
 	phishletSvc := &phishing.PhishletService{Store: phishletStore}
 
-	bus := phishing.NewCampaignBus()
+	bus := events.NewBus()
 
 	monitor := &phishing.SessionMonitor{
 		Campaigns: campaignStore,

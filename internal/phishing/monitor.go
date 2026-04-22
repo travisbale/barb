@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/travisbale/barb/sdk"
 	miragesdk "github.com/travisbale/mirage/sdk"
 )
 
@@ -15,7 +16,7 @@ import (
 type SessionMonitor struct {
 	Campaigns campaignStore
 	Miraged   *MiragedService
-	Bus       *CampaignBus
+	Bus       eventBus
 	Logger    *slog.Logger
 }
 
@@ -119,7 +120,11 @@ func (m *SessionMonitor) correlateByToken(resultID string, eventType miragesdk.E
 		return
 	}
 
-	m.Bus.PublishResultUpdate(result.CampaignID, result)
+	m.Bus.Publish(CampaignEvent{
+		Type:       sdk.EventResultUpdated,
+		CampaignID: result.CampaignID,
+		Result:     result,
+	})
 	m.Logger.Info("session correlated",
 		"campaign_id", result.CampaignID,
 		"event", string(eventType),
