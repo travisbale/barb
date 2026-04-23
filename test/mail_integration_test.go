@@ -62,14 +62,26 @@ type mailpitList struct {
 }
 
 // Shared Mailpit container — started once and reused across all integration tests.
+// Terminated by TestMain after m.Run() returns.
 var (
 	mailpitOnce     sync.Once
+	sharedContainer testcontainers.Container
 	sharedSMTPHost  string
 	sharedSMTPPort  int
 	sharedAPIURL    string
 	mailpitSkipMsg  string
 	mailpitStartErr error
 )
+
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if sharedContainer != nil {
+		if err := sharedContainer.Terminate(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to terminate mailpit container: %v\n", err)
+		}
+	}
+	os.Exit(code)
+}
 
 func startSharedMailpit() {
 	// Disable Ryuk reaper — testcontainers can't detect process exit in all environments.
@@ -95,6 +107,7 @@ func startSharedMailpit() {
 		mailpitStartErr = err
 		return
 	}
+	sharedContainer = container
 
 	host, err := container.Host(ctx)
 	if err != nil {
