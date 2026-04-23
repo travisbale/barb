@@ -599,8 +599,8 @@ func (s *CampaignService) Stream(ctx context.Context, campaignID string) (<-chan
 
 		// Subscribe before taking the snapshot so events that fire mid-snapshot
 		// queue in the bus channel rather than being lost.
-		sub := s.Bus.Subscribe(campaignID)
-		defer sub.Unsubscribe()
+		events, unsubscribe := s.Bus.Subscribe(campaignID)
+		defer unsubscribe()
 
 		s.emitSnapshot(ctx, campaign, chEvents)
 
@@ -608,13 +608,14 @@ func (s *CampaignService) Stream(ctx context.Context, campaignID string) (<-chan
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-sub.Events:
+			case event := <-events:
 				if !sendOrCancel(ctx, chEvents, event) {
 					return
 				}
 			}
 		}
 	}()
+
 	return chEvents, nil
 }
 

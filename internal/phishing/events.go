@@ -31,21 +31,14 @@ func newResultEvent(result *CampaignResult) CampaignEvent {
 	}
 }
 
-// Subscription is the handle returned by eventBus.Subscribe. Callers read
-// events from Events and release resources by invoking Unsubscribe.
-// Unsubscribe is safe to call multiple times.
-type Subscription struct {
-	Events      <-chan CampaignEvent
-	Unsubscribe func()
-}
-
 // eventBus is the publish/subscribe port for campaign events. Concrete
 // implementations live in internal/events and are injected into services
 // that need to emit or observe campaign events.
 //
 // Publish must never block: if a subscriber's channel is full the event is
-// dropped for that subscriber.
+// dropped for that subscriber. The returned unsubscribe func is safe to
+// call multiple times.
 type eventBus interface {
 	Publish(event CampaignEvent)
-	Subscribe(campaignID string) *Subscription
+	Subscribe(campaignID string) (events <-chan CampaignEvent, unsubscribe func())
 }

@@ -63,9 +63,9 @@ func (b *Bus) Publish(event phishing.CampaignEvent) {
 }
 
 // Subscribe registers a subscriber for events tagged with campaignID and
-// returns a Subscription handle. The caller releases resources by calling
-// Subscription.Unsubscribe; it is safe to invoke multiple times.
-func (b *Bus) Subscribe(campaignID string) *phishing.Subscription {
+// returns a buffered channel of events plus an unsubscribe function. The
+// unsubscribe func is safe to call multiple times.
+func (b *Bus) Subscribe(campaignID string) (events <-chan phishing.CampaignEvent, unsubscribe func()) {
 	ch := make(chan phishing.CampaignEvent, b.bufSize)
 	entry := &subEntry{ch: ch}
 
@@ -73,31 +73,35 @@ func (b *Bus) Subscribe(campaignID string) *phishing.Subscription {
 	b.subs[campaignID] = append(b.subs[campaignID], entry)
 	b.mu.Unlock()
 
-	return &phishing.Subscription{
-		Events:      ch,
-		Unsubscribe: func() { b.unsubscribe(campaignID, entry) },
-	}
+	return ch, func() { b.unsubscribe(campaignID, entry) }
 }
 
 // unsubscribe removes entry from the subscriber list for campaignID and
 // closes its channel. Idempotent: after the first call the entry is no
-// longer in the slice and subsequent calls are no-ops, so
-// Subscription.Unsubscribe is safe to invoke multiple times.
+// longer in the slice and subsequent calls are no-ops, so the unsubscribe
+// closure returned from Subscribe is safe to invoke multiple times.
 func (b *Bus) unsubscribe(campaignID string, entry *subEntry) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	entries := b.subs[campaignID]
 	for i, e := range entries {
-		if e == entry {
-			close(e.ch)
-			last := len(entries) - 1
-			entries[i] = entries[last]
-			b.subs[campaignID] = entries[:last]
-			if len(b.subs[campaignID]) == 0 {
-				delete(b.subs, campaignID)
-			}
-			return
+		if e != entry {
+			continue
 		}
+		close(e.ch)
+		b.subs[campaignID] = swapDelete(entries, i)
+		if len(b.subs[campaignID]) == 0 {
+			delete(b.subs, campaignID)
+		}
+		return
 	}
+}
+
+// swapDelete removes s[i] in O(1) by moving the last element into its slot
+// and truncating. Used when element order is irrelevant.
+func swapDelete[T any](s []T, i int) []T {
+	last := len(s) - 1
+	s[i] = s[last]
+	return s[:last]
 }
