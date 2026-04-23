@@ -2,7 +2,7 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 LDFLAGS := -ldflags "-X main.Version=$(VERSION)"
 DEV_PORT := 4443
 
-.PHONY: build release frontend frontend-test clean test unit fmt lint dev
+.PHONY: build release frontend frontend-test clean test unit fmt lint dev-mailpit dev-backend dev-frontend
 
 frontend:
 	@echo "Building frontend..."
@@ -48,10 +48,13 @@ lint:
 	@echo "Type checking frontend..."
 	@cd frontend && npx vue-tsc --noEmit
 
-dev: frontend
-	@docker run -d --name mailpit --rm -p 1025:1025 -p 8025:8025 \
+mailpit:
+	@docker start mailpit >/dev/null 2>&1 || docker run -d --name mailpit -p 1025:1025 -p 8025:8025 \
 		-e MP_SMTP_AUTH_ACCEPT_ANY=1 -e MP_SMTP_AUTH_ALLOW_INSECURE=1 \
 		axllent/mailpit:latest
-	@bash -c 'trap "docker stop mailpit; kill 0" EXIT; \
-		(cd frontend && VITE_API_PORT=$(DEV_PORT) npm run dev) & \
-		go run ./cmd/barb --addr :$(DEV_PORT) --debug'
+
+dev-backend:
+	@go run ./cmd/barb --addr :$(DEV_PORT) --debug
+
+dev-frontend:
+	@cd frontend && VITE_API_PORT=$(DEV_PORT) npm run dev
