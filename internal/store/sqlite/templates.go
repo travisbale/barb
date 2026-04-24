@@ -13,7 +13,7 @@ type Templates struct{ db *DB }
 func NewTemplateStore(db *DB) *Templates { return &Templates{db: db} }
 
 func (s *Templates) CreateTemplate(t *phishing.EmailTemplate) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO email_templates (id, name, subject, html_body, text_body, envelope_sender, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		t.ID, t.Name, t.Subject, t.HTMLBody, t.TextBody, t.EnvelopeSender, t.CreatedAt.Unix(),
@@ -25,7 +25,7 @@ func (s *Templates) CreateTemplate(t *phishing.EmailTemplate) error {
 }
 
 func (s *Templates) GetTemplate(id string) (*phishing.EmailTemplate, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, name, subject, html_body, text_body, envelope_sender, created_at
 		 FROM email_templates WHERE id = ?`, id,
 	)
@@ -33,7 +33,7 @@ func (s *Templates) GetTemplate(id string) (*phishing.EmailTemplate, error) {
 }
 
 func (s *Templates) UpdateTemplate(t *phishing.EmailTemplate) error {
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE email_templates SET name = ?, subject = ?, html_body = ?, text_body = ?, envelope_sender = ?
 		 WHERE id = ?`,
 		t.Name, t.Subject, t.HTMLBody, t.TextBody, t.EnvelopeSender, t.ID,
@@ -45,7 +45,7 @@ func (s *Templates) UpdateTemplate(t *phishing.EmailTemplate) error {
 }
 
 func (s *Templates) DeleteTemplate(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM email_templates WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM email_templates WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (s *Templates) DeleteTemplate(id string) error {
 }
 
 func (s *Templates) ListTemplates() ([]*phishing.EmailTemplate, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, name, subject, html_body, text_body, envelope_sender, created_at
 		 FROM email_templates ORDER BY created_at DESC`,
 	)

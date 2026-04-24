@@ -15,7 +15,7 @@ var schema string
 
 // DB wraps a SQLite database connection.
 type DB struct {
-	db *sql.DB
+	*sql.DB
 }
 
 // Open creates or opens a SQLite database and applies the schema.
@@ -36,18 +36,13 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("applying schema: %w", err)
 	}
 
-	return &DB{db: db}, nil
-}
-
-// Close closes the database connection.
-func (d *DB) Close() error {
-	return d.db.Close()
+	return &DB{DB: db}, nil
 }
 
 // WithTx executes fn within a transaction. The transaction is committed if fn
 // returns nil; otherwise it is rolled back.
 func (d *DB) WithTx(fn func(tx *sql.Tx) error) error {
-	tx, err := d.db.Begin()
+	tx, err := d.Begin()
 	if err != nil {
 		return err
 	}

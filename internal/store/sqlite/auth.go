@@ -13,7 +13,7 @@ type Auth struct{ db *DB }
 func NewAuthStore(db *DB) *Auth { return &Auth{db: db} }
 
 func (s *Auth) CreateUser(user *phishing.User) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO users (id, username, password_hash, password_change_required, created_at)
 		 VALUES (?, ?, ?, ?, ?)`,
 		user.ID, user.Username, user.PasswordHash, user.PasswordChangeRequired, user.CreatedAt.Unix(),
@@ -25,7 +25,7 @@ func (s *Auth) CreateUser(user *phishing.User) error {
 }
 
 func (s *Auth) GetUserByID(id string) (*phishing.User, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, username, password_hash, password_change_required, created_at
 		 FROM users WHERE id = ?`, id,
 	)
@@ -33,7 +33,7 @@ func (s *Auth) GetUserByID(id string) (*phishing.User, error) {
 }
 
 func (s *Auth) GetUserByUsername(username string) (*phishing.User, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, username, password_hash, password_change_required, created_at
 		 FROM users WHERE username = ?`, username,
 	)
@@ -59,7 +59,7 @@ func scanUser(row scanner) (*phishing.User, error) {
 }
 
 func (s *Auth) UpdateUser(user *phishing.User) error {
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE users SET password_hash = ?, password_change_required = ? WHERE id = ?`,
 		user.PasswordHash, user.PasswordChangeRequired, user.ID,
 	)
@@ -70,7 +70,7 @@ func (s *Auth) UpdateUser(user *phishing.User) error {
 }
 
 func (s *Auth) CreateSession(session *phishing.Session) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)`,
 		session.Token, session.UserID, session.ExpiresAt.Unix(),
 	)
@@ -78,7 +78,7 @@ func (s *Auth) CreateSession(session *phishing.Session) error {
 }
 
 func (s *Auth) GetSession(token string) (*phishing.Session, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT token, user_id, expires_at FROM sessions WHERE token = ?`, token,
 	)
 	var (
@@ -97,17 +97,17 @@ func (s *Auth) GetSession(token string) (*phishing.Session, error) {
 }
 
 func (s *Auth) DeleteSession(token string) error {
-	_, err := s.db.db.Exec(`DELETE FROM sessions WHERE token = ?`, token)
+	_, err := s.db.Exec(`DELETE FROM sessions WHERE token = ?`, token)
 	return err
 }
 
 func (s *Auth) DeleteExpiredSessions() error {
-	_, err := s.db.db.Exec(`DELETE FROM sessions WHERE expires_at < ?`, time.Now().Unix())
+	_, err := s.db.Exec(`DELETE FROM sessions WHERE expires_at < ?`, time.Now().Unix())
 	return err
 }
 
 func (s *Auth) DeleteUser(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM users WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}

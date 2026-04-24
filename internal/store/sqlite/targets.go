@@ -13,7 +13,7 @@ type Targets struct{ db *DB }
 func NewTargetStore(db *DB) *Targets { return &Targets{db: db} }
 
 func (s *Targets) CreateList(list *phishing.TargetList) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO target_lists (id, name, created_at) VALUES (?, ?, ?)`,
 		list.ID, list.Name, list.CreatedAt.Unix(),
 	)
@@ -24,12 +24,12 @@ func (s *Targets) CreateList(list *phishing.TargetList) error {
 }
 
 func (s *Targets) GetList(id string) (*phishing.TargetList, error) {
-	row := s.db.db.QueryRow(`SELECT id, name, created_at FROM target_lists WHERE id = ?`, id)
+	row := s.db.QueryRow(`SELECT id, name, created_at FROM target_lists WHERE id = ?`, id)
 	return scanTargetList(row)
 }
 
 func (s *Targets) DeleteList(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM target_lists WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM target_lists WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (s *Targets) DeleteList(id string) error {
 }
 
 func (s *Targets) ListLists() ([]*phishing.TargetList, error) {
-	rows, err := s.db.db.Query(`SELECT id, name, created_at FROM target_lists ORDER BY created_at DESC`)
+	rows, err := s.db.Query(`SELECT id, name, created_at FROM target_lists ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *Targets) ListLists() ([]*phishing.TargetList, error) {
 }
 
 func (s *Targets) CreateTarget(target *phishing.Target) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO targets (id, list_id, email, first_name, last_name, department, position)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		target.ID, target.ListID, target.Email, target.FirstName, target.LastName,
@@ -88,7 +88,7 @@ func (s *Targets) CreateTargets(targets []*phishing.Target) error {
 }
 
 func (s *Targets) ListTargets(listID string) ([]*phishing.Target, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, list_id, email, first_name, last_name, department, position
 		 FROM targets WHERE list_id = ? ORDER BY email ASC`, listID,
 	)
@@ -109,7 +109,7 @@ func (s *Targets) ListTargets(listID string) ([]*phishing.Target, error) {
 }
 
 func (s *Targets) DeleteTarget(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM targets WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM targets WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}

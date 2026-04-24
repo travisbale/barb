@@ -29,7 +29,7 @@ func (s *SMTP) CreateProfile(p *phishing.SMTPProfile) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.db.Exec(
+	_, err = s.db.Exec(
 		`INSERT INTO smtp_profiles (id, name, host, port, username, password, from_addr, from_name, custom_headers, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		p.ID, p.Name, p.Host, p.Port, p.Username, encrypted, p.FromAddr, p.FromName, headersJSON, p.CreatedAt.Unix(),
@@ -41,7 +41,7 @@ func (s *SMTP) CreateProfile(p *phishing.SMTPProfile) error {
 }
 
 func (s *SMTP) GetProfile(id string) (*phishing.SMTPProfile, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, name, host, port, username, password, from_addr, from_name, custom_headers, created_at
 		 FROM smtp_profiles WHERE id = ?`, id,
 	)
@@ -49,7 +49,7 @@ func (s *SMTP) GetProfile(id string) (*phishing.SMTPProfile, error) {
 }
 
 func (s *SMTP) DeleteProfile(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM smtp_profiles WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM smtp_profiles WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (s *SMTP) UpdateProfile(p *phishing.SMTPProfile) error {
 	if err != nil {
 		return err
 	}
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE smtp_profiles SET name = ?, host = ?, port = ?, username = ?, password = ?, from_addr = ?, from_name = ?, custom_headers = ?
 		 WHERE id = ?`,
 		p.Name, p.Host, p.Port, p.Username, encrypted, p.FromAddr, p.FromName, headersJSON, p.ID,
@@ -77,7 +77,7 @@ func (s *SMTP) UpdateProfile(p *phishing.SMTPProfile) error {
 }
 
 func (s *SMTP) ListProfiles() ([]*phishing.SMTPProfile, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, name, host, port, username, password, from_addr, from_name, custom_headers, created_at
 		 FROM smtp_profiles ORDER BY created_at DESC`,
 	)

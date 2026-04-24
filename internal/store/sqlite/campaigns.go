@@ -13,7 +13,7 @@ type Campaigns struct{ db *DB }
 func NewCampaignStore(db *DB) *Campaigns { return &Campaigns{db: db} }
 
 func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO campaigns (id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureID, c.LureURL, c.SendRate, c.CreatedAt.Unix(),
@@ -25,7 +25,7 @@ func (s *Campaigns) CreateCampaign(c *phishing.Campaign) error {
 }
 
 func (s *Campaigns) GetCampaign(id string) (*phishing.Campaign, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns WHERE id = ?`, id,
 	)
@@ -33,7 +33,7 @@ func (s *Campaigns) GetCampaign(id string) (*phishing.Campaign, error) {
 }
 
 func (s *Campaigns) UpdateCampaign(c *phishing.Campaign) error {
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE campaigns SET name = ?, status = ?, template_id = ?, smtp_profile_id = ?, target_list_id = ?, miraged_id = ?, phishlet = ?, redirect_url = ?, lure_id = ?, lure_url = ?, send_rate = ?, started_at = ?, completed_at = ?
 		 WHERE id = ?`,
 		c.Name, c.Status, c.TemplateID, c.SMTPProfileID, c.TargetListID, c.MiragedID, c.Phishlet, c.RedirectURL, c.LureID, c.LureURL, c.SendRate, timeToUnix(c.StartedAt), timeToUnix(c.CompletedAt), c.ID,
@@ -45,7 +45,7 @@ func (s *Campaigns) UpdateCampaign(c *phishing.Campaign) error {
 }
 
 func (s *Campaigns) DeleteCampaign(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM campaigns WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM campaigns WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (s *Campaigns) DeleteCampaign(id string) error {
 }
 
 func (s *Campaigns) ListCampaigns() ([]*phishing.Campaign, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, name, status, template_id, smtp_profile_id, target_list_id, miraged_id, phishlet, redirect_url, lure_id, lure_url, send_rate, created_at, started_at, completed_at
 		 FROM campaigns ORDER BY created_at DESC`,
 	)
@@ -94,7 +94,7 @@ func (s *Campaigns) CreateResults(results []*phishing.CampaignResult) error {
 }
 
 func (s *Campaigns) UpdateResult(r *phishing.CampaignResult) error {
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE campaign_results SET status = ?, sent_at = ?, clicked_at = ?, captured_at = ?, session_id = ?
 		 WHERE id = ?`,
 		r.Status, timeToUnix(r.SentAt), timeToUnix(r.ClickedAt), timeToUnix(r.CapturedAt), r.SessionID, r.ID,
@@ -106,7 +106,7 @@ func (s *Campaigns) UpdateResult(r *phishing.CampaignResult) error {
 }
 
 func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, campaign_id, target_id, email, status, sent_at, clicked_at, captured_at, session_id
 		 FROM campaign_results WHERE campaign_id = ? ORDER BY email ASC`, campaignID,
 	)
@@ -133,7 +133,7 @@ func (s *Campaigns) ListResults(campaignID string) ([]*phishing.CampaignResult, 
 }
 
 func (s *Campaigns) GetResult(id string) (*phishing.CampaignResult, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, campaign_id, target_id, email, status, sent_at, clicked_at, captured_at, session_id
 		 FROM campaign_results WHERE id = ?`, id,
 	)

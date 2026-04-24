@@ -13,7 +13,7 @@ type Phishlets struct{ db *DB }
 func NewPhishletStore(db *DB) *Phishlets { return &Phishlets{db: db} }
 
 func (s *Phishlets) CreatePhishlet(p *phishing.Phishlet) error {
-	_, err := s.db.db.Exec(
+	_, err := s.db.Exec(
 		`INSERT INTO phishlets (id, name, yaml, created_at) VALUES (?, ?, ?, ?)`,
 		p.ID, p.Name, p.YAML, p.CreatedAt.Unix(),
 	)
@@ -24,17 +24,17 @@ func (s *Phishlets) CreatePhishlet(p *phishing.Phishlet) error {
 }
 
 func (s *Phishlets) GetPhishlet(id string) (*phishing.Phishlet, error) {
-	row := s.db.db.QueryRow(`SELECT id, name, yaml, created_at FROM phishlets WHERE id = ?`, id)
+	row := s.db.QueryRow(`SELECT id, name, yaml, created_at FROM phishlets WHERE id = ?`, id)
 	return scanPhishlet(row)
 }
 
 func (s *Phishlets) GetPhishletByName(name string) (*phishing.Phishlet, error) {
-	row := s.db.db.QueryRow(`SELECT id, name, yaml, created_at FROM phishlets WHERE name = ?`, name)
+	row := s.db.QueryRow(`SELECT id, name, yaml, created_at FROM phishlets WHERE name = ?`, name)
 	return scanPhishlet(row)
 }
 
 func (s *Phishlets) UpdatePhishlet(p *phishing.Phishlet) error {
-	res, err := s.db.db.Exec(
+	res, err := s.db.Exec(
 		`UPDATE phishlets SET name = ?, yaml = ? WHERE id = ?`,
 		p.Name, p.YAML, p.ID,
 	)
@@ -45,7 +45,7 @@ func (s *Phishlets) UpdatePhishlet(p *phishing.Phishlet) error {
 }
 
 func (s *Phishlets) DeletePhishlet(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM phishlets WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM phishlets WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (s *Phishlets) DeletePhishlet(id string) error {
 }
 
 func (s *Phishlets) ListPhishlets() ([]*phishing.Phishlet, error) {
-	rows, err := s.db.db.Query(`SELECT id, name, yaml, created_at FROM phishlets ORDER BY name ASC`)
+	rows, err := s.db.Query(`SELECT id, name, yaml, created_at FROM phishlets ORDER BY name ASC`)
 	if err != nil {
 		return nil, err
 	}

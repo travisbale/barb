@@ -24,7 +24,7 @@ func (s *Miraged) CreateConnection(c *phishing.MiragedConnection) error {
 	if err != nil {
 		return fmt.Errorf("encrypting client key: %w", err)
 	}
-	_, err = s.db.db.Exec(
+	_, err = s.db.Exec(
 		`INSERT INTO miraged_connections (id, name, address, secret_hostname, cert_pem, key_pem, ca_cert_pem, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.ID, c.Name, c.Address, c.SecretHostname, c.CertPEM, encryptedKey, c.CACertPEM, c.CreatedAt.Unix(),
@@ -36,7 +36,7 @@ func (s *Miraged) CreateConnection(c *phishing.MiragedConnection) error {
 }
 
 func (s *Miraged) GetConnection(id string) (*phishing.MiragedConnection, error) {
-	row := s.db.db.QueryRow(
+	row := s.db.QueryRow(
 		`SELECT id, name, address, secret_hostname, cert_pem, key_pem, ca_cert_pem, created_at
 		 FROM miraged_connections WHERE id = ?`, id,
 	)
@@ -44,7 +44,7 @@ func (s *Miraged) GetConnection(id string) (*phishing.MiragedConnection, error) 
 }
 
 func (s *Miraged) UpdateConnectionName(id, name string) (*phishing.MiragedConnection, error) {
-	res, err := s.db.db.Exec(`UPDATE miraged_connections SET name = ? WHERE id = ?`, name, id)
+	res, err := s.db.Exec(`UPDATE miraged_connections SET name = ? WHERE id = ?`, name, id)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *Miraged) UpdateConnectionName(id, name string) (*phishing.MiragedConnec
 }
 
 func (s *Miraged) DeleteConnection(id string) error {
-	res, err := s.db.db.Exec(`DELETE FROM miraged_connections WHERE id = ?`, id)
+	res, err := s.db.Exec(`DELETE FROM miraged_connections WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *Miraged) DeleteConnection(id string) error {
 }
 
 func (s *Miraged) ListConnections() ([]*phishing.MiragedConnection, error) {
-	rows, err := s.db.db.Query(
+	rows, err := s.db.Query(
 		`SELECT id, name, address, secret_hostname, cert_pem, key_pem, ca_cert_pem, created_at
 		 FROM miraged_connections ORDER BY created_at DESC`,
 	)
