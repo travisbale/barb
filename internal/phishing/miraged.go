@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,8 +43,12 @@ type miragedStore interface {
 }
 
 // MiragedService manages miraged connections and provides SDK clients.
+// Clients are cached per connection ID so the TLS connection pool (and
+// therefore keep-alive connections to miraged) is reused across requests.
 type MiragedService struct {
 	Store miragedStore
+
+	clients sync.Map // connection ID → *miragesdk.Client
 }
 
 // Enroll connects to a miraged instance using an invite token, generates
@@ -156,18 +161,37 @@ func (s *MiragedService) Rename(id, name string) (*MiragedConnection, error) {
 }
 
 func (s *MiragedService) Delete(id string) error {
-	return s.Store.DeleteConnection(id)
+	if err := s.Store.DeleteConnection(id); err != nil {
+		return err
+	}
+	s.clients.Delete(id)
+	return nil
 }
 
 func (s *MiragedService) List() ([]*MiragedConnection, error) {
 	return s.Store.ListConnections()
 }
 
-// Client constructs a Mirage SDK client for the given connection ID.
+// Client returns a Mirage SDK client for the given connection ID, caching
+// it so keep-alive connections to miraged are reused across requests.
+// Rename doesn't invalidate the cache (certs and address are unchanged);
+// Delete does.
 func (s *MiragedService) Client(id string) (*miragesdk.Client, error) {
+	if cached, ok := s.clients.Load(id); ok {
+		return cached.(*miragesdk.Client), nil
+	}
+
 	conn, err := s.Store.GetConnection(id)
 	if err != nil {
 		return nil, err
 	}
-	return miragesdk.NewClient(conn.Address, conn.SecretHostname, conn.CertPEM, conn.KeyPEM, conn.CACertPEM)
+	client, err := miragesdk.NewClient(conn.Address, conn.SecretHostname, conn.CertPEM, conn.KeyPEM, conn.CACertPEM)
+	if err != nil {
+		return nil, err
+	}
+
+	// LoadOrStore handles a race where two concurrent callers construct the
+	// client simultaneously — only one gets stored, the other is discarded.
+	actual, _ := s.clients.LoadOrStore(id, client)
+	return actual.(*miragesdk.Client), nil
 }
