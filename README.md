@@ -35,11 +35,11 @@ Barb is a single Go binary with an embedded Vue frontend. It communicates with `
 - **Dashboard** — operations overview with campaign stats, active campaign progress, and recent captures
 - **Campaigns** — tie targets, templates, SMTP profiles, and phishlets together; configurable send rate; start, cancel, and monitor from the UI
 - **Campaign wizard** — guided setup for new campaigns
-- **Target lists** — manage recipients manually or import from CSV
+- **Target lists** — manage recipients manually or import from CSV, with inline renaming
 - **Email templates** — compose phishing emails with Go template variables, preview rendered output before sending
 - **Phishlet management** — store phishlet YAML configs with a syntax-highlighted editor; automatically pushed to miraged on campaign start
 - **SMTP profiles** — configure mail relay servers with encrypted credential storage (AES-256-GCM)
-- **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment)
+- **Miraged connections** — enroll with miraged instances using invite tokens (automatic keypair generation and mTLS certificate enrollment); configure per-connection notification channels (webhook, Slack) with event-type filtering and one-click test delivery
 - **Click tracking** — per-target lure URLs with encrypted tracking parameters for deterministic click attribution
 - **Session monitoring** — real-time correlation of miraged session captures to campaign targets via SSE
 - **Live updates** — campaign results stream to the UI in real time via server-sent events (no polling)

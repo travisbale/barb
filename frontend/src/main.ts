@@ -25,6 +25,7 @@ const router = createRouter({
     { path: '/phishlets', component: () => import('./views/Phishlets.vue') },
     { path: '/smtp', component: () => import('./views/SMTP.vue') },
     { path: '/miraged', component: () => import('./views/Miraged.vue') },
+    { path: '/miraged/:id', component: () => import('./views/MiragedDetail.vue') },
   ],
 })
 

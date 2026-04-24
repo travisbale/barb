@@ -54,6 +54,25 @@ func (r *Router) getTargetList(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, targetListToResponse(list))
 }
 
+func (r *Router) updateTargetList(w http.ResponseWriter, req *http.Request) {
+	body, ok := decodeAndValidate[sdk.UpdateTargetListRequest](w, req)
+	if !ok {
+		return
+	}
+
+	id := req.PathValue("id")
+	updated, err := r.Targets.UpdateList(id, &phishing.TargetListUpdate{Name: body.Name})
+	if err != nil {
+		if errors.Is(err, phishing.ErrNotFound) {
+			r.writeError(w, http.StatusNotFound, "Target list not found.", err)
+		} else {
+			r.writeError(w, http.StatusInternalServerError, "Failed to update target list.", err)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, targetListToResponse(updated))
+}
+
 func (r *Router) deleteTargetList(w http.ResponseWriter, req *http.Request) {
 	id := req.PathValue("id")
 	if err := r.Targets.DeleteList(id); err != nil {

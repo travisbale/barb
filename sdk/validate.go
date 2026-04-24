@@ -28,6 +28,13 @@ func (r CreateTargetListRequest) Validate() error {
 	return nil
 }
 
+func (r UpdateTargetListRequest) Validate() error {
+	if r.Name != nil && *r.Name == "" {
+		return invalid("Name cannot be empty.")
+	}
+	return nil
+}
+
 func (r AddTargetRequest) Validate() error {
 	if r.Email == "" {
 		return invalid("Email is required.")
@@ -181,6 +188,16 @@ func (r UpdateMiragedRequest) Validate() error {
 func (r PushMiragedPhishletRequest) Validate() error {
 	if r.YAML == "" {
 		return invalid("YAML is required.")
+	}
+	return nil
+}
+
+func (r CreateMiragedNotificationChannelRequest) Validate() error {
+	if r.Type != "webhook" && r.Type != "slack" {
+		return invalid("Type must be \"webhook\" or \"slack\".")
+	}
+	if r.URL == "" {
+		return invalid("URL is required.")
 	}
 	return nil
 }

@@ -36,6 +36,10 @@ Navigate to **Miraged** and add a new miraged connection:
 
 Barb generates a keypair and enrolls with miraged automatically.
 
+### Optional: add notification channels
+
+After enrollment, Barb opens the connection's detail page. Use the **Notification Channels** section to forward miraged events (`session.created`, `creds.captured`, etc.) to a webhook or Slack incoming webhook URL. Leave the event filter empty to receive all events, or pick specific types. The **Test** button sends a sample event to verify delivery.
+
 ## 3. Set up an SMTP profile
 
 For local testing, use [Mailpit](https://mailpit.axigen.com/) as a fake SMTP server:

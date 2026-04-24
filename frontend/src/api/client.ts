@@ -79,6 +79,10 @@ export function getTargetList(id: string): Promise<TargetList> {
   return request('GET', `/target-lists/${id}`)
 }
 
+export function updateTargetList(id: string, data: { name: string }): Promise<TargetList> {
+  return request('PATCH', `/target-lists/${id}`, data)
+}
+
 export function deleteTargetList(id: string): Promise<void> {
   return request('DELETE', `/target-lists/${id}`)
 }
@@ -382,6 +386,42 @@ export function enableMiragedPhishlet(id: string, name: string, hostname: string
 
 export function disableMiragedPhishlet(id: string, name: string): Promise<MiragedPhishlet> {
   return request('POST', `/miraged/${id}/phishlets/${name}/disable`)
+}
+
+// --- Miraged Notification Channels ---
+
+export interface MiragedNotificationChannel {
+  id: string
+  type: 'webhook' | 'slack'
+  url: string
+  filter: string[]
+  enabled: boolean
+  created_at: string
+}
+
+export function listMiragedNotifications(id: string): Promise<MiragedNotificationChannel[]> {
+  return request('GET', `/miraged/${id}/notifications/channels`)
+}
+
+export function createMiragedNotification(id: string, channel: {
+  type: 'webhook' | 'slack'
+  url: string
+  auth_header?: string
+  filter?: string[]
+}): Promise<MiragedNotificationChannel> {
+  return request('POST', `/miraged/${id}/notifications/channels`, channel)
+}
+
+export function deleteMiragedNotification(id: string, channelId: string): Promise<void> {
+  return request('DELETE', `/miraged/${id}/notifications/channels/${channelId}`)
+}
+
+export function testMiragedNotification(id: string, channelId: string): Promise<void> {
+  return request('POST', `/miraged/${id}/notifications/channels/${channelId}/test`)
+}
+
+export function listMiragedNotificationEventTypes(id: string): Promise<string[]> {
+  return request('GET', `/miraged/${id}/notifications/event-types`)
 }
 
 // --- Sessions ---

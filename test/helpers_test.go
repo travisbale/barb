@@ -21,8 +21,9 @@ func strPtr(s string) *string { return &s }
 func intPtr(i int) *int       { return &i }
 
 // wantError asserts that err is non-nil, contains the given substring, and
-// (if status > 0) is an APIError with the expected HTTP status code. Pass 0
-// for status to skip the status check (e.g., for client-side validation errors).
+// is an APIError with the expected HTTP status code. Integration tests must
+// reach the server, so a status code is always required — client-side
+// validation errors belong in sdk/validate_test.go.
 func wantError(t *testing.T, err error, status int, substr string) {
 	t.Helper()
 	if err == nil {
@@ -32,15 +33,13 @@ func wantError(t *testing.T, err error, status int, substr string) {
 	if !strings.Contains(err.Error(), substr) {
 		t.Errorf("error = %q, want substring %q", err.Error(), substr)
 	}
-	if status > 0 {
-		var apiErr *sdk.APIError
-		if !errors.As(err, &apiErr) {
-			t.Errorf("expected APIError with status %d, got %T: %v", status, err, err)
-			return
-		}
-		if apiErr.StatusCode != status {
-			t.Errorf("status = %d, want %d (message: %s)", apiErr.StatusCode, status, apiErr.Message)
-		}
+	var apiErr *sdk.APIError
+	if !errors.As(err, &apiErr) {
+		t.Errorf("expected APIError with status %d, got %T: %v", status, err, err)
+		return
+	}
+	if apiErr.StatusCode != status {
+		t.Errorf("status = %d, want %d (message: %s)", apiErr.StatusCode, status, apiErr.Message)
 	}
 }
 

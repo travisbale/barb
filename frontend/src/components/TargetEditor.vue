@@ -95,7 +95,8 @@ async function remove(targetId: string) {
 
     <!-- Actions bar -->
     <div class="flex items-center gap-2 mb-4">
-      <span class="text-xs font-mono text-dim flex-1">{{ targets.length }} {{ targets.length === 1 ? 'target' : 'targets' }}</span>
+      <h3 v-if="!compact" class="text-base font-medium text-primary flex-1">Targets</h3>
+      <span v-else class="text-xs font-mono text-dim flex-1">{{ targets.length }} {{ targets.length === 1 ? 'target' : 'targets' }}</span>
       <AppButton variant="secondary" :disabled="importing" @click="fileInput?.click()">
         {{ importing ? 'Importing...' : 'Import CSV' }}
       </AppButton>
@@ -143,6 +144,9 @@ async function remove(targetId: string) {
     </DataTable>
     <div v-if="compact && targets.length > 10" class="text-xs font-mono text-dim mt-2 px-4">
       and {{ targets.length - 10 }} more...
+    </div>
+    <div v-else-if="!compact && targets.length > 0" class="text-xs font-mono text-dim mt-2 px-4">
+      {{ targets.length }} {{ targets.length === 1 ? 'target' : 'targets' }}
     </div>
   </div>
 </template>

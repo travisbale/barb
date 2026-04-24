@@ -65,6 +65,57 @@ func TestTargetLists_DeleteNotFound(t *testing.T) {
 	wantError(t, err, http.StatusNotFound, "not found")
 }
 
+func TestTargetLists_Update(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	list, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Old"})
+	if err != nil {
+		t.Fatalf("CreateTargetList: %v", err)
+	}
+
+	updated, err := h.Client.UpdateTargetList(list.ID, sdk.UpdateTargetListRequest{Name: strPtr("New")})
+	if err != nil {
+		t.Fatalf("UpdateTargetList: %v", err)
+	}
+	if updated.Name != "New" {
+		t.Errorf("Name = %q, want %q", updated.Name, "New")
+	}
+
+	got, _ := h.Client.GetTargetList(list.ID)
+	if got.Name != "New" {
+		t.Errorf("persisted Name = %q, want %q", got.Name, "New")
+	}
+}
+
+func TestTargetLists_UpdateNotFound(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	_, err := h.Client.UpdateTargetList("nonexistent", sdk.UpdateTargetListRequest{Name: strPtr("Nope")})
+	wantError(t, err, http.StatusNotFound, "not found")
+}
+
+// An empty patch (nil Name) is a no-op and returns the current state —
+// matches the PATCH convention used by updateMiraged.
+func TestTargetLists_UpdateEmptyPatch(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	list, err := h.Client.CreateTargetList(sdk.CreateTargetListRequest{Name: "Unchanged"})
+	if err != nil {
+		t.Fatalf("CreateTargetList: %v", err)
+	}
+
+	got, err := h.Client.UpdateTargetList(list.ID, sdk.UpdateTargetListRequest{})
+	if err != nil {
+		t.Fatalf("UpdateTargetList: %v", err)
+	}
+	if got.Name != "Unchanged" {
+		t.Errorf("Name = %q, want %q", got.Name, "Unchanged")
+	}
+}
+
 func TestTargets_CRUD(t *testing.T) {
 	t.Parallel()
 	h := test.NewHarness(t)

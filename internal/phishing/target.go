@@ -31,6 +31,7 @@ type Target struct {
 type targetStore interface {
 	CreateList(list *TargetList) error
 	GetList(id string) (*TargetList, error)
+	UpdateList(list *TargetList) error
 	DeleteList(id string) error
 	ListLists() ([]*TargetList, error)
 	CreateTarget(target *Target) error
@@ -58,6 +59,26 @@ func (s *TargetService) CreateList(name string) (*TargetList, error) {
 
 func (s *TargetService) GetList(id string) (*TargetList, error) {
 	return s.Store.GetList(id)
+}
+
+// TargetListUpdate holds optional fields for a partial update to a target
+// list. Nil fields are left unchanged.
+type TargetListUpdate struct {
+	Name *string
+}
+
+func (s *TargetService) UpdateList(id string, update *TargetListUpdate) (*TargetList, error) {
+	list, err := s.Store.GetList(id)
+	if err != nil {
+		return nil, err
+	}
+	if update.Name != nil {
+		list.Name = *update.Name
+	}
+	if err := s.Store.UpdateList(list); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 func (s *TargetService) DeleteList(id string) error {

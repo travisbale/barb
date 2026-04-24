@@ -8,6 +8,10 @@ type CreateTargetListRequest struct {
 	Name string `json:"name"`
 }
 
+type UpdateTargetListRequest struct {
+	Name *string `json:"name,omitempty"`
+}
+
 type TargetListResponse struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
@@ -262,6 +266,22 @@ type PushMiragedPhishletRequest struct {
 type EnableMiragedPhishletRequest struct {
 	Hostname    string `json:"hostname"`
 	DNSProvider string `json:"dns_provider"`
+}
+
+type MiragedNotificationChannelResponse struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	URL       string    `json:"url"`
+	Filter    []string  `json:"filter"`
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type CreateMiragedNotificationChannelRequest struct {
+	Type       string   `json:"type"`
+	URL        string   `json:"url"`
+	AuthHeader string   `json:"auth_header,omitempty"`
+	Filter     []string `json:"filter,omitempty"`
 }
 
 // --- Auth ---

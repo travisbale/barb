@@ -60,6 +60,7 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("GET", sdk.RouteTargetLists, r.listTargetLists)
 	auth("POST", sdk.RouteTargetLists, r.createTargetList)
 	auth("GET", sdk.RouteTargetList, r.getTargetList)
+	auth("PATCH", sdk.RouteTargetList, r.updateTargetList)
 	auth("DELETE", sdk.RouteTargetList, r.deleteTargetList)
 	auth("GET", sdk.RouteTargets, r.listTargets)
 	auth("POST", sdk.RouteTargets, r.addTarget)
@@ -114,4 +115,9 @@ func (r *Router) registerRoutes(mux *http.ServeMux) {
 	auth("POST", sdk.RouteMiragedPhishletDisable, r.disableMiragedPhishlet)
 	auth("GET", sdk.RouteMiragedSession, r.getMiragedSession)
 	auth("GET", sdk.RouteMiragedSessionExport, r.exportMiragedSessionCookies)
+	auth("GET", sdk.RouteMiragedNotifications, r.listMiragedNotifications)
+	auth("POST", sdk.RouteMiragedNotifications, r.createMiragedNotification)
+	auth("DELETE", sdk.RouteMiragedNotification, r.deleteMiragedNotification)
+	auth("POST", sdk.RouteMiragedNotificationTest, r.testMiragedNotification)
+	auth("GET", sdk.RouteMiragedNotificationEventTypes, r.listMiragedNotificationEventTypes)
 }

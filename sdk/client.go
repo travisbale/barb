@@ -88,6 +88,10 @@ func (c *Client) GetTargetList(id string) (*TargetListResponse, error) {
 	return get[TargetListResponse](c, ResolveRoute(RouteTargetList, "id", id))
 }
 
+func (c *Client) UpdateTargetList(id string, req UpdateTargetListRequest) (*TargetListResponse, error) {
+	return send[TargetListResponse](c, http.MethodPatch, ResolveRoute(RouteTargetList, "id", id), req)
+}
+
 func (c *Client) DeleteTargetList(id string) error {
 	return discard(c, http.MethodDelete, ResolveRoute(RouteTargetList, "id", id))
 }
@@ -390,6 +394,34 @@ func (c *Client) PushMiragedPhishlet(connectionID string, yaml string) error {
 	}
 	defer resp.Body.Close()
 	return checkStatus(resp)
+}
+
+func (c *Client) ListMiragedNotifications(connectionID string) ([]MiragedNotificationChannelResponse, error) {
+	resp, err := get[[]MiragedNotificationChannelResponse](c, ResolveRoute(RouteMiragedNotifications, "id", connectionID))
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
+}
+
+func (c *Client) CreateMiragedNotification(connectionID string, req CreateMiragedNotificationChannelRequest) (*MiragedNotificationChannelResponse, error) {
+	return send[MiragedNotificationChannelResponse](c, http.MethodPost, ResolveRoute(RouteMiragedNotifications, "id", connectionID), req)
+}
+
+func (c *Client) DeleteMiragedNotification(connectionID, channelID string) error {
+	return discard(c, http.MethodDelete, ResolveRoute(RouteMiragedNotification, "id", connectionID, "channelId", channelID))
+}
+
+func (c *Client) TestMiragedNotification(connectionID, channelID string) error {
+	return discard(c, http.MethodPost, ResolveRoute(RouteMiragedNotificationTest, "id", connectionID, "channelId", channelID))
+}
+
+func (c *Client) ListMiragedNotificationEventTypes(connectionID string) ([]string, error) {
+	resp, err := get[[]string](c, ResolveRoute(RouteMiragedNotificationEventTypes, "id", connectionID))
+	if err != nil {
+		return nil, err
+	}
+	return *resp, nil
 }
 
 // --- Dashboard ---

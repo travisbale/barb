@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useConfirm } from '../composables/useConfirm'
-import { listMiraged, enrollMiraged, updateMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
+import { listMiraged, enrollMiraged, deleteMiraged, testMiraged, type MiragedConnection, type MiragedStatus } from '../api/client'
 import PageHeader from '../components/PageHeader.vue'
 import AppButton from '../components/AppButton.vue'
-import AppInput from '../components/AppInput.vue'
 import MiragedForm from '../components/MiragedForm.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -14,6 +14,7 @@ import FormCard from '../components/FormCard.vue'
 import DeleteButton from '../components/DeleteButton.vue'
 import AddButton from '../components/AddButton.vue'
 
+const router = useRouter()
 const { confirm } = useConfirm()
 const connections = ref<MiragedConnection[]>([])
 const statuses = ref<Record<string, MiragedStatus>>({})
@@ -22,11 +23,6 @@ const enrolling = ref(false)
 const error = ref('')
 
 const form = ref({ name: '', address: '', secret_hostname: '', token: '' })
-
-// Rename state.
-const editingId = ref<string | null>(null)
-const editName = ref('')
-const saving = ref(false)
 
 async function load() {
   try {
@@ -41,40 +37,11 @@ async function add() {
   error.value = ''
   try {
     const conn = await enrollMiraged(form.value)
-    connections.value.unshift(conn)
-    form.value = { name: '', address: '', secret_hostname: '', token: '' }
-    showAdd.value = false
+    router.push(`/miraged/${conn.id}`)
   } catch (e: any) {
     error.value = e.message
   } finally {
     enrolling.value = false
-  }
-}
-
-function startEdit(conn: MiragedConnection) {
-  editingId.value = conn.id
-  editName.value = conn.name
-  error.value = ''
-}
-
-function cancelEdit() {
-  editingId.value = null
-  editName.value = ''
-}
-
-async function saveEdit() {
-  if (!editingId.value) return
-  saving.value = true
-  error.value = ''
-  try {
-    const updated = await updateMiraged(editingId.value, { name: editName.value })
-    const idx = connections.value.findIndex(c => c.id === updated.id)
-    if (idx !== -1) connections.value[idx] = updated
-    editingId.value = null
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    saving.value = false
   }
 }
 
@@ -84,7 +51,6 @@ async function remove(id: string) {
     await deleteMiraged(id)
     connections.value = connections.value.filter(c => c.id !== id)
     delete statuses.value[id]
-    if (editingId.value === id) cancelEdit()
   } catch (e: any) {
     error.value = e.message
   }
@@ -141,15 +107,6 @@ onUnmounted(stopPolling)
       </template>
     </FormCard>
 
-    <!-- Rename form -->
-    <FormCard v-if="editingId" @submit="saveEdit">
-      <AppInput v-model="editName" placeholder="Name" required autofocus />
-      <template #actions>
-        <AppButton variant="ghost" @click="cancelEdit">Cancel</AppButton>
-        <AppButton type="submit" :disabled="saving">{{ saving ? 'Saving...' : 'Save' }}</AppButton>
-      </template>
-    </FormCard>
-
     <EmptyState v-if="connections.length === 0 && !showAdd" message="No miraged connections configured." />
 
     <DataTable v-else-if="connections.length > 0" :columns="[{ label: 'Name' }, { label: 'Address' }, { label: 'Status' }, { label: '', width: 'w-12' }]">
@@ -158,7 +115,7 @@ onUnmounted(stopPolling)
         :key="conn.id"
         :index="i"
         clickable
-        @click="startEdit(conn)"
+        @click="router.push(`/miraged/${conn.id}`)"
       >
         <td class="text-primary">{{ conn.name }}</td>
         <td class="text-muted">{{ conn.address }}</td>

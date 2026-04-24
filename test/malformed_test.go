@@ -193,3 +193,34 @@ func TestServerValidation_CreateTargetList(t *testing.T) {
 	status, msg := rawRequest(t, h, "POST", "/api/target-lists", `{}`)
 	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "Name is required.")
 }
+
+func TestServerValidation_UpdateTargetList(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	status, msg := rawRequest(t, h, "PATCH", "/api/target-lists/some-id", `{"name":""}`)
+	wantRawError(t, status, msg, http.StatusUnprocessableEntity, "Name cannot be empty.")
+}
+
+func TestServerValidation_CreateMiragedNotification(t *testing.T) {
+	t.Parallel()
+	h := test.NewHarness(t)
+
+	tests := []struct {
+		name    string
+		body    string
+		wantMsg string
+	}{
+		{"missing type", `{"url":"https://hooks.slack.com/x"}`, "webhook"},
+		{"invalid type", `{"type":"email","url":"https://hooks.slack.com/x"}`, "webhook"},
+		{"missing url", `{"type":"slack"}`, "URL is required."},
+		{"empty url", `{"type":"slack","url":""}`, "URL is required."},
+		{"empty body", `{}`, "webhook"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status, msg := rawRequest(t, h, "POST", "/api/miraged/some-id/notifications/channels", tt.body)
+			wantRawError(t, status, msg, http.StatusUnprocessableEntity, tt.wantMsg)
+		})
+	}
+}

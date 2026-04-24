@@ -35,15 +35,19 @@ const (
 	RouteSMTPProfile  = "/api/smtp-profiles/{id}"
 
 	// Miraged connections
-	RouteMiraged                = "/api/miraged"
-	RouteMiragedInstance        = "/api/miraged/{id}"
-	RouteMiragedStatus          = "/api/miraged/{id}/status"
-	RouteMiragedPhishlets       = "/api/miraged/{id}/phishlets"
-	RouteMiragedPhishletEnable  = "/api/miraged/{id}/phishlets/{name}/enable"
-	RouteMiragedPhishletDisable = "/api/miraged/{id}/phishlets/{name}/disable"
-	RouteMiragedDNSProviders    = "/api/miraged/{id}/dns/providers"
-	RouteMiragedSession         = "/api/miraged/{id}/sessions/{sessionId}"
-	RouteMiragedSessionExport   = "/api/miraged/{id}/sessions/{sessionId}/export"
+	RouteMiraged                       = "/api/miraged"
+	RouteMiragedInstance               = "/api/miraged/{id}"
+	RouteMiragedStatus                 = "/api/miraged/{id}/status"
+	RouteMiragedPhishlets              = "/api/miraged/{id}/phishlets"
+	RouteMiragedPhishletEnable         = "/api/miraged/{id}/phishlets/{name}/enable"
+	RouteMiragedPhishletDisable        = "/api/miraged/{id}/phishlets/{name}/disable"
+	RouteMiragedDNSProviders           = "/api/miraged/{id}/dns/providers"
+	RouteMiragedSession                = "/api/miraged/{id}/sessions/{sessionId}"
+	RouteMiragedSessionExport          = "/api/miraged/{id}/sessions/{sessionId}/export"
+	RouteMiragedNotifications          = "/api/miraged/{id}/notifications/channels"
+	RouteMiragedNotification           = "/api/miraged/{id}/notifications/channels/{channelId}"
+	RouteMiragedNotificationTest       = "/api/miraged/{id}/notifications/channels/{channelId}/test"
+	RouteMiragedNotificationEventTypes = "/api/miraged/{id}/notifications/event-types"
 
 	// Auth
 	RouteLogin          = "/api/auth/login"

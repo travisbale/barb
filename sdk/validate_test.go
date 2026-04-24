@@ -203,6 +203,53 @@ func TestEnrollMiragedRequest_Validate(t *testing.T) {
 	}
 }
 
+func TestUpdateTargetListRequest_Validate(t *testing.T) {
+	t.Parallel()
+	empty := ""
+	valid := "valid"
+	tests := []struct {
+		name    string
+		req     UpdateTargetListRequest
+		wantErr string
+	}{
+		{"valid", UpdateTargetListRequest{Name: &valid}, ""},
+		{"nil name", UpdateTargetListRequest{}, ""},
+		{"empty name", UpdateTargetListRequest{Name: &empty}, "Name cannot be empty."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			checkValidation(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestCreateMiragedNotificationChannelRequest_Validate(t *testing.T) {
+	t.Parallel()
+	valid := CreateMiragedNotificationChannelRequest{Type: "slack", URL: "https://hooks.slack.com/x"}
+	tests := []struct {
+		name    string
+		modify  func(*CreateMiragedNotificationChannelRequest)
+		wantErr string
+	}{
+		{"valid slack", nil, ""},
+		{"valid webhook", func(r *CreateMiragedNotificationChannelRequest) { r.Type = "webhook" }, ""},
+		{"missing type", func(r *CreateMiragedNotificationChannelRequest) { r.Type = "" }, "webhook"},
+		{"invalid type", func(r *CreateMiragedNotificationChannelRequest) { r.Type = "email" }, "webhook"},
+		{"missing url", func(r *CreateMiragedNotificationChannelRequest) { r.URL = "" }, "URL is required."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := valid
+			if tt.modify != nil {
+				tt.modify(&req)
+			}
+			err := req.Validate()
+			checkValidation(t, err, tt.wantErr)
+		})
+	}
+}
+
 func TestUpdateMiragedRequest_Validate(t *testing.T) {
 	t.Parallel()
 	empty := ""

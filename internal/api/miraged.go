@@ -52,7 +52,7 @@ func (r *Router) updateMiraged(w http.ResponseWriter, req *http.Request) {
 	}
 
 	id := req.PathValue("id")
-	updated, err := r.Miraged.Rename(id, *body.Name)
+	updated, err := r.Miraged.Update(id, &phishing.MiragedUpdate{Name: body.Name})
 	if err != nil {
 		switch {
 		case errors.Is(err, phishing.ErrNotFound):
@@ -219,6 +219,84 @@ func (r *Router) exportMiragedSessionCookies(w http.ResponseWriter, req *http.Re
 	}
 }
 
+func (r *Router) listMiragedNotifications(w http.ResponseWriter, req *http.Request) {
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
+	resp, err := client.ListNotificationChannels()
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "Failed to list notification channels.", err)
+		return
+	}
+	items := make([]sdk.MiragedNotificationChannelResponse, len(resp.Channels))
+	for i, c := range resp.Channels {
+		items[i] = miragedNotificationToResponse(c)
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (r *Router) createMiragedNotification(w http.ResponseWriter, req *http.Request) {
+	body, ok := decodeAndValidate[sdk.CreateMiragedNotificationChannelRequest](w, req)
+	if !ok {
+		return
+	}
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
+	created, err := client.CreateNotificationChannel(miragesdk.CreateNotificationChannelRequest{
+		Type:       miragesdk.ChannelType(body.Type),
+		URL:        body.URL,
+		AuthHeader: body.AuthHeader,
+		Filter:     body.Filter,
+	})
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "Failed to create notification channel.", err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, miragedNotificationToResponse(*created))
+}
+
+func (r *Router) deleteMiragedNotification(w http.ResponseWriter, req *http.Request) {
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
+	channelID := req.PathValue("channelId")
+	if err := client.DeleteNotificationChannel(channelID); err != nil {
+		r.writeError(w, http.StatusBadGateway, "Failed to delete notification channel.", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) listMiragedNotificationEventTypes(w http.ResponseWriter, req *http.Request) {
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
+	types, err := client.ListNotificationEventTypes()
+	if err != nil {
+		r.writeError(w, http.StatusBadGateway, "Failed to list notification event types.", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, types)
+}
+
+func (r *Router) testMiragedNotification(w http.ResponseWriter, req *http.Request) {
+	client, err := r.miragedClient(w, req)
+	if err != nil {
+		return
+	}
+	channelID := req.PathValue("channelId")
+	if err := client.TestNotificationChannel(channelID); err != nil {
+		r.writeError(w, http.StatusBadGateway, "Test notification failed.", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // miragedClient extracts the connection ID from the request path and returns
 // a mirage SDK client. It writes an error response and returns an error if
 // the connection is not found or the client cannot be constructed.
@@ -244,6 +322,17 @@ func miragedPhishletToResponse(p miragesdk.PhishletResponse) sdk.MiragedPhishlet
 		DNSProvider: p.DNSProvider,
 		SpoofURL:    p.SpoofURL,
 		Enabled:     p.Enabled,
+	}
+}
+
+func miragedNotificationToResponse(c miragesdk.NotificationChannelResponse) sdk.MiragedNotificationChannelResponse {
+	return sdk.MiragedNotificationChannelResponse{
+		ID:        c.ID,
+		Type:      string(c.Type),
+		URL:       c.URL,
+		Filter:    c.Filter,
+		Enabled:   c.Enabled,
+		CreatedAt: c.CreatedAt,
 	}
 }
 

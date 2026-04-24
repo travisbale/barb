@@ -28,6 +28,14 @@ func (s *Targets) GetList(id string) (*phishing.TargetList, error) {
 	return scanTargetList(row)
 }
 
+func (s *Targets) UpdateList(list *phishing.TargetList) error {
+	res, err := s.db.Exec(`UPDATE target_lists SET name = ? WHERE id = ?`, list.Name, list.ID)
+	if err != nil {
+		return err
+	}
+	return requireOneRow(res)
+}
+
 func (s *Targets) DeleteList(id string) error {
 	res, err := s.db.Exec(`DELETE FROM target_lists WHERE id = ?`, id)
 	if err != nil {

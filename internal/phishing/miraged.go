@@ -153,11 +153,20 @@ func (s *MiragedService) Get(id string) (*MiragedConnection, error) {
 	return s.Store.GetConnection(id)
 }
 
-func (s *MiragedService) Rename(id, name string) (*MiragedConnection, error) {
-	if name == "" {
+// MiragedUpdate holds optional fields for a partial update to a miraged
+// connection. Nil fields are left unchanged.
+type MiragedUpdate struct {
+	Name *string
+}
+
+func (s *MiragedService) Update(id string, update *MiragedUpdate) (*MiragedConnection, error) {
+	if update.Name == nil {
+		return s.Store.GetConnection(id)
+	}
+	if *update.Name == "" {
 		return nil, ErrNameRequired
 	}
-	return s.Store.UpdateConnectionName(id, name)
+	return s.Store.UpdateConnectionName(id, *update.Name)
 }
 
 func (s *MiragedService) Delete(id string) error {
